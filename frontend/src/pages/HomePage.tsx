@@ -1,0 +1,63 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export default function HomePage() {
+  const [roomName, setRoomName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const navigate = useNavigate();
+
+  const joinRoom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (roomName.trim()) {
+      const identity = displayName.trim() || undefined;
+      const search = identity ? `?identity=${encodeURIComponent(identity)}` : '';
+      navigate(`/room/${roomName}${search}`);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
+      <div className="p-8 bg-gray-900 rounded-lg border border-gray-800 shadow-xl w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+          Tauri LiveKit
+        </h1>
+        <form onSubmit={joinRoom} className="flex flex-col gap-4">
+          <div>
+            <label htmlFor="room" className="block text-sm font-medium text-gray-400 mb-1">
+              Room Name
+            </label>
+            <input
+              type="text"
+              id="room"
+              value={roomName}
+              onChange={(e) => setRoomName(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none text-white placeholder-gray-500"
+              placeholder="Enter room name"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="display-name" className="block text-sm font-medium text-gray-400 mb-1">
+              Display Name (optional)
+            </label>
+            <input
+              type="text"
+              id="display-name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none text-white placeholder-gray-500"
+              placeholder="How should we call you?"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded transition-colors"
+          >
+            Join Room
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+

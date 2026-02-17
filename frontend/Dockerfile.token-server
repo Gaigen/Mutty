@@ -1,0 +1,27 @@
+# Dockerfile для token server
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копируем package файлы
+COPY package.json package-lock.json* ./
+
+# Устанавливаем все зависимости (нужны dev зависимости для tsx и типов)
+RUN npm ci
+
+# Копируем необходимые файлы для token server
+COPY scripts/dev-token-server.ts ./scripts/
+COPY tsconfig.json ./
+COPY tsconfig.node.json ./tsconfig.node.json
+
+EXPOSE 4000
+
+# Переменные окружения можно передать через docker-compose
+ENV TOKEN_SERVER_PORT=4000
+ENV TOKEN_SERVER_HOST=0.0.0.0
+ENV LIVEKIT_API_KEY=devkey
+ENV LIVEKIT_API_SECRET=secret
+ENV LIVEKIT_WS_URL=ws://livekit:7880
+
+# Используем npx для запуска tsx (уже установлен через npm ci)
+CMD ["npx", "tsx", "scripts/dev-token-server.ts"]

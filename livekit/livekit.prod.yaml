@@ -1,0 +1,17 @@
+port: 7880
+rtc:
+  udp_port: 7882
+  tcp_port: 7881
+  use_external_ip: false
+  # В Docker используем 0.0.0.0 для прослушивания всех интерфейсов
+  node_ip: 0.0.0.0
+
+# В продакшене используйте реальные ключи!
+keys:
+  devkey: secret
+
+room:
+  empty_timeout: 60
+
+# Логирование
+log_level: info

@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"path": "../../../../../chat_2/rust-sdks/examples/wgpu_room"
+		}
+	],
+	"settings": {}
+}

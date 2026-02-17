@@ -1,0 +1,13 @@
+node_modules
+.git
+.gitignore
+*.log
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+*~
+dist
+.env.local
+.env.*.local
