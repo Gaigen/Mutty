@@ -8,8 +8,6 @@ services:
       - ./livekit/livekit.prod.yaml:/etc/livekit/config.yaml:ro
     command: --config /etc/livekit/config.yaml
     restart: unless-stopped
-    networks:
-      - voice-app-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7880/"]
       interval: 10s
@@ -32,8 +30,6 @@ services:
     depends_on:
       - livekit
     restart: unless-stopped
-    networks:
-      - voice-app-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/api/token"]
       interval: 10s
@@ -54,14 +50,8 @@ services:
       - token-server
       - livekit
     restart: unless-stopped
-    networks:
-      - voice-app-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
       interval: 10s
       timeout: 5s
       retries: 3
-
-networks:
-  voice-app-network:
-    driver: bridge
