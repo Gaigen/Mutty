@@ -13,8 +13,31 @@ const DEFAULT_SETTINGS: ScreenShareSettings = {
   frameRate: 60,
 };
 
+const STORAGE_KEY = 'voice-app:screen-share-settings';
+
+function loadSettings(): ScreenShareSettings {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<ScreenShareSettings>;
+      return { ...DEFAULT_SETTINGS, ...parsed };
+    }
+  } catch (e) {
+    console.warn('Failed to load screen share settings from localStorage:', e);
+  }
+  return { ...DEFAULT_SETTINGS };
+}
+
+function saveSettings(settings: ScreenShareSettings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch (e) {
+    console.warn('Failed to save screen share settings to localStorage:', e);
+  }
+}
+
 // Глобальное состояние для настроек screen share (можно заменить на контекст если нужно)
-let currentSettings: ScreenShareSettings = DEFAULT_SETTINGS;
+let currentSettings: ScreenShareSettings = loadSettings();
 const listeners = new Set<(settings: ScreenShareSettings) => void>();
 
 export function useScreenShareSettings() {
@@ -32,6 +55,7 @@ export function useScreenShareSettings() {
       currentSettings = { ...currentSettings, ...newSettings };
     }
     setSettingsState(currentSettings);
+    saveSettings(currentSettings);
     listeners.forEach((listener) => listener(currentSettings));
   }, []);
 

@@ -1,7 +1,12 @@
 import { useRoomContext } from '@livekit/components-react';
 import { VideoSenderStats, VideoReceiverStats, Track } from 'livekit-client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAudioSettings } from '../../hooks/useAudioSettings';
 import { useScreenShareSettings } from '../../hooks/useScreenShareSettings';
+import {
+  createNoiseGateProcessor,
+  type NoiseGateProcessorRef,
+} from '../../utils/NoiseGateProcessor';
 
 const PRESETS = {
   '720p@60': { resolution: { width: 1280, height: 720 }, frameRate: 60 },
@@ -41,13 +46,287 @@ interface StreamSettingsProps {
 export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps) {
   const room = useRoomContext();
   const { settings, setSettings } = useScreenShareSettings();
-  const [activeTab, setActiveTab] = useState<'settings' | 'stats'>('settings');
+  const { settings: audioSettings, setSettings: setAudioSettings } = useAudioSettings();
+  const [activeTab, setActiveTab] = useState<'audio' | 'settings' | 'stats'>('audio');
+  const [audioDevices, setAudioDevices] = useState<{ inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] }>({
+    inputs: [],
+    outputs: [],
+  });
   const [senderStats, setSenderStats] = useState<VideoSenderStats[]>([]);
   const [receiverStats, setReceiverStats] = useState<VideoReceiverStats[]>([]);
   const prevSenderStatsRef = useRef<VideoSenderStats[]>([]);
   const prevReceiverStatsRef = useRef<VideoReceiverStats[]>([]);
   const senderStatsRef = useRef<VideoSenderStats[]>([]);
   const receiverStatsRef = useRef<VideoReceiverStats[]>([]);
+
+  // Noise Gate processor ref — хранит ссылку на AudioWorkletNode для обновления параметров
+  const noiseGateRef = useRef<NoiseGateProcessorRef>({
+    node: null,
+    options: {
+      threshold: audioSettings.noiseGateThreshold,
+      attack: audioSettings.noiseGateAttack,
+      release: audioSettings.noiseGateRelease,
+    },
+  });
+
+  // Load audio devices
+  useEffect(() => {
+    let cancelled = false;
+    navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) => {
+        if (cancelled) return;
+        setAudioDevices({
+          inputs: devices.filter((d) => d.kind === 'audioinput'),
+          outputs: devices.filter((d) => d.kind === 'audiooutput'),
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Apply microphone capture options when changed (restart track)
+  // Устройство микрофона — через кнопку Microphone в панели LiveKit
+  const applyMicOptions = useCallback(async () => {
+    if (!room) return;
+    const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+    const track = pub?.track;
+    if (!track || track.kind !== Track.Kind.Audio) {
+      // Трек не существует — настройки применятся при следующем включении микрофона
+      return;
+    }
+    
+    const localTrack = track as import('livekit-client').LocalAudioTrack;
+    const wasMuted = localTrack.isMuted;
+    
+    const newOptions = {
+      noiseSuppression: audioSettings.noiseSuppression,
+      echoCancellation: audioSettings.echoCancellation,
+      autoGainControl: audioSettings.autoGainControl,
+      voiceIsolation: audioSettings.voiceIsolation,
+    };
+    
+    console.log('[AudioSettings] Applying mic options:', newOptions);
+    
+    try {
+      // Если трек muted, временно unmute для применения настроек
+      if (wasMuted) {
+        await localTrack.unmute();
+      }
+      
+      await localTrack.restartTrack(newOptions);
+      console.log('[AudioSettings] Mic options applied successfully');
+      
+      // Возвращаем mute состояние если было muted
+      if (wasMuted) {
+        await localTrack.mute();
+      }
+    } catch (e) {
+      console.error('[AudioSettings] Failed to apply mic options:', e);
+      // Восстанавливаем mute состояние при ошибке
+      if (wasMuted && !localTrack.isMuted) {
+        try {
+          await localTrack.mute();
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }, [room, audioSettings.noiseSuppression, audioSettings.echoCancellation, audioSettings.autoGainControl, audioSettings.voiceIsolation]);
+
+  // Apply speaker device when changed
+  const applySpeakerDevice = useCallback(() => {
+    if (!room || !audioSettings.speakerDeviceId) return;
+    try {
+      console.log('[AudioSettings] Applying speaker device:', audioSettings.speakerDeviceId);
+      room.switchActiveDevice('audiooutput', audioSettings.speakerDeviceId);
+    } catch (e) {
+      console.warn('[AudioSettings] Failed to apply speaker device:', e);
+    }
+  }, [room, audioSettings.speakerDeviceId]);
+
+  // Применяем устройство динамиков при изменении
+  useEffect(() => {
+    if (!audioSettings.speakerDeviceId) return;
+    applySpeakerDevice();
+  }, [audioSettings.speakerDeviceId, applySpeakerDevice]);
+
+  // Применяем устройство динамиков при инициализации комнаты
+  useEffect(() => {
+    if (!room || !audioSettings.speakerDeviceId) return;
+    // Небольшая задержка для инициализации комнаты
+    const timer = setTimeout(() => {
+      console.log('[AudioSettings] Applying saved speaker device on init');
+      applySpeakerDevice();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [room, applySpeakerDevice]); // Зависим от room и applySpeakerDevice
+
+  // Apply mic options when capture settings change
+  const prevMicSettingsRef = useRef({
+    noiseSuppression: audioSettings.noiseSuppression,
+    echoCancellation: audioSettings.echoCancellation,
+    autoGainControl: audioSettings.autoGainControl,
+    voiceIsolation: audioSettings.voiceIsolation,
+  });
+
+  // Применяем настройки микрофона при изменении настроек
+  useEffect(() => {
+    if (!room) return;
+    
+    const hasChanged =
+      prevMicSettingsRef.current.noiseSuppression !== audioSettings.noiseSuppression ||
+      prevMicSettingsRef.current.echoCancellation !== audioSettings.echoCancellation ||
+      prevMicSettingsRef.current.autoGainControl !== audioSettings.autoGainControl ||
+      prevMicSettingsRef.current.voiceIsolation !== audioSettings.voiceIsolation;
+
+    if (hasChanged) {
+      prevMicSettingsRef.current = {
+        noiseSuppression: audioSettings.noiseSuppression,
+        echoCancellation: audioSettings.echoCancellation,
+        autoGainControl: audioSettings.autoGainControl,
+        voiceIsolation: audioSettings.voiceIsolation,
+      };
+      applyMicOptions();
+    }
+  }, [
+    room,
+    audioSettings.noiseSuppression,
+    audioSettings.echoCancellation,
+    audioSettings.autoGainControl,
+    audioSettings.voiceIsolation,
+    applyMicOptions,
+  ]);
+
+  // Применяем настройки микрофона при инициализации (если трек уже существует)
+  // и при появлении нового трека микрофона
+  useEffect(() => {
+    if (!room) return;
+
+    // Применяем настройки сразу, если трек уже существует
+    const checkAndApply = () => {
+      const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+      if (pub?.track) {
+        console.log('[AudioSettings] Applying saved mic settings on init/track appear');
+        applyMicOptions();
+      }
+    };
+
+    // Проверяем сразу
+    checkAndApply();
+
+    // Слушаем появление треков микрофона
+    const handleTrackPublished = (publication: import('livekit-client').LocalTrackPublication) => {
+      if (publication.source === Track.Source.Microphone && publication.track) {
+        console.log('[AudioSettings] Microphone track published, applying saved settings');
+        // Небольшая задержка, чтобы трек точно был готов
+        setTimeout(() => {
+          applyMicOptions();
+        }, 100);
+      }
+    };
+
+    room.on('localTrackPublished', handleTrackPublished);
+
+    return () => {
+      room.off('localTrackPublished', handleTrackPublished);
+    };
+  }, [room, applyMicOptions]);
+
+  // Применяем устройство динамиков при инициализации
+  useEffect(() => {
+    if (!room || !audioSettings.speakerDeviceId) return;
+    // Небольшая задержка для инициализации комнаты
+    const timer = setTimeout(() => {
+      console.log('[AudioSettings] Applying saved speaker device on init');
+      applySpeakerDevice();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [room]); // Только при монтировании комнаты, не при каждом изменении speakerDeviceId
+
+  // ─── Noise Gate ──────────────────────────────────────────────────────────
+
+  /** Возвращает LocalAudioTrack микрофона или null */
+  function getMicTrack() {
+    if (!room) return null;
+    const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+    const track = pub?.track;
+    if (!track || track.kind !== Track.Kind.Audio) return null;
+    return track as import('livekit-client').LocalAudioTrack;
+  }
+
+  // Включение / выключение noise gate
+  useEffect(() => {
+    if (!room) return;
+
+    async function applyNoiseGate(enabled: boolean) {
+      const track = getMicTrack();
+      if (!track) return;
+
+      if (enabled) {
+        // Не устанавливаем дважды
+        if (track.getProcessor()) {
+          console.log('[NoiseGate] processor already set, skipping');
+          return;
+        }
+        console.log('[NoiseGate] enabling processor');
+        // Синхронизируем опции из актуальных настроек
+        noiseGateRef.current.options = {
+          threshold: audioSettings.noiseGateThreshold,
+          attack: audioSettings.noiseGateAttack,
+          release: audioSettings.noiseGateRelease,
+        };
+        const proc = createNoiseGateProcessor(noiseGateRef.current);
+        try {
+          await track.setProcessor(proc);
+          console.log('[NoiseGate] processor enabled successfully');
+        } catch (e) {
+          console.error('[NoiseGate] failed to set processor:', e);
+        }
+      } else {
+        if (!track.getProcessor()) return;
+        console.log('[NoiseGate] disabling processor');
+        try {
+          await track.stopProcessor();
+          noiseGateRef.current.node = null;
+          console.log('[NoiseGate] processor disabled successfully');
+        } catch (e) {
+          console.error('[NoiseGate] failed to stop processor:', e);
+        }
+      }
+    }
+
+    applyNoiseGate(audioSettings.noiseGateEnabled);
+
+    // Также применяем при появлении трека (пользователь включил мик после открытия настроек)
+    const handleTrackPublished = (publication: import('livekit-client').LocalTrackPublication) => {
+      if (publication.source === Track.Source.Microphone && audioSettings.noiseGateEnabled) {
+        setTimeout(() => applyNoiseGate(true), 150);
+      }
+    };
+    room.on('localTrackPublished', handleTrackPublished);
+    return () => {
+      room.off('localTrackPublished', handleTrackPublished);
+    };
+  }, [room, audioSettings.noiseGateEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Обновление параметров noise gate без перезапуска processor
+  useEffect(() => {
+    noiseGateRef.current.options = {
+      threshold: audioSettings.noiseGateThreshold,
+      attack: audioSettings.noiseGateAttack,
+      release: audioSettings.noiseGateRelease,
+    };
+    if (noiseGateRef.current.node) {
+      noiseGateRef.current.node.port.postMessage({
+        threshold: Math.pow(10, audioSettings.noiseGateThreshold / 20),
+        attackMs: audioSettings.noiseGateAttack,
+        releaseMs: audioSettings.noiseGateRelease,
+      });
+    }
+  }, [audioSettings.noiseGateThreshold, audioSettings.noiseGateAttack, audioSettings.noiseGateRelease]);
 
   // Находим текущий пресет по настройкам
   const currentPresetKey = Object.entries(PRESETS).find(
@@ -130,6 +409,16 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
       <div className="flex items-center justify-between border-b border-[#2a2a2a] px-4 py-3">
         <div className="flex gap-1">
           <button
+            onClick={() => setActiveTab('audio')}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              activeTab === 'audio'
+                ? 'bg-[#2a2a2a] text-white'
+                : 'text-gray-400 hover:text-white hover:bg-[#252525]'
+            }`}
+          >
+            Audio
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
             className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
               activeTab === 'settings'
@@ -137,7 +426,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
                 : 'text-gray-400 hover:text-white hover:bg-[#252525]'
             }`}
           >
-            Settings
+            Screen
           </button>
           <button
             onClick={() => setActiveTab('stats')}
@@ -163,7 +452,207 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
 
       {/* Контент */}
       <div className="p-4 max-h-[60vh] overflow-y-auto">
-        {activeTab === 'settings' ? (
+        {activeTab === 'audio' ? (
+          <div className="space-y-6">
+            {/* Input (microphone) — устройство выбирается на кнопке Microphone в панели */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                <span>🎤</span> Microphone (Input)
+              </h3>
+              <p className="text-[10px] text-gray-500 mb-3">
+                Device: use the Microphone button dropdown in the control bar
+              </p>
+              <div className="space-y-2">
+                  {[
+                    { key: 'noiseSuppression' as const, label: 'Noise suppression', desc: 'Reduces background noise' },
+                    { key: 'echoCancellation' as const, label: 'Echo cancellation', desc: 'Removes echo from speakers' },
+                    { key: 'autoGainControl' as const, label: 'Auto gain', desc: 'Normalizes microphone level' },
+                    { key: 'voiceIsolation' as const, label: 'Voice isolation', desc: 'Stronger noise reduction (experimental)' },
+                  ].map(({ key, label, desc }) => (
+                    <label key={key} className="flex items-center justify-between gap-3 py-1.5 cursor-pointer group">
+                      <div>
+                        <span className="text-xs text-white">{label}</span>
+                        <span className="block text-[10px] text-gray-500">{desc}</span>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={audioSettings[key]}
+                        onClick={() => setAudioSettings({ [key]: !audioSettings[key] })}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${
+                          audioSettings[key] ? 'bg-blue-600' : 'bg-[#3a3a3a]'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                            audioSettings[key] ? 'left-4' : 'left-0.5'
+                          }`}
+                        />
+                      </button>
+                    </label>
+                  ))}
+              </div>
+            </div>
+
+            {/* Noise Gate */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                <span>🚪</span> Noise Gate
+              </h3>
+              <p className="text-[10px] text-gray-500 mb-3">
+                Blocks mic when silent — cuts background noise in pauses between speech
+              </p>
+
+              {/* Enable toggle */}
+              <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer mb-3">
+                <div>
+                  <span className="text-xs text-white">Enable Noise Gate</span>
+                  <span className="block text-[10px] text-gray-500">
+                    {audioSettings.noiseGateEnabled ? 'Active — mic muted below threshold' : 'Inactive'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={audioSettings.noiseGateEnabled}
+                  onClick={() => setAudioSettings({ noiseGateEnabled: !audioSettings.noiseGateEnabled })}
+                  className={`relative w-9 h-5 rounded-full transition-colors ${
+                    audioSettings.noiseGateEnabled ? 'bg-blue-600' : 'bg-[#3a3a3a]'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                      audioSettings.noiseGateEnabled ? 'left-4' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </label>
+
+              {/* Parameters — shown only when enabled */}
+              {audioSettings.noiseGateEnabled && (
+                <div className="space-y-3 pl-1 border-l-2 border-[#2a2a2a]">
+                  {/* Threshold */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">
+                      Threshold: {audioSettings.noiseGateThreshold} dB
+                      <span className="text-[10px] text-gray-600 ml-1">(lower = more aggressive)</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="-60"
+                      max="0"
+                      step="1"
+                      value={audioSettings.noiseGateThreshold}
+                      onChange={(e) => setAudioSettings({ noiseGateThreshold: parseInt(e.target.value) })}
+                      className="w-full h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    />
+                    <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                      <span>-60 dB</span>
+                      <span>-30 dB</span>
+                      <span>0 dB</span>
+                    </div>
+                  </div>
+
+                  {/* Advanced (attack/release) */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-[10px] text-gray-500 hover:text-gray-400 select-none flex items-center gap-1.5 py-1">
+                      <svg className="w-2.5 h-2.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      Advanced (Attack / Release)
+                    </summary>
+                    <div className="mt-2 space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1.5">
+                          Attack: {audioSettings.noiseGateAttack} ms
+                          <span className="text-[10px] text-gray-600 ml-1">(how fast gate opens)</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="1"
+                          max="100"
+                          step="1"
+                          value={audioSettings.noiseGateAttack}
+                          onChange={(e) => setAudioSettings({ noiseGateAttack: parseInt(e.target.value) })}
+                          className="w-full h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        />
+                        <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                          <span>1 ms</span>
+                          <span>100 ms</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1.5">
+                          Release: {audioSettings.noiseGateRelease} ms
+                          <span className="text-[10px] text-gray-600 ml-1">(how fast gate closes)</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="20"
+                          max="500"
+                          step="10"
+                          value={audioSettings.noiseGateRelease}
+                          onChange={(e) => setAudioSettings({ noiseGateRelease: parseInt(e.target.value) })}
+                          className="w-full h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        />
+                        <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                          <span>20 ms</span>
+                          <span>500 ms</span>
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              )}
+            </div>
+
+            {/* Output (speakers) */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                <span>🔊</span> Speakers (Output)
+              </h3>
+              <div className="space-y-3">
+                {audioDevices.outputs.length > 0 && (
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1.5">Output device</label>
+                    <select
+                      value={audioSettings.speakerDeviceId}
+                      onChange={(e) => setAudioSettings({ speakerDeviceId: e.target.value })}
+                      className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
+                    >
+                      <option value="">Default</option>
+                      {audioDevices.outputs.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>
+                          {d.label || `Speaker ${d.deviceId.slice(0, 8)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1.5">
+                    Speaker volume: {Math.round(audioSettings.outputVolume * 100)}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={Math.min(1, audioSettings.outputVolume)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setAudioSettings({ outputVolume: Math.max(0, Math.min(1, val)) });
+                    }}
+                    className="w-full h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Note: HTML audio volume is limited to 0-100%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'settings' ? (
           <div className="space-y-4">
             <div>
               <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Screen Share Quality</h3>
