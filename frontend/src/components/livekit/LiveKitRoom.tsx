@@ -1,10 +1,12 @@
-import { LiveKitRoom, VideoConference } from '@livekit/components-react';
+import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { type RoomOptions } from 'livekit-client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAudioSettings } from '../../hooks/useAudioSettings';
+import { useScreenShareSettings } from '../../hooks/useScreenShareSettings';
 import ScreenShareHandler from './ScreenShareHandler';
 import StreamSettings from './StreamSettings';
-import { useScreenShareSettings } from '../../hooks/useScreenShareSettings';
+import { VideoConferenceWithVolume } from './VideoConferenceWithVolume';
 
 interface LiveKitRoomProps {
   roomName: string;
@@ -20,7 +22,8 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [showStreamSettings, setShowStreamSettings] = useState(false);
-  const { settings: screenShareSettings } = useScreenShareSettings();
+  useScreenShareSettings(); // ScreenShareHandler uses getScreenShareSettings()
+  const { settings: audioSettings } = useAudioSettings();
 
   // Интеграция кнопки в панель управления LiveKit
   useEffect(() => {
@@ -136,6 +139,29 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
     fetchToken();
   }, [fetchToken]);
 
+  // Room options — must be before early return (Rules of Hooks)
+  // Без processor: AudioContext блокируется браузером до клика, ломая микрофон
+  const roomOptions: RoomOptions = useMemo(
+    () => ({
+      audioCaptureDefaults: {
+        noiseSuppression: true,
+        echoCancellation: true,
+        autoGainControl: true,
+        voiceIsolation: false,
+      },
+      publishDefaults: {
+        videoCodec: 'av1',
+        videoEncoding: { maxBitrate: 2_500_000, maxFramerate: 60 },
+        screenShareEncoding: {
+          maxBitrate: 8_000_000,
+          maxFramerate: 60,
+        },
+        simulcast: false,
+      },
+    }),
+    []
+  );
+
   if (status === 'loading' || !connection) {
     return (
       <div className="flex items-center justify-center h-full text-white">
@@ -165,18 +191,6 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
     );
   }
 
-  const roomOptions: RoomOptions = {
-    publishDefaults: {
-      videoCodec: 'av1',
-      videoEncoding: { maxBitrate: 2_500_000, maxFramerate: 60 },
-      screenShareEncoding: {
-        maxBitrate: 8_000_000,
-        maxFramerate: screenShareSettings.frameRate,
-      },
-      simulcast: false,
-    },
-  };
-
   return (
     <LiveKitRoom
       video={{
@@ -191,7 +205,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       onDisconnected={onLeave}
       options={roomOptions as RoomOptions}
     >
-      <VideoConference />
+      <VideoConferenceWithVolume outputVolume={audioSettings.outputVolume} />
       
       <ScreenShareHandler />
       
