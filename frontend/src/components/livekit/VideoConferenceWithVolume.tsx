@@ -4,19 +4,22 @@
  */
 import {
   CarouselLayout,
+  Chat,
   ConnectionStateToast,
+  ControlBar,
   FocusLayout,
   FocusLayoutContainer,
   GridLayout,
   LayoutContextProvider,
   ParticipantTile,
   RoomAudioRenderer,
+  useCreateLayoutContext,
+  usePinnedTracks,
+  useTracks,
 } from '@livekit/components-react';
-import { isEqualTrackRef, isTrackReference, isWeb } from '@livekit/components-core';
+import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
-import { Chat, ControlBar } from '@livekit/components-react';
-import { useCreateLayoutContext, usePinnedTracks, useTracks } from '@livekit/components-react';
 
 interface VideoConferenceWithVolumeProps extends React.HTMLAttributes<HTMLDivElement> {
   outputVolume?: number;
@@ -28,7 +31,7 @@ export function VideoConferenceWithVolume({ outputVolume = 1, ...props }: VideoC
     unreadMessages: 0,
     showSettings: false,
   });
-  const lastAutoFocusedScreenShareTrack = React.useRef<any>(null);
+  const lastAutoFocusedScreenShareTrack = React.useRef<TrackReferenceOrPlaceholder | null>(null);
 
   const tracks = useTracks(
     [

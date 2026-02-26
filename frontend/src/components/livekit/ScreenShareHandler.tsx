@@ -1,5 +1,5 @@
 import { useRoomContext } from '@livekit/components-react';
-import { type ScreenShareCaptureOptions } from 'livekit-client';
+import { type ScreenShareCaptureOptions, type TrackPublishOptions } from 'livekit-client';
 import { useEffect } from 'react';
 import { getScreenShareSettings } from '../../hooks/useScreenShareSettings';
 
@@ -33,7 +33,7 @@ export default function ScreenShareHandler() {
     localParticipant.setScreenShareEnabled = async function (
       enabled: boolean,
       options?: ScreenShareCaptureOptions,
-      publishOptions?: any,
+      publishOptions?: TrackPublishOptions,
     ) {
       if (enabled && !options) {
         const settings = getScreenShareSettings();
