@@ -6,8 +6,6 @@ export interface AudioSettings {
   echoCancellation: boolean;
   autoGainControl: boolean;
   voiceIsolation: boolean;
-  microphoneDeviceId: string;
-  inputGain: number; // 0.5 - 2.0, 1 = default
 
   // Noise Gate
   noiseGateEnabled: boolean;
@@ -17,7 +15,10 @@ export interface AudioSettings {
 
   // Output (speakers)
   speakerDeviceId: string;
-  outputVolume: number; // 0 - 1.5, 1 = default
+  outputVolume: number; // 0 - 1, 1 = default
+
+  // UI
+  joinLeaveSounds: boolean;
 }
 
 const DEFAULT_SETTINGS: AudioSettings = {
@@ -25,14 +26,13 @@ const DEFAULT_SETTINGS: AudioSettings = {
   echoCancellation: true,
   autoGainControl: true,
   voiceIsolation: false,
-  microphoneDeviceId: '',
-  inputGain: 1,
   noiseGateEnabled: false,
   noiseGateThreshold: -40,
   noiseGateAttack: 10,
   noiseGateRelease: 100,
   speakerDeviceId: '',
   outputVolume: 1,
+  joinLeaveSounds: true,
 };
 
 const STORAGE_KEY = 'voice-app:audio-settings';
