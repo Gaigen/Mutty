@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import LiveKitRoomComponent from '@/components/livekit/LiveKitRoom';
 
 export default function RoomPage() {
@@ -21,7 +22,9 @@ export default function RoomPage() {
 
   return (
     <div className="h-screen w-full bg-black">
-      <LiveKitRoomComponent roomName={roomName} identity={identity} onLeave={() => navigate('/')} />
+      <ErrorBoundary onReset={() => navigate('/')}>
+        <LiveKitRoomComponent roomName={roomName} identity={identity} onLeave={() => navigate('/')} />
+      </ErrorBoundary>
     </div>
   );
 }

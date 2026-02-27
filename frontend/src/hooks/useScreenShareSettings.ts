@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export interface ScreenShareSettings {
   resolution: {
@@ -42,6 +42,14 @@ const listeners = new Set<(settings: ScreenShareSettings) => void>();
 
 export function useScreenShareSettings() {
   const [settings, setSettingsState] = useState<ScreenShareSettings>(currentSettings);
+
+  useEffect(() => {
+    const listener = (s: ScreenShareSettings) => setSettingsState(s);
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
 
   const setSettings = useCallback((newSettings: Partial<ScreenShareSettings>) => {
     // Если передан полный объект с resolution, полностью заменяем resolution
