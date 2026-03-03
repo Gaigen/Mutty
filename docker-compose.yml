@@ -41,8 +41,33 @@ services:
       timeout: 5s
       retries: 3
 
+  # YouTube Bot — LiveKit participant that streams YT audio/video into a room
+  # LIVEKIT_URL here is the internal Docker address (livekit:7880, NOT localhost)
+  # VITE_AGENT_ENDPOINT is the browser-facing address (localhost:5000)
+  agent-server:
+    build:
+      context: ./agent-server
+    container_name: voice-app-agent-server
+    ports:
+      - "5000:5000"
+    environment:
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
+      - AGENT_PORT=5000
+      # CORS: через запятую (пусто = разрешить все "*"). Пример: http://localhost:1420,https://myapp.com
+      - AGENT_CORS_ORIGINS=${AGENT_CORS_ORIGINS:-}
+    depends_on:
+      - livekit
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
   # Frontend приложение
-  # Важно: VITE_* — это URL для БРАУЗЕРА (твой ПК). Всегда localhost или твой домен, НЕ livekit!
+  # Важно: VITE_* — это URL для БРАУЗЕРА (твой ПК). Всегда localhost или твой домен, НЕ livekit/agent-server!
   frontend:
     build:
       context: ./frontend
@@ -50,12 +75,14 @@ services:
       args:
         VITE_LIVEKIT_URL: ${VITE_LIVEKIT_URL:-ws://localhost:7880}
         VITE_TOKEN_ENDPOINT: ${VITE_TOKEN_ENDPOINT:-http://localhost:4000/api/token}
+        VITE_AGENT_ENDPOINT: ${VITE_AGENT_ENDPOINT:-http://localhost:5000}
     container_name: voice-app-frontend
     ports:
       - "1420:80"
     depends_on:
       - token-server
       - livekit
+      - agent-server
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]

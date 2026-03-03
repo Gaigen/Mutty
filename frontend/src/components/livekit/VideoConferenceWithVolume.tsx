@@ -6,7 +6,6 @@ import {
   CarouselLayout,
   Chat,
   ConnectionStateToast,
-  ControlBar,
   FocusLayout,
   FocusLayoutContainer,
   GridLayout,
@@ -20,12 +19,18 @@ import {
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
+import { CustomControlBar } from './CustomControlBar';
 
 interface VideoConferenceWithVolumeProps extends React.HTMLAttributes<HTMLDivElement> {
   outputVolume?: number;
+  rightControls?: React.ReactNode;
 }
 
-export function VideoConferenceWithVolume({ outputVolume = 1, ...props }: VideoConferenceWithVolumeProps) {
+export function VideoConferenceWithVolume({
+  outputVolume = 1,
+  rightControls,
+  ...props
+}: VideoConferenceWithVolumeProps) {
   const [widgetState, setWidgetState] = React.useState({
     showChat: false,
     unreadMessages: 0,
@@ -107,7 +112,7 @@ export function VideoConferenceWithVolume({ outputVolume = 1, ...props }: VideoC
                 </FocusLayoutContainer>
               </div>
             )}
-            <ControlBar controls={{ chat: true, settings: false }} />
+            <CustomControlBar controls={{ chat: true }} rightControls={rightControls} />
           </div>
           <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
         </LayoutContextProvider>

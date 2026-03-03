@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { getScreenShareSettings } from '../../hooks/useScreenShareSettings';
 
 /**
- * Компонент для применения настроек screen share
+ * Применяет настройки screen share (resolution, fps, codec) при каждом запуске демонстрации.
+ * publishOptions с videoCodec передаётся явно — иначе LiveKit может откатиться на VP8.
  */
 export default function ScreenShareHandler() {
   const room = useRoomContext();
@@ -12,42 +13,55 @@ export default function ScreenShareHandler() {
   useEffect(() => {
     if (!room) return;
 
-    const localParticipant = room.localParticipant;
-    const originalCreateScreenTracks = localParticipant.createScreenTracks.bind(localParticipant);
-    const originalSetScreenShareEnabled = localParticipant.setScreenShareEnabled.bind(localParticipant);
+    const lp = room.localParticipant;
+    const origCreateScreenTracks = lp.createScreenTracks.bind(lp);
+    const origSetScreenShareEnabled = lp.setScreenShareEnabled.bind(lp);
 
-    localParticipant.createScreenTracks = async function (options?: ScreenShareCaptureOptions) {
-      const settings = getScreenShareSettings();
-      const mergedOptions: ScreenShareCaptureOptions = {
+    lp.createScreenTracks = async function (options?: ScreenShareCaptureOptions) {
+      const s = getScreenShareSettings();
+      return origCreateScreenTracks({
         ...options,
         resolution: {
-          ...settings.resolution,
-          frameRate: settings.frameRate,
+          width: s.resolution.width,
+          height: s.resolution.height,
+          frameRate: s.frameRate,
           ...options?.resolution,
         },
-        contentHint: options?.contentHint ?? 'motion',
-      };
-      return originalCreateScreenTracks(mergedOptions);
+        contentHint: options?.contentHint ?? s.contentHint,
+      });
     };
 
-    localParticipant.setScreenShareEnabled = async function (
+    lp.setScreenShareEnabled = async function (
       enabled: boolean,
-      options?: ScreenShareCaptureOptions,
+      captureOptions?: ScreenShareCaptureOptions,
       publishOptions?: TrackPublishOptions,
     ) {
-      if (enabled && !options) {
-        const settings = getScreenShareSettings();
-        options = {
-          resolution: { ...settings.resolution, frameRate: settings.frameRate },
-          contentHint: 'motion',
-        };
-      }
-      return originalSetScreenShareEnabled(enabled, options, publishOptions);
+      if (!enabled) return origSetScreenShareEnabled(enabled, captureOptions, publishOptions);
+
+      const s = getScreenShareSettings();
+      const mergedCapture: ScreenShareCaptureOptions = captureOptions ?? {
+        resolution: {
+          width: s.resolution.width,
+          height: s.resolution.height,
+          frameRate: s.frameRate,
+        },
+        contentHint: s.contentHint,
+      };
+      // Явно задаём videoCodec чтобы не откатываться на VP8
+      const mergedPublish: TrackPublishOptions = {
+        videoCodec: s.videoCodec,
+        videoEncoding: {
+          maxBitrate: s.maxBitrate,
+          maxFramerate: s.frameRate,
+        },
+        ...publishOptions,
+      };
+      return origSetScreenShareEnabled(enabled, mergedCapture, mergedPublish);
     };
 
     return () => {
-      localParticipant.createScreenTracks = originalCreateScreenTracks;
-      localParticipant.setScreenShareEnabled = originalSetScreenShareEnabled;
+      lp.createScreenTracks = origCreateScreenTracks;
+      lp.setScreenShareEnabled = origSetScreenShareEnabled;
     };
   }, [room]);
 
