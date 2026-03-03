@@ -57,6 +57,9 @@ services:
       - AGENT_PORT=5000
       # CORS: через запятую (пусто = разрешить все "*"). Пример: http://localhost:1420,https://myapp.com
       - AGENT_CORS_ORIGINS=${AGENT_CORS_ORIGINS:-}
+      # Прокси только для загрузки медиа (YouTube/SoundCloud и т.д.). К LiveKit — без прокси.
+      # Укажи HTTP/SOCKS адрес клиента VLESS (v2ray/xray): http://proxy:7890 или socks5://proxy:1080
+      - AGENT_MEDIA_PROXY=${AGENT_MEDIA_PROXY:-}
     depends_on:
       - livekit
     restart: unless-stopped
