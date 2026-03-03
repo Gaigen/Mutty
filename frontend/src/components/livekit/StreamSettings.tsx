@@ -2,14 +2,35 @@ import { useRoomContext, useRemoteParticipants } from '@livekit/components-react
 import { VideoSenderStats, VideoReceiverStats, Track, type LocalVideoTrack, type RemoteVideoTrack, type RemoteAudioTrack } from 'livekit-client';
 import { useEffect, useRef, useState } from 'react';
 import { useAudioSettings } from '../../hooks/useAudioSettings';
-import { useScreenShareSettings } from '../../hooks/useScreenShareSettings';
+import { useCameraSettings } from '../../hooks/useCameraSettings';
+import { useScreenShareSettings, type VideoCodec, type ContentHint } from '../../hooks/useScreenShareSettings';
 
-const PRESETS = {
-  '720p@60': { resolution: { width: 1280, height: 720 }, frameRate: 60 },
-  '720p@30': { resolution: { width: 1280, height: 720 }, frameRate: 30 },
+const SCREEN_PRESETS = {
   '1080p@60': { resolution: { width: 1920, height: 1080 }, frameRate: 60 },
   '1080p@30': { resolution: { width: 1920, height: 1080 }, frameRate: 30 },
+  '720p@60':  { resolution: { width: 1280, height: 720 },  frameRate: 60 },
+  '720p@30':  { resolution: { width: 1280, height: 720 },  frameRate: 30 },
 } as const;
+
+const CAMERA_PRESETS = {
+  '1080p': { width: 1920, height: 1080 },
+  '720p':  { width: 1280, height: 720  },
+  '480p':  { width: 854,  height: 480  },
+  '360p':  { width: 640,  height: 360  },
+} as const;
+
+const CODECS: { value: VideoCodec; label: string; desc: string }[] = [
+  { value: 'av1',  label: 'AV1',  desc: 'Лучшее качество, макс. сжатие, требует поддержки сервера' },
+  { value: 'vp9',  label: 'VP9',  desc: 'Хорошее качество, широкая совместимость' },
+  { value: 'h264', label: 'H.264', desc: 'Максимальная совместимость, хуже сжатие' },
+  { value: 'vp8',  label: 'VP8',  desc: 'Устаревший, только для совместимости' },
+];
+
+const CONTENT_HINTS: { value: ContentHint; label: string; desc: string }[] = [
+  { value: 'motion', label: 'Motion',  desc: 'Видео, игры — плавность важнее чёткости' },
+  { value: 'detail', label: 'Detail',  desc: 'Код, дизайн — чёткость важнее плавности' },
+  { value: 'text',   label: 'Text',    desc: 'Документы, таблицы — максимальная резкость текста' },
+];
 
 function computeBitrate(
   current: VideoSenderStats | VideoReceiverStats,
@@ -44,9 +65,10 @@ interface StreamSettingsProps {
 
 export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps) {
   const room = useRoomContext();
-  const { settings, setSettings } = useScreenShareSettings();
+  const { settings: screenSettings, setSettings: setScreenSettings } = useScreenShareSettings();
+  const { settings: camSettings, setSettings: setCamSettings } = useCameraSettings();
   const { settings: audioSettings, setSettings: setAudioSettings } = useAudioSettings();
-  const [activeTab, setActiveTab] = useState<'audio' | 'settings' | 'stats' | 'people'>('audio');
+  const [activeTab, setActiveTab] = useState<'audio' | 'screen' | 'camera' | 'people' | 'stats'>('audio');
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
   const remoteParticipants = useRemoteParticipants();
   const [participantVolumes, setParticipantVolumes] = useState<Record<string, number>>({});
@@ -65,6 +87,19 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
     const audioTrack = pub?.audioTrack as RemoteAudioTrack | undefined;
     audioTrack?.setVolume(volume);
   };
+
+  // Находим активный пресет экрана
+  const currentScreenPreset = Object.entries(SCREEN_PRESETS).find(
+    ([, p]) =>
+      p.resolution.width === screenSettings.resolution.width &&
+      p.resolution.height === screenSettings.resolution.height &&
+      p.frameRate === screenSettings.frameRate,
+  )?.[0] ?? '';
+
+  // Находим активный пресет камеры
+  const currentCamPreset = Object.entries(CAMERA_PRESETS).find(
+    ([, p]) => p.width === camSettings.width && p.height === camSettings.height,
+  )?.[0] ?? '';
 
   // Загружаем только выходные устройства — входные выбираются через кнопку Microphone
   useEffect(() => {
@@ -129,27 +164,20 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
     return () => clearInterval(interval);
   }, [isOpen, activeTab, room]);
 
-  // Находим активный пресет
-  const currentPresetKey = Object.entries(PRESETS).find(
-    ([, preset]) =>
-      preset.resolution.width === settings.resolution.width &&
-      preset.resolution.height === settings.resolution.height &&
-      preset.frameRate === settings.frameRate,
-  )?.[0] ?? '';
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg shadow-2xl z-50 w-[90vw] max-w-md">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#2a2a2a] px-4 py-3">
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {(
             [
-              { id: 'audio', label: 'Audio' },
-              { id: 'settings', label: 'Screen' },
-              { id: 'people', label: `People${remoteParticipants.length > 0 ? ` (${remoteParticipants.length})` : ''}` },
-              { id: 'stats', label: 'Stats' },
+              { id: 'audio',  label: 'Audio' },
+              { id: 'screen', label: 'Screen' },
+              { id: 'camera', label: 'Camera' },
+              { id: 'people', label: remoteParticipants.length > 0 ? `People (${remoteParticipants.length})` : 'People' },
+              { id: 'stats',  label: 'Stats' },
             ] as const
           ).map(({ id, label }) => (
             <button
@@ -383,17 +411,18 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
           </div>
         )}
 
-        {activeTab === 'settings' && (
-          <div className="space-y-4">
+        {activeTab === 'screen' && (
+          <div className="space-y-5">
+            {/* Resolution + FPS presets */}
             <div>
-              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Screen Share Quality</h3>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {Object.entries(PRESETS).map(([key, preset]) => (
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Resolution & FPS</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(SCREEN_PRESETS).map(([key, preset]) => (
                   <button
                     key={key}
-                    onClick={() => setSettings(preset)}
+                    onClick={() => setScreenSettings(preset)}
                     className={`px-3 py-2.5 rounded text-xs font-medium transition-all border ${
-                      currentPresetKey === key
+                      currentScreenPreset === key
                         ? 'bg-[#3a3a3a] text-white border-[#4a4a4a]'
                         : 'bg-[#252525] text-gray-300 hover:bg-[#2a2a2a] hover:text-white border-[#2a2a2a]'
                     }`}
@@ -403,51 +432,206 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
                   </button>
                 ))}
               </div>
+            </div>
 
-              <details className="group">
-                <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 select-none py-2 flex items-center gap-2">
-                  <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  Advanced Settings
-                </summary>
-                <div className="mt-3 space-y-3 pt-3 border-t border-[#2a2a2a]">
-                  <div className="grid grid-cols-2 gap-3">
+            {/* Codec */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Codec</h3>
+              <div className="space-y-1.5">
+                {CODECS.map(({ value, label, desc }) => (
+                  <label key={value} className="flex items-start gap-2.5 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="screen-codec"
+                      value={value}
+                      checked={screenSettings.videoCodec === value}
+                      onChange={() => setScreenSettings({ videoCodec: value })}
+                      className="mt-0.5 accent-blue-500 shrink-0"
+                    />
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1.5">Width</label>
-                      <input
-                        type="number"
-                        value={settings.resolution.width}
-                        onChange={(e) =>
-                          setSettings({ resolution: { ...settings.resolution, width: parseInt(e.target.value) || 1280 } })
-                        }
-                        className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
-                      />
+                      <span className="text-xs text-white font-medium">{label}</span>
+                      <span className="block text-[10px] text-gray-500">{desc}</span>
                     </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Content hint */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Content Type</h3>
+              <div className="space-y-1.5">
+                {CONTENT_HINTS.map(({ value, label, desc }) => (
+                  <label key={value} className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="content-hint"
+                      value={value}
+                      checked={screenSettings.contentHint === value}
+                      onChange={() => setScreenSettings({ contentHint: value })}
+                      className="mt-0.5 accent-blue-500 shrink-0"
+                    />
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1.5">Height</label>
-                      <input
-                        type="number"
-                        value={settings.resolution.height}
-                        onChange={(e) =>
-                          setSettings({ resolution: { ...settings.resolution, height: parseInt(e.target.value) || 720 } })
-                        }
-                        className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
-                      />
+                      <span className="text-xs text-white font-medium">{label}</span>
+                      <span className="block text-[10px] text-gray-500">{desc}</span>
                     </div>
-                  </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Bitrate */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Max Bitrate</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="1000000"
+                  max="20000000"
+                  step="500000"
+                  value={screenSettings.maxBitrate}
+                  onChange={(e) => setScreenSettings({ maxBitrate: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+                <span className="text-xs text-white w-16 text-right shrink-0">
+                  {(screenSettings.maxBitrate / 1_000_000).toFixed(1)} Mbps
+                </span>
+              </div>
+              <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                <span>1 Mbps</span><span>20 Mbps</span>
+              </div>
+            </div>
+
+            {/* Custom resolution */}
+            <details className="group">
+              <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 select-none py-2 flex items-center gap-2">
+                <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                Custom Resolution
+              </summary>
+              <div className="mt-3 space-y-3 pt-3 border-t border-[#2a2a2a]">
+                <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1.5">Frame Rate (FPS)</label>
+                    <label className="block text-xs text-gray-400 mb-1">Width</label>
                     <input
                       type="number"
-                      value={settings.frameRate}
-                      onChange={(e) => setSettings({ frameRate: parseInt(e.target.value) || 60 })}
+                      value={screenSettings.resolution.width}
+                      onChange={(e) =>
+                        setScreenSettings({ resolution: { ...screenSettings.resolution, width: parseInt(e.target.value) || 1920 } })
+                      }
+                      className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Height</label>
+                    <input
+                      type="number"
+                      value={screenSettings.resolution.height}
+                      onChange={(e) =>
+                        setScreenSettings({ resolution: { ...screenSettings.resolution, height: parseInt(e.target.value) || 1080 } })
+                      }
+                      className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">FPS</label>
+                    <input
+                      type="number"
+                      value={screenSettings.frameRate}
+                      onChange={(e) => setScreenSettings({ frameRate: parseInt(e.target.value) || 60 })}
                       min="1" max="60"
-                      className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
+                      className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
                     />
                   </div>
                 </div>
-              </details>
+              </div>
+            </details>
+          </div>
+        )}
+
+        {activeTab === 'camera' && (
+          <div className="space-y-5">
+            <p className="text-[10px] text-gray-500">Применяется при следующем подключении к комнате.</p>
+
+            {/* Resolution presets */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Resolution</h3>
+              <div className="grid grid-cols-4 gap-2">
+                {Object.entries(CAMERA_PRESETS).map(([key, preset]) => (
+                  <button
+                    key={key}
+                    onClick={() => setCamSettings({ width: preset.width, height: preset.height })}
+                    className={`px-2 py-2 rounded text-xs font-medium transition-all border ${
+                      currentCamPreset === key
+                        ? 'bg-[#3a3a3a] text-white border-[#4a4a4a]'
+                        : 'bg-[#252525] text-gray-300 hover:bg-[#2a2a2a] hover:text-white border-[#2a2a2a]'
+                    }`}
+                  >
+                    {key}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* FPS */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Frame Rate</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="15" max="60" step="5"
+                  value={camSettings.maxFramerate}
+                  onChange={(e) => setCamSettings({ maxFramerate: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+                <span className="text-xs text-white w-12 text-right shrink-0">{camSettings.maxFramerate} FPS</span>
+              </div>
+            </div>
+
+            {/* Codec */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Codec</h3>
+              <div className="space-y-1.5">
+                {CODECS.map(({ value, label, desc }) => (
+                  <label key={value} className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="camera-codec"
+                      value={value}
+                      checked={camSettings.videoCodec === value}
+                      onChange={() => setCamSettings({ videoCodec: value })}
+                      className="mt-0.5 accent-blue-500 shrink-0"
+                    />
+                    <div>
+                      <span className="text-xs text-white font-medium">{label}</span>
+                      <span className="block text-[10px] text-gray-500">{desc}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Bitrate */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Max Bitrate</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="500000"
+                  max="8000000"
+                  step="250000"
+                  value={camSettings.maxBitrate}
+                  onChange={(e) => setCamSettings({ maxBitrate: parseInt(e.target.value) })}
+                  className="flex-1 h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+                <span className="text-xs text-white w-16 text-right shrink-0">
+                  {(camSettings.maxBitrate / 1_000_000).toFixed(2)} Mbps
+                </span>
+              </div>
+              <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                <span>0.5 Mbps</span><span>8 Mbps</span>
+              </div>
             </div>
           </div>
         )}

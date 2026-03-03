@@ -1,16 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
 
+export type VideoCodec = 'av1' | 'vp9' | 'h264' | 'vp8';
+export type ContentHint = 'motion' | 'detail' | 'text';
+
 export interface ScreenShareSettings {
-  resolution: {
-    width: number;
-    height: number;
-  };
+  // Capture
+  resolution: { width: number; height: number };
   frameRate: number;
+  contentHint: ContentHint;
+  // Publish
+  videoCodec: VideoCodec;
+  maxBitrate: number; // bps
 }
 
 const DEFAULT_SETTINGS: ScreenShareSettings = {
-  resolution: { width: 1280, height: 720 },
+  resolution: { width: 1920, height: 1080 },
   frameRate: 60,
+  contentHint: 'motion',
+  videoCodec: 'av1',
+  maxBitrate: 8_000_000,
 };
 
 const STORAGE_KEY = 'voice-app:screen-share-settings';
@@ -23,7 +31,7 @@ function loadSettings(): ScreenShareSettings {
       return { ...DEFAULT_SETTINGS, ...parsed };
     }
   } catch (e) {
-    console.warn('Failed to load screen share settings from localStorage:', e);
+    console.warn('Failed to load screen share settings:', e);
   }
   return { ...DEFAULT_SETTINGS };
 }
@@ -32,13 +40,12 @@ function saveSettings(settings: ScreenShareSettings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   } catch (e) {
-    console.warn('Failed to save screen share settings to localStorage:', e);
+    console.warn('Failed to save screen share settings:', e);
   }
 }
 
-// Глобальное состояние для настроек screen share (можно заменить на контекст если нужно)
 let currentSettings: ScreenShareSettings = loadSettings();
-const listeners = new Set<(settings: ScreenShareSettings) => void>();
+const listeners = new Set<(s: ScreenShareSettings) => void>();
 
 export function useScreenShareSettings() {
   const [settings, setSettingsState] = useState<ScreenShareSettings>(currentSettings);
@@ -46,25 +53,18 @@ export function useScreenShareSettings() {
   useEffect(() => {
     const listener = (s: ScreenShareSettings) => setSettingsState(s);
     listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+    return () => { listeners.delete(listener); };
   }, []);
 
   const setSettings = useCallback((newSettings: Partial<ScreenShareSettings>) => {
-    // Если передан полный объект с resolution, полностью заменяем resolution
-    if (newSettings.resolution && typeof newSettings.resolution === 'object') {
-      currentSettings = {
-        ...currentSettings,
-        ...newSettings,
-        resolution: { ...newSettings.resolution }, // Полностью заменяем resolution
-      };
-    } else {
-      currentSettings = { ...currentSettings, ...newSettings };
-    }
+    currentSettings = {
+      ...currentSettings,
+      ...newSettings,
+      ...(newSettings.resolution ? { resolution: { ...newSettings.resolution } } : {}),
+    };
     setSettingsState(currentSettings);
     saveSettings(currentSettings);
-    listeners.forEach((listener) => listener(currentSettings));
+    listeners.forEach((l) => l(currentSettings));
   }, []);
 
   return { settings, setSettings };
@@ -73,4 +73,3 @@ export function useScreenShareSettings() {
 export function getScreenShareSettings(): ScreenShareSettings {
   return currentSettings;
 }
-
