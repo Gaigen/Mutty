@@ -3,6 +3,9 @@ import '@livekit/components-styles';
 import { type RoomOptions, DisconnectReason } from 'livekit-client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAudioSettings, getAudioSettings } from '../../hooks/useAudioSettings';
+import { getCameraSettings } from '../../hooks/useCameraSettings';
+import { getScreenShareSettings } from '../../hooks/useScreenShareSettings';
+import AgentControls from './AgentControls';
 import AudioHandler from './AudioHandler';
 import ScreenShareHandler from './ScreenShareHandler';
 import SoundHandler from './SoundHandler';
@@ -97,10 +100,11 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
     fetchToken();
   }, [fetchToken]);
 
-  // audioCaptureDefaults читаем из сохранённых настроек, чтобы первый захват микрофона
-  // сразу использовал правильные параметры, а не дефолты браузера
+  // Все defaults читаем из сохранённых настроек — без хардкода
   const roomOptions: RoomOptions = useMemo(() => {
     const audio = getAudioSettings();
+    const cam = getCameraSettings();
+    const screen = getScreenShareSettings();
     return {
       audioCaptureDefaults: {
         noiseSuppression: audio.noiseSuppression,
@@ -108,10 +112,13 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
         autoGainControl: audio.autoGainControl,
         voiceIsolation: audio.voiceIsolation,
       },
+      videoCaptureDefaults: {
+        resolution: { width: cam.width, height: cam.height, frameRate: cam.maxFramerate },
+      },
       publishDefaults: {
-        videoCodec: 'av1',
-        videoEncoding: { maxBitrate: 2_500_000, maxFramerate: 60 },
-        screenShareEncoding: { maxBitrate: 8_000_000, maxFramerate: 60 },
+        videoCodec: cam.videoCodec,
+        videoEncoding: { maxBitrate: cam.maxBitrate, maxFramerate: cam.maxFramerate },
+        screenShareEncoding: { maxBitrate: screen.maxBitrate, maxFramerate: screen.frameRate },
         simulcast: false,
       },
     };
@@ -181,10 +188,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
 
   return (
     <LiveKitRoom
-      video={{
-        frameRate: { min: 30, ideal: 60, max: 60 },
-        resolution: { width: 1280, height: 720 },
-      }}
+      video={true}
       audio={true}
       token={connection.token}
       serverUrl={connection.serverUrl}
@@ -193,35 +197,29 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       onDisconnected={handleDisconnected}
       options={roomOptions}
     >
-      <VideoConferenceWithVolume outputVolume={audioSettings.outputVolume} />
+      <VideoConferenceWithVolume
+        outputVolume={audioSettings.outputVolume}
+        rightControls={(
+          <>
+            <AgentControls roomName={roomName} />
+            <button
+              type="button"
+              className="lk-button"
+              title="Stream Settings"
+              aria-label="Stream Settings"
+              aria-pressed={showStreamSettings}
+              onClick={() => setShowStreamSettings((p) => !p)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
+            >
+              <GearIcon />
+              <span>Settings</span>
+            </button>
+          </>
+        )}
+      />
       <AudioHandler />
       <SoundHandler />
       <ScreenShareHandler />
-
-      {/* Кнопка настроек — React-элемент поверх control bar, без DOM-хаков */}
-      <button
-        type="button"
-        className="lk-button"
-        title="Stream Settings"
-        aria-label="Stream Settings"
-        aria-pressed={showStreamSettings}
-        onClick={() => setShowStreamSettings((p) => !p)}
-        style={{
-          position: 'fixed',
-          bottom: '0.75rem',
-          right: '0.75rem',
-          zIndex: 20,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.375rem',
-          backgroundColor: showStreamSettings
-            ? 'var(--lk-control-active-bg, rgba(255,255,255,0.15))'
-            : undefined,
-        }}
-      >
-        <GearIcon />
-        <span>Settings</span>
-      </button>
 
       <StreamSettings isOpen={showStreamSettings} onClose={() => setShowStreamSettings(false)} />
     </LiveKitRoom>
