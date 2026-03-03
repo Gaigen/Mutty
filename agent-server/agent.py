@@ -322,6 +322,8 @@ class YouTubeAgent:
         env = os.environ.copy()
         env["HTTP_PROXY"] = MEDIA_PROXY
         env["HTTPS_PROXY"] = MEDIA_PROXY
+        env["http_proxy"] = MEDIA_PROXY
+        env["https_proxy"] = MEDIA_PROXY
         return env
 
     async def _resolve(self, url: str) -> tuple[str, str, str]:
