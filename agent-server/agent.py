@@ -30,6 +30,10 @@ LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
 LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
 LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
 
+# Прокси только для загрузки медиа (yt-dlp, ffmpeg). К LiveKit агент ходит напрямую.
+# Формат: http://host:port или socks5://host:port. Для VLESS — укажи локальный HTTP/SOCKS клиент (v2ray/xray и т.д.).
+MEDIA_PROXY = os.getenv("AGENT_MEDIA_PROXY", "").strip() or None
+
 BOT_IDENTITY = "youtube-bot"
 BOT_NAME = "i meen to go away"
 CHAT_TOPIC = "lk-chat-topic"
@@ -311,9 +315,19 @@ class YouTubeAgent:
         except Exception as exc:
             await self._send_chat(f"❌ Ошибка при поиске: {exc}")
 
+    def _subprocess_env_for_media(self) -> dict:
+        """Окружение только для yt-dlp/ffmpeg — через прокси, LiveKit не трогаем."""
+        if not MEDIA_PROXY:
+            return None
+        env = os.environ.copy()
+        env["HTTP_PROXY"] = MEDIA_PROXY
+        env["HTTPS_PROXY"] = MEDIA_PROXY
+        return env
+
     async def _resolve(self, url: str) -> tuple[str, str, str]:
+        yt_extra = ["--proxy", MEDIA_PROXY] if MEDIA_PROXY else []
         url_proc = await asyncio.create_subprocess_exec(
-            "yt-dlp", "--no-playlist", "--no-warnings",
+            "yt-dlp", "--no-playlist", "--no-warnings", *yt_extra,
             "-f", (
                 "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]"
                 "/bestvideo[height<=720]+bestaudio"
@@ -322,6 +336,7 @@ class YouTubeAgent:
             "--get-url", url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=self._subprocess_env_for_media() or os.environ,
         )
         stdout, stderr = await asyncio.wait_for(url_proc.communicate(), timeout=30)
         lines = [ln for ln in stdout.decode().strip().splitlines() if ln.startswith("http")]
@@ -334,9 +349,10 @@ class YouTubeAgent:
         title = ""
         try:
             tp = await asyncio.create_subprocess_exec(
-                "yt-dlp", "--no-playlist", "--get-title", url,
+                "yt-dlp", "--no-playlist", *yt_extra, "--get-title", url,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
+                env=self._subprocess_env_for_media() or os.environ,
             )
             tout, _ = await asyncio.wait_for(tp.communicate(), timeout=15)
             title = tout.decode().strip()
@@ -385,10 +401,12 @@ class YouTubeAgent:
             "-f", "s16le", "-loglevel", "quiet",
             "pipe:1",
         ]
+        ffmpeg_env = self._subprocess_env_for_media() or os.environ
         self._ffmpeg_audio = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
+            env=ffmpeg_env,
         )
         assert self._ffmpeg_audio.stdout
         assert self._audio_source
@@ -440,10 +458,12 @@ class YouTubeAgent:
             "-f", "rawvideo", "-loglevel", "quiet",
             "pipe:1",
         ]
+        ffmpeg_env = self._subprocess_env_for_media() or os.environ
         self._ffmpeg_video = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
+            env=ffmpeg_env,
         )
         assert self._ffmpeg_video.stdout
         assert self._video_source
