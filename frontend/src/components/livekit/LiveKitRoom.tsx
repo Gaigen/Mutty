@@ -2,9 +2,12 @@ import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { type RoomOptions, DisconnectReason } from 'livekit-client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { config, appConfig } from '../../config';
 import { useAudioSettings, getAudioSettings } from '../../hooks/useAudioSettings';
 import { getCameraSettings } from '../../hooks/useCameraSettings';
 import { getScreenShareSettings } from '../../hooks/useScreenShareSettings';
+import { UserChoicesProvider } from '../../context/UserChoicesContext';
+import { ParticipantVolumesProvider } from '../../context/ParticipantVolumesContext';
 import AgentControls from './AgentControls';
 import AudioHandler from './AudioHandler';
 import ScreenShareHandler from './ScreenShareHandler';
@@ -20,16 +23,16 @@ interface LiveKitRoomProps {
 
 function disconnectReasonMessage(reason: DisconnectReason): string {
   switch (reason) {
-    case DisconnectReason.DUPLICATE_IDENTITY:  return 'Другое устройство подключилось с тем же именем.';
-    case DisconnectReason.SERVER_SHUTDOWN:     return 'Сервер был остановлен.';
-    case DisconnectReason.PARTICIPANT_REMOVED: return 'Вас удалили из комнаты.';
-    case DisconnectReason.ROOM_DELETED:        return 'Комната была удалена.';
-    case DisconnectReason.ROOM_CLOSED:         return 'Комната закрыта.';
-    case DisconnectReason.CONNECTION_TIMEOUT:  return 'Превышено время ожидания соединения.';
-    case DisconnectReason.MEDIA_FAILURE:       return 'Ошибка медиа-соединения.';
-    case DisconnectReason.JOIN_FAILURE:        return 'Не удалось войти в комнату.';
-    case DisconnectReason.SIGNAL_CLOSE:        return 'Потеряна связь с сервером.';
-    default:                                   return 'Соединение неожиданно прервалось.';
+    case DisconnectReason.DUPLICATE_IDENTITY:  return 'Another device joined with the same name.';
+    case DisconnectReason.SERVER_SHUTDOWN:     return 'Server was stopped.';
+    case DisconnectReason.PARTICIPANT_REMOVED: return 'You were removed from the room.';
+    case DisconnectReason.ROOM_DELETED:        return 'Room was deleted.';
+    case DisconnectReason.ROOM_CLOSED:         return 'Room is closed.';
+    case DisconnectReason.CONNECTION_TIMEOUT:  return 'Connection timed out.';
+    case DisconnectReason.MEDIA_FAILURE:       return 'Media connection failed.';
+    case DisconnectReason.JOIN_FAILURE:        return 'Failed to join the room.';
+    case DisconnectReason.SIGNAL_CLOSE:        return 'Lost connection to server.';
+    default:                                   return 'Connection was unexpectedly closed.';
   }
 }
 
@@ -43,14 +46,14 @@ function GearIcon() {
 }
 
 export default function LiveKitRoomComponent({ roomName, identity: providedIdentity, onLeave }: LiveKitRoomProps) {
-  const defaultServerUrl = import.meta.env.VITE_LIVEKIT_URL || 'ws://127.0.0.1:7880';
-  const tokenEndpoint = import.meta.env.VITE_TOKEN_ENDPOINT || 'http://127.0.0.1:4000/api/token';
+  const defaultServerUrl = config.livekitUrl;
+  const tokenEndpoint = config.tokenEndpoint;
 
-  // Стабильный identity — вычисляется один раз, не пересоздаётся на каждом рендере
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Identity задаётся при монтировании. При навигации RoomPage передаёт identity из URL,
+  // поэтому providedIdentity стабилен в рамках сессии комнаты.
   const identity = useMemo(
     () => providedIdentity || `dev-${(crypto.randomUUID?.() ?? Math.random().toString(36)).slice(0, 8)}`,
-    [],
+    [providedIdentity],
   );
 
   const [connection, setConnection] = useState<{ token: string; serverUrl: string } | null>(null);
@@ -77,7 +80,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       setStatus('idle');
     } catch (err) {
       console.error('Failed to get LiveKit token', err);
-      setError('Не удалось получить токен LiveKit. Проверь dev token сервер.');
+      setError('Failed to get LiveKit token. Check that the token server is running.');
       setStatus('error');
     }
   }, [tokenEndpoint, roomName, identity, defaultServerUrl]);
@@ -119,7 +122,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
         videoCodec: cam.videoCodec,
         videoEncoding: { maxBitrate: cam.maxBitrate, maxFramerate: cam.maxFramerate },
         screenShareEncoding: { maxBitrate: screen.maxBitrate, maxFramerate: screen.frameRate },
-        simulcast: false,
+        simulcast: appConfig.simulcast,
       },
     };
   }, []);
@@ -129,7 +132,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
     return (
       <div className="flex items-center justify-center h-full text-white">
         <div className="text-center space-y-4">
-          <h2 className="text-xl text-yellow-400">Соединение разорвано</h2>
+          <h2 className="text-xl text-yellow-400">Connection lost</h2>
           <p className="text-gray-300 text-sm">{message}</p>
           <div className="flex gap-3 justify-center">
             <button
@@ -137,14 +140,14 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
               className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 transition"
               onClick={handleReconnect}
             >
-              Переподключиться
+              Reconnect
             </button>
             <button
               type="button"
               className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition"
               onClick={onLeave}
             >
-              На главную
+              Back to home
             </button>
           </div>
         </div>
@@ -156,9 +159,9 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
     return (
       <div className="flex items-center justify-center h-full text-white">
         <div className="text-center space-y-3">
-          <h2 className="text-xl">Подключаемся к LiveKit...</h2>
+          <h2 className="text-xl">Connecting to LiveKit...</h2>
           <p className="text-gray-400 text-sm">
-            Получаем токен из dev token сервера ({tokenEndpoint}).
+            Fetching token from {tokenEndpoint}
           </p>
         </div>
       </div>
@@ -169,17 +172,17 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
     return (
       <div className="flex items-center justify-center h-full text-white">
         <div className="text-center space-y-3">
-          <h2 className="text-xl text-red-400">Ошибка подключения</h2>
+          <h2 className="text-xl text-red-400">Connection error</h2>
           <p className="text-red-400 text-sm">{error}</p>
           <button
             type="button"
             className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 transition"
             onClick={fetchToken}
           >
-            Повторить попытку
+            Retry
           </button>
           <div className="text-xs text-gray-400">
-            Убедись, что `npm run dev:token` и LiveKit сервер запущены.
+            Make sure the token server and LiveKit server are running.
           </div>
         </div>
       </div>
@@ -188,8 +191,8 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
 
   return (
     <LiveKitRoom
-      video={true}
-      audio={true}
+      video={appConfig.showVideo}
+      audio={appConfig.showAudio}
       token={connection.token}
       serverUrl={connection.serverUrl}
       data-lk-theme="default"
@@ -197,11 +200,14 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       onDisconnected={handleDisconnected}
       options={roomOptions}
     >
+      <UserChoicesProvider>
+      <ParticipantVolumesProvider>
       <VideoConferenceWithVolume
         outputVolume={audioSettings.outputVolume}
         rightControls={(
           <>
             <AgentControls roomName={roomName} />
+            {appConfig.showSettingsButton && (
             <button
               type="button"
               className="lk-button"
@@ -214,6 +220,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
               <GearIcon />
               <span>Settings</span>
             </button>
+            )}
           </>
         )}
       />
@@ -221,7 +228,11 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       <SoundHandler />
       <ScreenShareHandler />
 
-      <StreamSettings isOpen={showStreamSettings} onClose={() => setShowStreamSettings(false)} />
+      {appConfig.showSettingsButton && (
+        <StreamSettings isOpen={showStreamSettings} onClose={() => setShowStreamSettings(false)} />
+      )}
+      </ParticipantVolumesProvider>
+      </UserChoicesProvider>
     </LiveKitRoom>
   );
 }

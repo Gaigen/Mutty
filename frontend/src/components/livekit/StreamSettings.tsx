@@ -1,16 +1,22 @@
 import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';
-import { VideoSenderStats, VideoReceiverStats, Track, type LocalVideoTrack, type RemoteVideoTrack, type RemoteAudioTrack } from 'livekit-client';
+import { useParticipantVolumes } from '../../context/ParticipantVolumesContext';
+import { VideoSenderStats, VideoReceiverStats, Track, type LocalVideoTrack, type RemoteVideoTrack } from 'livekit-client';
 import { useEffect, useRef, useState } from 'react';
 import { useAudioSettings } from '../../hooks/useAudioSettings';
 import { useCameraSettings } from '../../hooks/useCameraSettings';
 import { useScreenShareSettings, type VideoCodec, type ContentHint } from '../../hooks/useScreenShareSettings';
 
-const SCREEN_PRESETS = {
-  '1080p@60': { resolution: { width: 1920, height: 1080 }, frameRate: 60 },
-  '1080p@30': { resolution: { width: 1920, height: 1080 }, frameRate: 30 },
-  '720p@60':  { resolution: { width: 1280, height: 720 },  frameRate: 60 },
-  '720p@30':  { resolution: { width: 1280, height: 720 },  frameRate: 30 },
+const SCREEN_RESOLUTION_PRESETS = {
+  '4K':    { width: 3840, height: 2160 },
+  '1440p': { width: 2560, height: 1440 },
+  '1080p': { width: 1920, height: 1080 },
+  '720p':  { width: 1280, height: 720  },
+  '540p':  { width: 960,  height: 540  },
+  '480p':  { width: 854,  height: 480  },
+  '360p':  { width: 640,  height: 360  },
 } as const;
+
+const SCREEN_FPS_PRESETS = [60, 30, 24, 15, 10, 5] as const;
 
 const CAMERA_PRESETS = {
   '1080p': { width: 1920, height: 1080 },
@@ -20,16 +26,16 @@ const CAMERA_PRESETS = {
 } as const;
 
 const CODECS: { value: VideoCodec; label: string; desc: string }[] = [
-  { value: 'av1',  label: 'AV1',  desc: 'Лучшее качество, макс. сжатие, требует поддержки сервера' },
-  { value: 'vp9',  label: 'VP9',  desc: 'Хорошее качество, широкая совместимость' },
-  { value: 'h264', label: 'H.264', desc: 'Максимальная совместимость, хуже сжатие' },
-  { value: 'vp8',  label: 'VP8',  desc: 'Устаревший, только для совместимости' },
+  { value: 'av1',  label: 'AV1',  desc: 'Best quality, best compression. Requires server support.' },
+  { value: 'vp9',  label: 'VP9',  desc: 'Good quality, wide compatibility.' },
+  { value: 'h264', label: 'H.264', desc: 'Maximum compatibility, larger file size.' },
+  { value: 'vp8',  label: 'VP8',  desc: 'Legacy, compatibility only.' },
 ];
 
 const CONTENT_HINTS: { value: ContentHint; label: string; desc: string }[] = [
-  { value: 'motion', label: 'Motion',  desc: 'Видео, игры — плавность важнее чёткости' },
-  { value: 'detail', label: 'Detail',  desc: 'Код, дизайн — чёткость важнее плавности' },
-  { value: 'text',   label: 'Text',    desc: 'Документы, таблицы — максимальная резкость текста' },
+  { value: 'motion', label: 'Motion',  desc: 'Video, games — prioritize smoothness.' },
+  { value: 'detail', label: 'Detail',  desc: 'Code, design — prioritize sharpness.' },
+  { value: 'text',   label: 'Text',    desc: 'Documents, spreadsheets — maximum text clarity.' },
 ];
 
 function computeBitrate(
@@ -71,7 +77,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
   const [activeTab, setActiveTab] = useState<'audio' | 'screen' | 'camera' | 'people' | 'stats'>('audio');
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
   const remoteParticipants = useRemoteParticipants();
-  const [participantVolumes, setParticipantVolumes] = useState<Record<string, number>>({});
+  const { volumes: participantVolumes, setVolume: setParticipantVolume } = useParticipantVolumes();
 
   // Stats — state для рендера, prev ref для вычисления битрейта
   const [senderStats, setSenderStats] = useState<VideoSenderStats[]>([]);
@@ -80,20 +86,12 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
   const prevReceiverRef = useRef<VideoReceiverStats[]>([]);
 
   const onParticipantVolume = (identity: string, volume: number) => {
-    setParticipantVolumes((prev) => ({ ...prev, [identity]: volume }));
-    const participant = room?.remoteParticipants.get(identity);
-    if (!participant) return;
-    const pub = participant.getTrackPublication(Track.Source.Microphone);
-    const audioTrack = pub?.audioTrack as RemoteAudioTrack | undefined;
-    audioTrack?.setVolume(volume);
+    setParticipantVolume(identity, volume);
   };
 
-  // Находим активный пресет экрана
-  const currentScreenPreset = Object.entries(SCREEN_PRESETS).find(
-    ([, p]) =>
-      p.resolution.width === screenSettings.resolution.width &&
-      p.resolution.height === screenSettings.resolution.height &&
-      p.frameRate === screenSettings.frameRate,
+  // Находим активные пресеты экрана
+  const currentResolutionPreset = Object.entries(SCREEN_RESOLUTION_PRESETS).find(
+    ([, p]) => p.width === screenSettings.resolution.width && p.height === screenSettings.resolution.height,
   )?.[0] ?? '';
 
   // Находим активный пресет камеры
@@ -214,14 +212,14 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
                 <span>🎤</span> Microphone (Input)
               </h3>
               <p className="text-[10px] text-gray-500 mb-3">
-                Device: use the Microphone button dropdown in the control bar
+                Device: use the Microphone dropdown in the control bar
               </p>
               <div className="space-y-2">
                 {(
                   [
-                    { key: 'noiseSuppression' as const, label: 'Noise suppression', desc: 'Reduces background noise' },
-                    { key: 'echoCancellation' as const, label: 'Echo cancellation', desc: 'Removes echo from speakers' },
-                    { key: 'autoGainControl' as const, label: 'Auto gain', desc: 'Normalizes microphone level' },
+                    { key: 'noiseSuppression' as const, label: 'Noise suppression', desc: 'Reduce background noise' },
+                    { key: 'echoCancellation' as const, label: 'Echo cancellation', desc: 'Remove echo' },
+                    { key: 'autoGainControl' as const, label: 'Auto gain', desc: 'Normalize mic level' },
                     { key: 'voiceIsolation' as const, label: 'Voice isolation', desc: 'Stronger noise reduction (experimental)' },
                   ] as const
                 ).map(({ key, label, desc }) => (
@@ -256,7 +254,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
                 <span>🚪</span> Noise Gate
               </h3>
               <p className="text-[10px] text-gray-500 mb-3">
-                Blocks mic when silent — cuts background noise in pauses between speech
+                Mute mic when silent to cut background noise between speech
               </p>
               <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer mb-3">
                 <div>
@@ -389,7 +387,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
               <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer">
                 <div>
                   <span className="text-xs text-white">Join / Leave sounds</span>
-                  <span className="block text-[10px] text-gray-500">Звук при входе и выходе участников</span>
+                  <span className="block text-[10px] text-gray-500">Chime when participants join or leave</span>
                 </div>
                 <button
                   type="button"
@@ -413,22 +411,41 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
 
         {activeTab === 'screen' && (
           <div className="space-y-5">
-            {/* Resolution + FPS presets */}
+            {/* Resolution presets */}
             <div>
-              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Resolution & FPS</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(SCREEN_PRESETS).map(([key, preset]) => (
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Resolution</h3>
+              <div className="grid grid-cols-4 gap-2">
+                {Object.entries(SCREEN_RESOLUTION_PRESETS).map(([key, preset]) => (
                   <button
                     key={key}
-                    onClick={() => setScreenSettings(preset)}
-                    className={`px-3 py-2.5 rounded text-xs font-medium transition-all border ${
-                      currentScreenPreset === key
+                    onClick={() => setScreenSettings({ resolution: { width: preset.width, height: preset.height } })}
+                    className={`px-2 py-2 rounded text-xs font-medium transition-all border ${
+                      currentResolutionPreset === key
                         ? 'bg-[#3a3a3a] text-white border-[#4a4a4a]'
                         : 'bg-[#252525] text-gray-300 hover:bg-[#2a2a2a] hover:text-white border-[#2a2a2a]'
                     }`}
                   >
-                    <div className="font-semibold">{key.split('@')[0]}</div>
-                    <div className="text-[10px] opacity-75 mt-0.5">{preset.frameRate} FPS</div>
+                    {key}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* FPS presets */}
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Frame rate (FPS)</h3>
+              <div className="flex flex-wrap gap-2">
+                {SCREEN_FPS_PRESETS.map((fps) => (
+                  <button
+                    key={fps}
+                    onClick={() => setScreenSettings({ frameRate: fps })}
+                    className={`px-3 py-2 rounded text-xs font-medium transition-all border ${
+                      screenSettings.frameRate === fps
+                        ? 'bg-[#3a3a3a] text-white border-[#4a4a4a]'
+                        : 'bg-[#252525] text-gray-300 hover:bg-[#2a2a2a] hover:text-white border-[#2a2a2a]'
+                    }`}
+                  >
+                    {fps} FPS
                   </button>
                 ))}
               </div>
@@ -552,7 +569,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
 
         {activeTab === 'camera' && (
           <div className="space-y-5">
-            <p className="text-[10px] text-gray-500">Применяется при следующем подключении к комнате.</p>
+            <p className="text-[10px] text-gray-500">Applied on next room join.</p>
 
             {/* Resolution presets */}
             <div>
@@ -639,12 +656,12 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
         {activeTab === 'people' && (
           <div className="space-y-3">
             <p className="text-[10px] text-gray-500 mb-1">
-              Громкость каждого участника. Выше 100% — усилить тихий голос.
+              Per-participant volume. Above 100% boosts quiet voices.
             </p>
             {remoteParticipants.length === 0 ? (
               <div className="text-gray-500 text-center py-8">
-                <div className="text-sm mb-1">Нет других участников</div>
-                <div className="text-xs text-gray-600">Участники появятся здесь когда войдут в комнату</div>
+                <div className="text-sm mb-1">No other participants</div>
+                <div className="text-xs text-gray-600">Participants will appear here when they join</div>
               </div>
             ) : (
               remoteParticipants.map((participant) => {

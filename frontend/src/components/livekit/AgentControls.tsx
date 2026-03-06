@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { config, appConfig } from '../../config';
 
 interface Props {
   roomName: string;
@@ -15,12 +16,15 @@ interface AgentStatus {
   url: string | null;
 }
 
-const AGENT_ENDPOINT =
-  (import.meta.env.VITE_AGENT_ENDPOINT as string | undefined) || 'http://localhost:5000';
+function agentHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (config.agentApiKey) h['X-API-Key'] = config.agentApiKey;
+  return h;
+}
 
 const DEFAULT_STATUS: AgentStatus = {
   active: false,
-  mode: 'video',
+  mode: appConfig.agentDefaultMode,
   playing: false,
   title: null,
   url: null,
@@ -66,25 +70,30 @@ function Spinner() {
 export default function AgentControls({ roomName }: Props) {
   const [agentState, setAgentState] = useState<AgentState>('idle');
   const [status, setStatus] = useState<AgentStatus>(DEFAULT_STATUS);
-  const [hidden, setHidden] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch(
-        `${AGENT_ENDPOINT}/agent/status/${encodeURIComponent(roomName)}`,
-        { signal: AbortSignal.timeout(3_000) },
+        `${config.agentEndpoint}/agent/status/${encodeURIComponent(roomName)}`,
+        { headers: agentHeaders(), signal: AbortSignal.timeout(5_000) },
       );
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (res.status === 401) setUnavailable(true);
+        else if (res.status !== 429) setUnavailable(true);
+        return;
+      }
       const data: AgentStatus = await res.json();
       setStatus(data);
       setAgentState((prev) => {
         if (prev === 'loading-join' || prev === 'loading-leave') return prev;
         return data.active ? 'active' : 'idle';
       });
+      setUnavailable(false);
     } catch {
-      setHidden(true);
+      setUnavailable(true);
     }
   }, [roomName]);
 
@@ -101,9 +110,9 @@ export default function AgentControls({ roomName }: Props) {
     setAgentState('loading-join');
     setError(null);
     try {
-      const res = await fetch(`${AGENT_ENDPOINT}/agent/join`, {
+      const res = await fetch(`${config.agentEndpoint}/agent/join`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: agentHeaders(),
         body: JSON.stringify({ room: roomName }),
       });
       const data = await res.json();
@@ -111,7 +120,7 @@ export default function AgentControls({ roomName }: Props) {
       setAgentState('active');
       await fetchStatus();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка');
+      setError(e instanceof Error ? e.message : 'Error');
       setAgentState('idle');
     }
   }, [roomName, fetchStatus]);
@@ -120,9 +129,9 @@ export default function AgentControls({ roomName }: Props) {
     setAgentState('loading-leave');
     setError(null);
     try {
-      const res = await fetch(`${AGENT_ENDPOINT}/agent/leave`, {
+      const res = await fetch(`${config.agentEndpoint}/agent/leave`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: agentHeaders(),
         body: JSON.stringify({ room: roomName }),
       });
       const data = await res.json();
@@ -130,41 +139,63 @@ export default function AgentControls({ roomName }: Props) {
       setAgentState('idle');
       setStatus(DEFAULT_STATUS);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка');
+      setError(e instanceof Error ? e.message : 'Error');
       setAgentState('active');
     }
   }, [roomName]);
 
   const stopPlayback = useCallback(async () => {
     try {
-      await fetch(`${AGENT_ENDPOINT}/agent/stop`, {
+      await fetch(`${config.agentEndpoint}/agent/stop`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: agentHeaders(),
         body: JSON.stringify({ room: roomName }),
       });
       setStatus((s) => ({ ...s, playing: false, title: null, url: null }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка');
+      setError(e instanceof Error ? e.message : 'Error');
     }
   }, [roomName]);
 
   const setMode = useCallback(
     async (mode: Mode) => {
       try {
-        await fetch(`${AGENT_ENDPOINT}/agent/mode`, {
+        await fetch(`${config.agentEndpoint}/agent/mode`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: agentHeaders(),
           body: JSON.stringify({ room: roomName, mode }),
         });
         setStatus((s) => ({ ...s, mode }));
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Ошибка');
+        setError(e instanceof Error ? e.message : 'Error');
       }
     },
     [roomName],
   );
 
-  if (hidden) return null;
+  if (unavailable) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <span
+          style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}
+          title="Agent service unavailable or requires authorization"
+        >
+          Service unavailable
+        </span>
+        <button
+          type="button"
+          className="lk-button"
+          onClick={() => {
+            setUnavailable(false);
+            fetchStatus();
+          }}
+          style={{ fontSize: 11, padding: '0.2rem 0.4rem' }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   const isActive = agentState === 'active';
   const isLoadingJoin = agentState === 'loading-join';
@@ -178,12 +209,12 @@ export default function AgentControls({ roomName }: Props) {
         <button
           type="button"
           className="lk-button"
-          title="Вызвать YouTube-агента"
+          title="Invite YouTube agent"
           onClick={callAgent}
           style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
         >
           <BotIcon />
-          <span>Агент</span>
+          <span>Agent</span>
         </button>
         {error && <ErrorTooltip>{error}</ErrorTooltip>}
       </div>
@@ -200,7 +231,7 @@ export default function AgentControls({ roomName }: Props) {
         style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', opacity: 0.6 }}
       >
         <Spinner />
-        <span>Подключаю...</span>
+        <span>Connecting...</span>
       </button>
     );
   }
@@ -215,7 +246,7 @@ export default function AgentControls({ roomName }: Props) {
         style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', opacity: 0.6 }}
       >
         <Spinner />
-        <span>Отключаю...</span>
+        <span>Disconnecting...</span>
       </button>
     );
   }
@@ -245,7 +276,7 @@ export default function AgentControls({ roomName }: Props) {
       <button
         type="button"
         className="lk-button"
-        title="Только аудио"
+        title="Audio only"
         onClick={() => setMode('audio')}
         style={{
           display: 'flex',
@@ -259,14 +290,14 @@ export default function AgentControls({ roomName }: Props) {
         }}
       >
         <span>🎵</span>
-        <span style={{ fontSize: 12 }}>Аудио</span>
+        <span style={{ fontSize: 12 }}>Audio</span>
       </button>
 
       {/* Mode: Video */}
       <button
         type="button"
         className="lk-button"
-        title="Аудио + видео"
+        title="Audio + video"
         onClick={() => setMode('video')}
         style={{
           display: 'flex',
@@ -280,7 +311,7 @@ export default function AgentControls({ roomName }: Props) {
         }}
       >
         <span>🎬</span>
-        <span style={{ fontSize: 12 }}>Видео</span>
+        <span style={{ fontSize: 12 }}>Video</span>
       </button>
 
       {/* Stop playback — only when playing */}
@@ -288,12 +319,12 @@ export default function AgentControls({ roomName }: Props) {
         <button
           type="button"
           className="lk-button"
-          title="Остановить воспроизведение"
+          title="Stop playback"
           onClick={stopPlayback}
           style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.3rem 0.6rem' }}
         >
           <StopIcon />
-          <span style={{ fontSize: 12 }}>Стоп</span>
+          <span style={{ fontSize: 12 }}>Stop</span>
         </button>
       )}
 
@@ -301,7 +332,7 @@ export default function AgentControls({ roomName }: Props) {
       <button
         type="button"
         className="lk-button"
-        title="Убрать агента"
+        title="Remove agent"
         onClick={removeAgent}
         style={{
           display: 'flex',
@@ -311,7 +342,7 @@ export default function AgentControls({ roomName }: Props) {
         }}
       >
         <BotIcon />
-        <span style={{ fontSize: 12 }}>Убрать</span>
+        <span style={{ fontSize: 12 }}>Remove</span>
       </button>
 
       {error && <ErrorTooltip>{error}</ErrorTooltip>}

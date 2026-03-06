@@ -11,7 +11,6 @@ import {
   GridLayout,
   LayoutContextProvider,
   ParticipantTile,
-  RoomAudioRenderer,
   useCreateLayoutContext,
   usePinnedTracks,
   useTracks,
@@ -19,7 +18,9 @@ import {
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
+import { appConfig } from '../../config';
 import { CustomControlBar } from './CustomControlBar';
+import { CustomRoomAudioRenderer } from './CustomRoomAudioRenderer';
 
 interface VideoConferenceWithVolumeProps extends React.HTMLAttributes<HTMLDivElement> {
   outputVolume?: number;
@@ -112,13 +113,19 @@ export function VideoConferenceWithVolume({
                 </FocusLayoutContainer>
               </div>
             )}
-            <CustomControlBar controls={{ chat: true }} rightControls={rightControls} />
+            <CustomControlBar
+              controls={{
+                chat: appConfig.showChat,
+                leave: appConfig.showLeave,
+              }}
+              rightControls={rightControls}
+            />
           </div>
           <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
         </LayoutContextProvider>
       )}
-      {/* Ограничиваем volume до 1.0 для HTML audio (выше 1.0 вызывает ошибку) */}
-      <RoomAudioRenderer volume={Math.min(1, Math.max(0, outputVolume))} />
+      {/* Per-participant volume: 200% реально усиливает, не только визуально */}
+      <CustomRoomAudioRenderer outputVolume={outputVolume} />
       <ConnectionStateToast />
     </div>
   );

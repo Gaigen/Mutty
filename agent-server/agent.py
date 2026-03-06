@@ -11,13 +11,14 @@ YouTube Bot — LiveKit participant that streams audio/video from various source
 """
 
 import asyncio
+import ipaddress
 import json
 import logging
 import os
 import re
 import time
 import uuid
-from typing import Optional
+from typing import Callable, Optional
 from urllib.parse import urlparse
 
 from livekit import rtc
@@ -42,9 +43,10 @@ AUDIO_SAMPLE_RATE = 48_000
 AUDIO_CHANNELS = 2
 AUDIO_SAMPLES_PER_FRAME = 960  # 20 ms at 48 kHz
 
-VIDEO_WIDTH = 1280
-VIDEO_HEIGHT = 720
-VIDEO_FPS = 30
+# Разрешение стрима. 1080p — лучше для широкого видео, 720p — экономия трафика.
+VIDEO_WIDTH = int(os.getenv("AGENT_VIDEO_WIDTH", "1920"))
+VIDEO_HEIGHT = int(os.getenv("AGENT_VIDEO_HEIGHT", "1080"))
+VIDEO_FPS = int(os.getenv("AGENT_VIDEO_FPS", "30"))
 
 # Black frame YUV420p: Y=0, U=V=128 (one frame, reused when stopping)
 _BLACK_FRAME: Optional[bytearray] = None
@@ -69,6 +71,30 @@ _YOUTUBE_DOMAINS = ("youtube.com", "youtu.be", "www.youtube.com", "m.youtube.com
 _TWITCH_DOMAINS = ("twitch.tv", "www.twitch.tv", "m.twitch.tv", "clips.twitch.tv")
 _SOUNDCLOUD_DOMAINS = ("soundcloud.com", "on.soundcloud.com")
 _TELEGRAM_DOMAINS = ("t.me", "telegram.me", "telegram.org")
+
+
+def _is_url_safe_for_media(url: str) -> bool:
+    """Block SSRF: file://, localhost, private IPs. Allow http(s) and ytsearch/scsearch."""
+    if url.startswith(("ytsearch", "scsearch")):
+        return True
+    if url.startswith("file://"):
+        return False
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        host = (parsed.hostname or "").strip().lower()
+        if not host or host in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+            return False
+        try:
+            ip = ipaddress.ip_address(host)
+            if ip.is_private or ip.is_loopback or ip.is_link_local:
+                return False
+        except ValueError:
+            pass
+        return True
+    except Exception:
+        return False
 
 
 def _classify_source(url: str) -> str:
@@ -104,9 +130,10 @@ SC_SEARCH_RE = re.compile(r"^(?:!?\s*)?(?:sc|soundcloud|саундклауд)\s+
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
 class YouTubeAgent:
-    def __init__(self, room_name: str) -> None:
+    def __init__(self, room_name: str, on_disconnect: Optional[Callable[[], None]] = None) -> None:
         self.room_name = room_name
         self.room = rtc.Room()
+        self._on_disconnect_cb = on_disconnect
 
         self._mode: str = "video"          # "audio" | "video"
         self._current_url: Optional[str] = None
@@ -123,6 +150,7 @@ class YouTubeAgent:
         self._video_task: Optional[asyncio.Task] = None
         self._ffmpeg_audio: Optional[asyncio.subprocess.Process] = None
         self._ffmpeg_video: Optional[asyncio.subprocess.Process] = None
+        self._command_lock = asyncio.Lock()
 
     # ── Public properties ─────────────────────────────────────────────────────
     @property
@@ -158,6 +186,7 @@ class YouTubeAgent:
             .to_jwt()
         )
         self.room.on("data_received", self._on_data)
+        self.room.on("participant_disconnected", self._on_participant_disconnected)
         await self.room.connect(LIVEKIT_URL, token)
         logger.info("[Bot] Connected to room '%s'", self.room_name)
         await self._send_chat(
@@ -168,10 +197,12 @@ class YouTubeAgent:
 
     async def disconnect(self) -> None:
         await self._stop_streams()
-        await self._send_chat("👋 YouTube Bot отключён.")
+        await self._send_chat("👋 YouTube Bot disconnected.")
         if self.room.connection_state == rtc.ConnectionState.CONN_CONNECTED:
             await self.room.disconnect()
         logger.info("[Bot] Disconnected from room '%s'", self.room_name)
+        if self._on_disconnect_cb:
+            self._on_disconnect_cb()
 
     async def stop(self) -> None:
         """Stop playback without disconnecting the bot."""
@@ -200,6 +231,12 @@ class YouTubeAgent:
             if old != mode:
                 logger.info("[Bot] Mode changed to '%s' in room '%s'", mode, self.room_name)
 
+    def _on_participant_disconnected(self, participant: rtc.RemoteParticipant) -> None:
+        """Leave room when agent is alone (no other participants)."""
+        if len(self.room.remote_participants) == 0:
+            logger.info("[Bot] Alone in room '%s', disconnecting", self.room_name)
+            asyncio.ensure_future(self.disconnect())
+
     # ── Chat listener ─────────────────────────────────────────────────────────
     def _on_data(self, dp: rtc.DataPacket) -> None:
         try:
@@ -215,21 +252,21 @@ class YouTubeAgent:
 
             # стоп / stop
             if STOP_RE.match(text):
-                asyncio.ensure_future(self.stop())
+                asyncio.ensure_future(self._run_command(self.stop))
                 return
 
             # аудио <url>
             m = AUDIO_CMD_RE.match(text)
             if m:
                 self._mode = "audio"
-                asyncio.ensure_future(self.play(m.group(1)))
+                asyncio.ensure_future(self._run_command(lambda: self.play(m.group(1))))
                 return
 
             # видео <url>
             m = VIDEO_CMD_RE.match(text)
             if m:
                 self._mode = "video"
-                asyncio.ensure_future(self.play(m.group(1)))
+                asyncio.ensure_future(self._run_command(lambda: self.play(m.group(1))))
                 return
 
             # youtube / yt / ютуб <query>
@@ -237,7 +274,7 @@ class YouTubeAgent:
             if m:
                 query = m.group(1).strip()
                 if query:
-                    asyncio.ensure_future(self._search_and_play("youtube", query))
+                    asyncio.ensure_future(self._run_command(lambda: self._search_and_play("youtube", query)))
                 return
 
             # soundcloud / sc / саундклауд <query>
@@ -245,7 +282,7 @@ class YouTubeAgent:
             if m:
                 query = m.group(1).strip()
                 if query:
-                    asyncio.ensure_future(self._search_and_play("soundcloud", query))
+                    asyncio.ensure_future(self._run_command(lambda: self._search_and_play("soundcloud", query)))
                 return
 
             # Любой URL — используем текущий режим, но сразу говорим источник
@@ -254,13 +291,21 @@ class YouTubeAgent:
                 url = match.group(0)
                 source = _classify_source(url)
                 logger.info("[Bot] URL detected (%s): %s", source, url)
-                asyncio.ensure_future(self.play(url))
+                asyncio.ensure_future(self._run_command(lambda: self.play(url)))
 
         except Exception:
             logger.exception("[Bot] Error in _on_data")
 
+    async def _run_command(self, coro_fn) -> None:
+        """Run command under lock to prevent race conditions."""
+        async with self._command_lock:
+            await coro_fn()
+
     # ── Playback ──────────────────────────────────────────────────────────────
     async def play(self, url: str) -> None:
+        if not _is_url_safe_for_media(url):
+            await self._send_chat("❌ Недопустимая ссылка (SSRF protection).")
+            return
         await self._stop_streams()
         label = "🎵 аудио" if self._mode == "audio" else "🎬 видео"
         src = _classify_source(url)
@@ -316,14 +361,14 @@ class YouTubeAgent:
             await self._send_chat(f"❌ Ошибка при поиске: {exc}")
 
     def _subprocess_env_for_media(self) -> dict:
-        """Окружение только для yt-dlp/ffmpeg — через прокси, LiveKit не трогаем."""
-        if not MEDIA_PROXY:
-            return None
-        env = os.environ.copy()
-        env["HTTP_PROXY"] = MEDIA_PROXY
-        env["HTTPS_PROXY"] = MEDIA_PROXY
-        env["http_proxy"] = MEDIA_PROXY
-        env["https_proxy"] = MEDIA_PROXY
+        """Окружение только для yt-dlp/ffmpeg — через прокси, LiveKit не трогаем.
+        Всегда возвращает dict (не os.environ) — некоторые библиотеки ожидают именно dict."""
+        env = dict(os.environ)
+        if MEDIA_PROXY:
+            env["HTTP_PROXY"] = MEDIA_PROXY
+            env["HTTPS_PROXY"] = MEDIA_PROXY
+            env["http_proxy"] = MEDIA_PROXY
+            env["https_proxy"] = MEDIA_PROXY
         return env
 
     async def _resolve(self, url: str) -> tuple[str, str, str]:
@@ -331,14 +376,14 @@ class YouTubeAgent:
         url_proc = await asyncio.create_subprocess_exec(
             "yt-dlp", "--no-playlist", "--no-warnings", *yt_extra,
             "-f", (
-                "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]"
-                "/bestvideo[height<=720]+bestaudio"
-                "/best[height<=720]/best"
+                f"bestvideo[height<={VIDEO_HEIGHT}][ext=mp4]+bestaudio[ext=m4a]"
+                f"/bestvideo[height<={VIDEO_HEIGHT}]+bestaudio"
+                f"/best[height<={VIDEO_HEIGHT}]/best"
             ),
             "--get-url", url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=self._subprocess_env_for_media() or os.environ,
+            env=self._subprocess_env_for_media(),
         )
         stdout, stderr = await asyncio.wait_for(url_proc.communicate(), timeout=30)
         lines = [ln for ln in stdout.decode().strip().splitlines() if ln.startswith("http")]
@@ -354,7 +399,7 @@ class YouTubeAgent:
                 "yt-dlp", "--no-playlist", *yt_extra, "--get-title", url,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
-                env=self._subprocess_env_for_media() or os.environ,
+                env=self._subprocess_env_for_media(),
             )
             tout, _ = await asyncio.wait_for(tp.communicate(), timeout=15)
             title = tout.decode().strip()
@@ -403,7 +448,7 @@ class YouTubeAgent:
             "-f", "s16le", "-loglevel", "quiet",
             "pipe:1",
         ]
-        ffmpeg_env = self._subprocess_env_for_media() or os.environ
+        ffmpeg_env = self._subprocess_env_for_media()
         self._ffmpeg_audio = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
@@ -446,10 +491,10 @@ class YouTubeAgent:
     async def _stream_video(self, url: str) -> None:
         frame_bytes = VIDEO_WIDTH * VIDEO_HEIGHT * 3 // 2
         frame_duration = 1.0 / VIDEO_FPS
-        # Letterbox: keep aspect ratio, add black bars (no crop/stretch)
+        # Letterbox: сохраняем пропорции, чёрные полосы по краям. Lanczos — лучшее качество.
         vf = (
-            f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=decrease,"
-            f"pad={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2,fps={VIDEO_FPS}"
+            f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=decrease:flags=lanczos,"
+            f"pad={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black,fps={VIDEO_FPS}"
         )
         cmd = [
             "ffmpeg",
@@ -460,7 +505,7 @@ class YouTubeAgent:
             "-f", "rawvideo", "-loglevel", "quiet",
             "pipe:1",
         ]
-        ffmpeg_env = self._subprocess_env_for_media() or os.environ
+        ffmpeg_env = self._subprocess_env_for_media()
         self._ffmpeg_video = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
@@ -472,7 +517,8 @@ class YouTubeAgent:
 
         try:
             while True:
-                t0 = asyncio.get_event_loop().time()
+                loop = asyncio.get_running_loop()
+                t0 = loop.time()
                 raw = await self._ffmpeg_video.stdout.readexactly(frame_bytes)
                 self._video_source.capture_frame(
                     rtc.VideoFrame(
@@ -482,7 +528,7 @@ class YouTubeAgent:
                         data=bytearray(raw),
                     )
                 )
-                elapsed = asyncio.get_event_loop().time() - t0
+                elapsed = loop.time() - t0
                 wait = frame_duration - elapsed
                 if wait > 0:
                     await asyncio.sleep(wait)

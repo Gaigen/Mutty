@@ -32,6 +32,7 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
       - LIVEKIT_WS_URL=${LIVEKIT_WS_URL:-ws://localhost:7880}
+      - TOKEN_CORS_ORIGINS=${TOKEN_CORS_ORIGINS:-}
     depends_on:
       - livekit
     restart: unless-stopped
@@ -60,6 +61,14 @@ services:
       # Прокси только для загрузки медиа (YouTube/SoundCloud и т.д.). К LiveKit — без прокси.
       # Укажи HTTP/SOCKS адрес клиента VLESS (v2ray/xray): http://proxy:7890 или socks5://proxy:1080
       - AGENT_MEDIA_PROXY=${AGENT_MEDIA_PROXY:-}
+      # API key для защиты Agent API (если задан — frontend должен передавать VITE_AGENT_API_KEY)
+      - AGENT_API_KEY=${AGENT_API_KEY:-}
+      # В production: AGENT_HEALTH_SHOW_ROOMS=false
+      - AGENT_HEALTH_SHOW_ROOMS=${AGENT_HEALTH_SHOW_ROOMS:-true}
+      # Разрешение видео (1920x1080 по умолчанию). Для экономии: 1280x720
+      - AGENT_VIDEO_WIDTH=${AGENT_VIDEO_WIDTH:-1920}
+      - AGENT_VIDEO_HEIGHT=${AGENT_VIDEO_HEIGHT:-1080}
+      - AGENT_VIDEO_FPS=${AGENT_VIDEO_FPS:-30}
     depends_on:
       - livekit
     restart: unless-stopped
@@ -79,6 +88,7 @@ services:
         VITE_LIVEKIT_URL: ${VITE_LIVEKIT_URL:-ws://localhost:7880}
         VITE_TOKEN_ENDPOINT: ${VITE_TOKEN_ENDPOINT:-http://localhost:4000/api/token}
         VITE_AGENT_ENDPOINT: ${VITE_AGENT_ENDPOINT:-http://localhost:5000}
+        VITE_AGENT_API_KEY: ${VITE_AGENT_API_KEY:-}
     container_name: voice-app-frontend
     ports:
       - "1420:80"
