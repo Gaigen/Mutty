@@ -1,6 +1,7 @@
 import { useRoomContext } from '@livekit/components-react';
 import { Track, type LocalAudioTrack, type LocalTrackPublication } from 'livekit-client';
 import { useCallback, useEffect, useRef } from 'react';
+import { useUserChoicesContext } from '../../context/UserChoicesContext';
 import { useAudioSettings } from '../../hooks/useAudioSettings';
 import { createNoiseGateProcessor, type NoiseGateProcessorRef } from '../../utils/NoiseGateProcessor';
 
@@ -21,6 +22,8 @@ export default function AudioHandler() {
     },
   });
 
+  const userChoices = useUserChoicesContext();
+
   const getMicTrack = useCallback((): LocalAudioTrack | null => {
     if (!room) return null;
     const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
@@ -36,8 +39,13 @@ export default function AudioHandler() {
     if (!localTrack) return;
 
     const wasMuted = localTrack.isMuted;
-    // Сохраняем текущее устройство — без этого restartTrack сбрасывает на дефолтный mic
-    const currentDeviceId = localTrack.mediaStreamTrack?.getSettings().deviceId;
+    // Приоритет: сохранённый выбор юзера > текущий трек > без constraint
+    const preferredDeviceId =
+      userChoices?.audioDeviceId && userChoices.audioDeviceId !== 'default'
+        ? userChoices.audioDeviceId
+        : localTrack.mediaStreamTrack?.getSettings().deviceId;
+
+    userChoices?.skipNextAudioDeviceSave();
 
     try {
       if (wasMuted) await localTrack.unmute();
@@ -46,7 +54,7 @@ export default function AudioHandler() {
         echoCancellation: audioSettings.echoCancellation,
         autoGainControl: audioSettings.autoGainControl,
         voiceIsolation: audioSettings.voiceIsolation,
-        ...(currentDeviceId ? { deviceId: currentDeviceId } : {}),
+        ...(preferredDeviceId ? { deviceId: preferredDeviceId } : {}),
       });
       if (wasMuted) await localTrack.mute();
     } catch (e) {
@@ -57,6 +65,7 @@ export default function AudioHandler() {
     }
   }, [
     getMicTrack,
+    userChoices,
     audioSettings.noiseSuppression,
     audioSettings.echoCancellation,
     audioSettings.autoGainControl,

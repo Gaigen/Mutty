@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { LS_KEYS } from '../config';
 
 export type VideoCodec = 'av1' | 'vp9' | 'h264' | 'vp8';
 export type ContentHint = 'motion' | 'detail' | 'text';
@@ -21,11 +22,9 @@ const DEFAULT_SETTINGS: ScreenShareSettings = {
   maxBitrate: 8_000_000,
 };
 
-const STORAGE_KEY = 'voice-app:screen-share-settings';
-
 function loadSettings(): ScreenShareSettings {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(LS_KEYS.screenShareSettings);
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<ScreenShareSettings>;
       return { ...DEFAULT_SETTINGS, ...parsed };
@@ -38,7 +37,7 @@ function loadSettings(): ScreenShareSettings {
 
 function saveSettings(settings: ScreenShareSettings) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    localStorage.setItem(LS_KEYS.screenShareSettings, JSON.stringify(settings));
   } catch (e) {
     console.warn('Failed to save screen share settings:', e);
   }
