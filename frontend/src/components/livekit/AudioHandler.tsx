@@ -23,6 +23,9 @@ export default function AudioHandler() {
   });
 
   const userChoices = useUserChoicesContext();
+  // Ref — читаем сохранённый deviceId без добавления в deps (избегаем feedback loop)
+  const savedAudioDeviceIdRef = useRef(userChoices?.audioDeviceId ?? 'default');
+  savedAudioDeviceIdRef.current = userChoices?.audioDeviceId ?? 'default';
 
   const getMicTrack = useCallback((): LocalAudioTrack | null => {
     if (!room) return null;
@@ -39,13 +42,10 @@ export default function AudioHandler() {
     if (!localTrack) return;
 
     const wasMuted = localTrack.isMuted;
-    // Приоритет: сохранённый выбор юзера > текущий трек > без constraint
-    const preferredDeviceId =
-      userChoices?.audioDeviceId && userChoices.audioDeviceId !== 'default'
-        ? userChoices.audioDeviceId
-        : localTrack.mediaStreamTrack?.getSettings().deviceId;
-
-    userChoices?.skipNextAudioDeviceSave();
+    // Saved choice takes priority (restores device on reload); fallback to current track's device
+    const saved = savedAudioDeviceIdRef.current;
+    const currentDeviceId = localTrack.mediaStreamTrack?.getSettings().deviceId;
+    const preferredDeviceId = (saved && saved !== 'default') ? saved : currentDeviceId;
 
     try {
       if (wasMuted) await localTrack.unmute();
@@ -65,7 +65,6 @@ export default function AudioHandler() {
     }
   }, [
     getMicTrack,
-    userChoices,
     audioSettings.noiseSuppression,
     audioSettings.echoCancellation,
     audioSettings.autoGainControl,
