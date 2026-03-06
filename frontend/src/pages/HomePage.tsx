@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LS_KEYS, appConfig } from '../config';
+import { initOnUserGesture } from '../utils/audioContext';
 import { generateRandomNickname } from '../utils/randomNickname';
 
 function loadRecentRooms(): string[] {
@@ -34,6 +35,8 @@ export default function HomePage() {
     e.preventDefault();
     const room = roomName.trim();
     if (!room) return;
+
+    initOnUserGesture();
 
     const identity = displayName.trim() || generateRandomNickname();
     localStorage.setItem(LS_KEYS.identity, identity);

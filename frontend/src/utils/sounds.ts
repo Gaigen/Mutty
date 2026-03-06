@@ -1,14 +1,4 @@
-let audioCtx: AudioContext | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = new AudioContext();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  return audioCtx;
-}
+import { getSharedAudioContext } from './audioContext';
 
 function playNote(
   ctx: AudioContext,
@@ -37,7 +27,7 @@ function playNote(
 /** Два коротких восходящих тона — кто-то вошёл */
 export function playJoinSound() {
   try {
-    const ctx = getAudioContext();
+    const ctx = getSharedAudioContext();
     const t = ctx.currentTime;
     playNote(ctx, 523, t,        0.12, 0.18); // C5
     playNote(ctx, 784, t + 0.11, 0.20, 0.22); // G5
@@ -49,7 +39,7 @@ export function playJoinSound() {
 /** Один нисходящий тон — кто-то вышел */
 export function playLeaveSound() {
   try {
-    const ctx = getAudioContext();
+    const ctx = getSharedAudioContext();
     const t = ctx.currentTime;
     playNote(ctx, 659, t,        0.10, 0.14); // E5
     playNote(ctx, 392, t + 0.09, 0.22, 0.12); // G4
