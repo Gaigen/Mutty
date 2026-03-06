@@ -656,7 +656,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
         {activeTab === 'people' && (
           <div className="space-y-3">
             <p className="text-[10px] text-gray-500 mb-1">
-              Per-participant volume. Above 100% boosts quiet voices.
+              Per-participant volume (0–100%).
             </p>
             {remoteParticipants.length === 0 ? (
               <div className="text-gray-500 text-center py-8">
@@ -676,7 +676,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
                     <input
                       type="range"
                       min="0"
-                      max="2"
+                      max="1"
                       step="0.05"
                       value={volume}
                       onChange={(e) => onParticipantVolume(participant.identity, parseFloat(e.target.value))}
