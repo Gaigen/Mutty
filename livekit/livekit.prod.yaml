@@ -6,7 +6,8 @@ rtc:
   # В Docker используем 0.0.0.0 для прослушивания всех интерфейсов
   node_ip: 0.0.0.0
 
-# В продакшене используйте реальные ключи!
+# ВАЖНО: В production ОБЯЗАТЕЛЬНО смените ключи! devkey/secret — только для разработки.
+# Сгенерируйте новые: https://docs.livekit.io/realtime/self-hosting/keys/
 keys:
   devkey: secret
 

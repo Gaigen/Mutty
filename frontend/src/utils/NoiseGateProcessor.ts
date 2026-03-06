@@ -82,7 +82,7 @@ export function createNoiseGateProcessor(
     ref.node = null;
     workletNode = null;
     sourceNode = null;
-    destNode?.stream.getTracks().forEach((t) => t.stop());
+    destNode?.stream?.getTracks()?.forEach((t) => t.stop());
     destNode = null;
     processor.processedTrack = undefined;
   }

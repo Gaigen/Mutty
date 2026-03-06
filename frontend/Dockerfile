@@ -3,9 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Копируем package файлы
+# Копируем package файлы (package-lock.json опционален — при отсутствии используется npm install)
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Копируем исходный код
 COPY . .
@@ -14,10 +14,12 @@ COPY . .
 ARG VITE_LIVEKIT_URL=ws://localhost:7880
 ARG VITE_TOKEN_ENDPOINT=http://localhost:4000/api/token
 ARG VITE_AGENT_ENDPOINT=http://localhost:5000
+ARG VITE_AGENT_API_KEY=
 
 ENV VITE_LIVEKIT_URL=${VITE_LIVEKIT_URL}
 ENV VITE_TOKEN_ENDPOINT=${VITE_TOKEN_ENDPOINT}
 ENV VITE_AGENT_ENDPOINT=${VITE_AGENT_ENDPOINT}
+ENV VITE_AGENT_API_KEY=${VITE_AGENT_API_KEY}
 
 # Собираем приложение
 RUN npm run build
