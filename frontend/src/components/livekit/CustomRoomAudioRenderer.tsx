@@ -9,6 +9,7 @@ import { getTrackReferenceId, isTrackReference } from '@livekit/components-core'
 import { Track } from 'livekit-client';
 import type { TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { useEffect, useRef } from 'react';
+import { getSharedAudioContext } from '../../utils/audioContext';
 import { useParticipantVolumes } from '../../context/ParticipantVolumesContext';
 
 interface CustomRoomAudioRendererProps {
@@ -32,7 +33,7 @@ function TrackVolumeRenderer({
     const mediaTrack = track?.mediaStreamTrack;
     if (!mediaTrack || track?.kind !== Track.Kind.Audio) return;
 
-    const ctx = new AudioContext();
+    const ctx = getSharedAudioContext();
     ctxRef.current = ctx;
 
     const source = ctx.createMediaStreamSource(new MediaStream([mediaTrack]));
@@ -53,7 +54,6 @@ function TrackVolumeRenderer({
     return () => {
       source.disconnect();
       gain.disconnect();
-      ctx.close();
       ctxRef.current = null;
       sourceRef.current = null;
       gainRef.current = null;
