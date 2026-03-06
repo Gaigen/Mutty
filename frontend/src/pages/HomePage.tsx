@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { LS_KEYS, appConfig } from '../config';
 import { generateRandomNickname } from '../utils/randomNickname';
-
-const IDENTITY_KEY = 'voice-app:identity';
-const ROOMS_KEY = 'voice-app:recent-rooms';
-const MAX_RECENT_ROOMS = 5;
 
 function loadRecentRooms(): string[] {
   try {
-    const stored = localStorage.getItem(ROOMS_KEY);
+    const stored = localStorage.getItem(LS_KEYS.recentRooms);
     return stored ? (JSON.parse(stored) as string[]) : [];
   } catch {
     return [];
@@ -18,7 +15,7 @@ function loadRecentRooms(): string[] {
 function saveRecentRoom(name: string) {
   const rooms = loadRecentRooms().filter((r) => r !== name);
   rooms.unshift(name);
-  localStorage.setItem(ROOMS_KEY, JSON.stringify(rooms.slice(0, MAX_RECENT_ROOMS)));
+  localStorage.setItem(LS_KEYS.recentRooms, JSON.stringify(rooms.slice(0, appConfig.maxRecentRooms)));
 }
 
 export default function HomePage() {
@@ -28,7 +25,7 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedIdentity = localStorage.getItem(IDENTITY_KEY);
+    const savedIdentity = localStorage.getItem(LS_KEYS.identity);
     if (savedIdentity) setDisplayName(savedIdentity);
     setRecentRooms(loadRecentRooms());
   }, []);
@@ -39,7 +36,7 @@ export default function HomePage() {
     if (!room) return;
 
     const identity = displayName.trim() || generateRandomNickname();
-    localStorage.setItem(IDENTITY_KEY, identity);
+    localStorage.setItem(LS_KEYS.identity, identity);
     saveRecentRoom(room);
 
     navigate(`/room/${room}?identity=${encodeURIComponent(identity)}`);
@@ -57,7 +54,7 @@ export default function HomePage() {
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
       <div className="p-8 bg-gray-900 rounded-lg border border-gray-800 shadow-xl w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-          Tauri LiveKit
+          Voice App
         </h1>
 
         <form onSubmit={joinRoom} className="flex flex-col gap-4">
@@ -104,20 +101,20 @@ export default function HomePage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none text-white placeholder-gray-500"
-                placeholder="Или оставь пустым — придумаем сами"
+                placeholder="Leave empty for random nickname"
               />
               <button
                 type="button"
                 onClick={handleRandomNick}
                 className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded text-gray-400 hover:text-white transition-colors text-lg"
-                title="Случайный ник"
+                title="Random nickname"
               >
                 🎲
               </button>
             </div>
             {!displayName && (
               <p className="mt-1 text-[11px] text-gray-600">
-                Пустое поле → случайный ник при входе
+                Empty = random nickname on join
               </p>
             )}
           </div>

@@ -1,19 +1,19 @@
 const ADJECTIVES = [
-  'Ленивый', 'Быстрый', 'Хитрый', 'Сонный', 'Весёлый',
-  'Грустный', 'Смелый', 'Тихий', 'Громкий', 'Голодный',
-  'Пушистый', 'Рыжий', 'Мокрый', 'Дикий', 'Бодрый',
-  'Важный', 'Нервный', 'Добрый', 'Умный', 'Сытый',
-  'Лохматый', 'Серьёзный', 'Странный', 'Забывчивый', 'Гордый',
-  'Сердитый', 'Вёрткий', 'Пугливый', 'Хмурый', 'Игривый',
+  'Lazy', 'Swift', 'Clever', 'Sleepy', 'Cheerful',
+  'Sad', 'Brave', 'Quiet', 'Loud', 'Hungry',
+  'Fluffy', 'Ginger', 'Wet', 'Wild', 'Energetic',
+  'Important', 'Nervous', 'Kind', 'Smart', 'Full',
+  'Shaggy', 'Serious', 'Strange', 'Forgetful', 'Proud',
+  'Angry', 'Nimble', 'Timid', 'Gloomy', 'Playful',
 ];
 
 const ANIMALS = [
-  'Енот', 'Лемур', 'Капибара', 'Пингвин', 'Лиса',
-  'Медведь', 'Хомяк', 'Кролик', 'Утка', 'Панда',
-  'Лось', 'Ёж', 'Выдра', 'Тюлень', 'Краб',
-  'Осьминог', 'Жираф', 'Зебра', 'Коала', 'Кенгуру',
-  'Барсук', 'Скунс', 'Броненосец', 'Тапир', 'Нарвал',
-  'Утконос', 'Опоссум', 'Ламантин', 'Аксолотль', 'Квокка',
+  'Raccoon', 'Lemur', 'Capybara', 'Penguin', 'Fox',
+  'Bear', 'Hamster', 'Rabbit', 'Duck', 'Panda',
+  'Moose', 'Hedgehog', 'Otter', 'Seal', 'Crab',
+  'Octopus', 'Giraffe', 'Zebra', 'Koala', 'Kangaroo',
+  'Badger', 'Skunk', 'Armadillo', 'Tapir', 'Narwhal',
+  'Platypus', 'Opossum', 'Manatee', 'Axolotl', 'Quokka',
 ];
 
 export function generateRandomNickname(): string {

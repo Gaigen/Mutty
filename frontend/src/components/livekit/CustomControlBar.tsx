@@ -7,8 +7,8 @@ import {
   ChatToggle,
   StartMediaButton,
   useLocalParticipantPermissions,
-  usePersistentUserChoices,
 } from '@livekit/components-react';
+import { useUserChoicesContext } from '../../context/UserChoicesContext';
 import { supportsScreenSharing } from '@livekit/components-core';
 
 type CustomControlBarControls = {
@@ -70,12 +70,11 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
     setIsScreenShareEnabled(enabled);
   }, []);
 
-  const {
-    saveAudioInputEnabled,
-    saveVideoInputEnabled,
-    saveAudioInputDeviceId,
-    saveVideoInputDeviceId,
-  } = usePersistentUserChoices({ preventSave: false });
+  const userChoices = useUserChoicesContext();
+  const saveAudioInputEnabled = userChoices?.saveAudioInputEnabled ?? (() => {});
+  const saveVideoInputEnabled = userChoices?.saveVideoInputEnabled ?? (() => {});
+  const saveAudioInputDeviceId = userChoices?.saveAudioInputDeviceId ?? (() => {});
+  const saveVideoInputDeviceId = userChoices?.saveVideoInputDeviceId ?? (() => {});
 
   const microphoneOnChange = React.useCallback(
     (enabled: boolean, isUserInitiated: boolean) => {

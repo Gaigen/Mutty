@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { LS_KEYS } from '../config';
 
 export interface AudioSettings {
   // Input (microphone)
@@ -35,11 +36,9 @@ const DEFAULT_SETTINGS: AudioSettings = {
   joinLeaveSounds: true,
 };
 
-const STORAGE_KEY = 'voice-app:audio-settings';
-
 function loadSettings(): AudioSettings {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(LS_KEYS.audioSettings);
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<AudioSettings>;
       return { ...DEFAULT_SETTINGS, ...parsed };
@@ -52,7 +51,7 @@ function loadSettings(): AudioSettings {
 
 function saveSettings(settings: AudioSettings) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    localStorage.setItem(LS_KEYS.audioSettings, JSON.stringify(settings));
   } catch (e) {
     console.warn('Failed to save audio settings to localStorage:', e);
   }

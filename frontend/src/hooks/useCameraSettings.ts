@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { LS_KEYS } from '../config';
 import type { VideoCodec } from './useScreenShareSettings';
 
 export interface CameraSettings {
@@ -17,11 +18,9 @@ const DEFAULT_SETTINGS: CameraSettings = {
   height: 720,
 };
 
-const STORAGE_KEY = 'voice-app:camera-settings';
-
 function loadSettings(): CameraSettings {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(LS_KEYS.cameraSettings);
     if (stored) {
       return { ...DEFAULT_SETTINGS, ...(JSON.parse(stored) as Partial<CameraSettings>) };
     }
@@ -32,7 +31,7 @@ function loadSettings(): CameraSettings {
 }
 
 function saveSettings(s: CameraSettings) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+  try { localStorage.setItem(LS_KEYS.cameraSettings, JSON.stringify(s)); }
   catch (e) { console.warn('Failed to save camera settings:', e); }
 }
 
