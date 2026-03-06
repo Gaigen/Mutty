@@ -41,37 +41,41 @@ export default function AudioHandler() {
     const localTrack = getMicTrack();
     if (!localTrack) return;
 
-    const wasMuted = localTrack.isMuted;
-    // Saved choice takes priority (restores device on reload); fallback to current track's device
-    const saved = savedAudioDeviceIdRef.current;
-    const currentDeviceId = localTrack.mediaStreamTrack?.getSettings().deviceId;
-    const preferredDeviceId = (saved && saved !== 'default') ? saved : currentDeviceId;
+    const mediaTrack = localTrack.mediaStreamTrack;
+    if (!mediaTrack || mediaTrack.readyState === 'ended') return;
 
+    // applyConstraints updates audio processing without recreating the track —
+    // avoids the LiveKit bug where restartTrack ignores deviceId in Chrome.
     try {
-      if (wasMuted) await localTrack.unmute();
-      await localTrack.restartTrack({
+      await mediaTrack.applyConstraints({
         noiseSuppression: audioSettings.noiseSuppression,
         echoCancellation: audioSettings.echoCancellation,
         autoGainControl: audioSettings.autoGainControl,
-        voiceIsolation: audioSettings.voiceIsolation,
-        ...(preferredDeviceId ? { deviceId: preferredDeviceId } : {}),
       });
-      if (wasMuted) await localTrack.mute();
     } catch (e) {
-      console.error('[AudioHandler] Failed to apply mic options:', e);
-      if (wasMuted && !localTrack.isMuted) {
-        try { await localTrack.mute(); } catch { /* ignore */ }
-      }
+      console.warn('[AudioHandler] applyConstraints failed:', e);
     }
   }, [
     getMicTrack,
     audioSettings.noiseSuppression,
     audioSettings.echoCancellation,
     audioSettings.autoGainControl,
-    audioSettings.voiceIsolation,
   ]);
 
-  // Применяем при изменении настроек и при появлении нового трека микрофона
+  // Restore saved mic device on room connect (once per connection)
+  useEffect(() => {
+    if (!room) return;
+    const saved = savedAudioDeviceIdRef.current;
+    if (!saved || saved === 'default') return;
+    const timer = setTimeout(() => {
+      room.switchActiveDevice('audioinput', saved).catch((e) =>
+        console.error('[AudioHandler] Failed to restore mic device:', e)
+      );
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [room]);
+
+  // Apply processing settings when they change or when mic track is published
   useEffect(() => {
     if (!room) return;
     applyMicOptions();
