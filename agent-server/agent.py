@@ -3,6 +3,10 @@ YouTube Bot — LiveKit participant that streams audio/video from various source
 
 Команды (без «!»):
   <url>                  — воспроизвести ссылку (YouTube / Twitch / SoundCloud / Telegram / др.)
+  add <url> / queue <url> — добавить в очередь
+  skip / next            — пропустить текущий трек (без голосования)
+  queue / list           — показать очередь
+  clear                  — очистить очередь
   стоп / stop            — остановить воспроизведение
   аудио <url>            — только звук по ссылке
   видео <url>            — видео+звук по ссылке
@@ -11,6 +15,7 @@ YouTube Bot — LiveKit participant that streams audio/video from various source
 """
 
 import asyncio
+from collections import deque
 import ipaddress
 import json
 import logging
@@ -19,7 +24,7 @@ import re
 import time
 import uuid
 from typing import Callable, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 from livekit import rtc
 from livekit.api import AccessToken, VideoGrants
@@ -37,31 +42,25 @@ MEDIA_PROXY = os.getenv("AGENT_MEDIA_PROXY", "").strip() or None
 
 BOT_IDENTITY = "youtube-bot"
 BOT_NAME = "i meen to go away"
-CHAT_TOPIC = "lk-chat-topic"
+# Topic для чата. components-react использует "lk-chat-topic"; при проблемах попробуй AGENT_CHAT_TOPIC=lk-chat
+CHAT_TOPIC = os.getenv("AGENT_CHAT_TOPIC", "lk-chat-topic").strip() or "lk-chat-topic"
 
 AUDIO_SAMPLE_RATE = 48_000
 AUDIO_CHANNELS = 2
 AUDIO_SAMPLES_PER_FRAME = 960  # 20 ms at 48 kHz
 
-# Разрешение стрима. 1080p — лучше для широкого видео, 720p — экономия трафика.
-VIDEO_WIDTH = int(os.getenv("AGENT_VIDEO_WIDTH", "1920"))
-VIDEO_HEIGHT = int(os.getenv("AGENT_VIDEO_HEIGHT", "1080"))
+# Разрешение стрима. Presets для выбора качества; default из env.
 VIDEO_FPS = int(os.getenv("AGENT_VIDEO_FPS", "30"))
 
-# Black frame YUV420p: Y=0, U=V=128 (one frame, reused when stopping)
-_BLACK_FRAME: Optional[bytearray] = None
-
-
-def _get_black_frame() -> bytearray:
-    global _BLACK_FRAME
-    if _BLACK_FRAME is None:
-        y_size = VIDEO_WIDTH * VIDEO_HEIGHT
-        uv_size = (VIDEO_WIDTH // 2) * (VIDEO_HEIGHT // 2)
-        _BLACK_FRAME = bytearray(y_size)
-        _BLACK_FRAME.extend(bytes([128] * uv_size))  # U
-        _BLACK_FRAME.extend(bytes([128] * uv_size))  # V
-    return _BLACK_FRAME
-
+QUALITY_PRESETS: dict[str, tuple[int, int]] = {
+    "360p": (640, 360),
+    "480p": (854, 480),
+    "720p": (1280, 720),
+    "1080p": (1920, 1080),
+}
+DEFAULT_QUALITY = os.getenv("AGENT_VIDEO_QUALITY", "720p").strip().lower()
+if DEFAULT_QUALITY not in QUALITY_PRESETS:
+    DEFAULT_QUALITY = "720p"
 
 # Любой http(s)-URL в сообщении
 URL_RE = re.compile(r"https?://\S+")
@@ -71,6 +70,9 @@ _YOUTUBE_DOMAINS = ("youtube.com", "youtu.be", "www.youtube.com", "m.youtube.com
 _TWITCH_DOMAINS = ("twitch.tv", "www.twitch.tv", "m.twitch.tv", "clips.twitch.tv")
 _SOUNDCLOUD_DOMAINS = ("soundcloud.com", "on.soundcloud.com")
 _TELEGRAM_DOMAINS = ("t.me", "telegram.me", "telegram.org")
+
+# Источники без видео — при переключении на них снимаем видео-трек, чтобы не висел последний кадр
+_AUDIO_ONLY_SOURCES = ("soundcloud",)
 
 
 def _is_url_safe_for_media(url: str) -> bool:
@@ -120,6 +122,10 @@ def _classify_source(url: str) -> str:
     return "other"
 
 STOP_RE = re.compile(r"^(?:!?\s*)?(стоп|stop)\s*$", re.IGNORECASE)
+SKIP_RE = re.compile(r"^(?:!?\s*)?(skip|next|скип)\s*$", re.IGNORECASE)
+QUEUE_CMD_RE = re.compile(r"^(?:!?\s*)?(?:add|queue|добавить|очередь)\s+(.+)", re.IGNORECASE)
+QUEUE_LIST_RE = re.compile(r"^(?:!?\s*)?(?:queue|list|очередь|список)\s*$", re.IGNORECASE)
+CLEAR_RE = re.compile(r"^(?:!?\s*)?(?:clear|очистить)\s*$", re.IGNORECASE)
 AUDIO_CMD_RE = re.compile(r"^(?:!?\s*)?аудио\s+(https?://\S+)", re.IGNORECASE)
 VIDEO_CMD_RE = re.compile(r"^(?:!?\s*)?видео\s+(https?://\S+)", re.IGNORECASE)
 
@@ -136,6 +142,7 @@ class YouTubeAgent:
         self._on_disconnect_cb = on_disconnect
 
         self._mode: str = "video"          # "audio" | "video"
+        self._quality: str = DEFAULT_QUALITY  # "360p" | "480p" | "720p" | "1080p"
         self._current_url: Optional[str] = None
         self._current_title: Optional[str] = None
 
@@ -150,12 +157,22 @@ class YouTubeAgent:
         self._video_task: Optional[asyncio.Task] = None
         self._ffmpeg_audio: Optional[asyncio.subprocess.Process] = None
         self._ffmpeg_video: Optional[asyncio.subprocess.Process] = None
+        self._ffmpeg_av: Optional[asyncio.subprocess.Process] = None  # combined A+V for sync
         self._command_lock = asyncio.Lock()
+        self._queue: deque[str] = deque()
+        self._url_to_meta: dict[str, tuple[str, str]] = {}  # url -> (title, link_url)
 
     # ── Public properties ─────────────────────────────────────────────────────
     @property
     def mode(self) -> str:
         return self._mode
+
+    @property
+    def quality(self) -> str:
+        return self._quality
+
+    def _video_dimensions(self) -> tuple[int, int]:
+        return QUALITY_PRESETS.get(self._quality, QUALITY_PRESETS[DEFAULT_QUALITY])
 
     @property
     def is_playing(self) -> bool:
@@ -168,6 +185,38 @@ class YouTubeAgent:
     @property
     def current_url(self) -> Optional[str]:
         return self._current_url
+
+    @property
+    def queue(self) -> list[str]:
+        return list(self._queue)
+
+    def queue_display(self) -> list[tuple[str, str]]:
+        """(title, link) for each queue item, for menu hyperlinks."""
+        out: list[tuple[str, str]] = []
+        max_title = 45
+        for url in list(self._queue)[:10]:
+            meta = self._url_to_meta.get(url)
+            if meta:
+                title, link = meta
+                display = (title[:max_title] + "…") if len(title) > max_title else title
+                out.append((display, link))
+            elif url.startswith("ytsearch"):
+                _, _, rest = url.partition(":")
+                q = rest[:max_title] + ("…" if len(rest) > max_title else rest)
+                link = f"https://www.youtube.com/results?search_query={quote_plus(rest)}"
+                out.append((f"🔍 {q}", link))
+            elif url.startswith("scsearch"):
+                _, _, rest = url.partition(":")
+                q = rest[:max_title] + ("…" if len(rest) > max_title else rest)
+                link = f"https://soundcloud.com/search?q={quote_plus(rest)}"
+                out.append((f"🔍 SC {q}", link))
+            elif url.startswith("http"):
+                short = url[:max_title] + ("…" if len(url) > max_title else "")
+                out.append((short, url))
+            else:
+                short = url[:max_title] + ("…" if len(url) > max_title else "")
+                out.append((short, ""))
+        return out
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
     async def connect(self) -> None:
@@ -191,8 +240,7 @@ class YouTubeAgent:
         logger.info("[Bot] Connected to room '%s'", self.room_name)
         await self._send_chat(
             "👋 YouTube Bot подключён!\n"
-            "📎 Отправьте ссылку на YouTube / Twitch / SoundCloud или публичный Telegram-пост с медиа — начну воспроизведение через yt-dlp.\n"
-            "💡 Команды: аудио <url> · видео <url> · стоп"
+            "📎 Отправьте ссылку — начну воспроизведение. add <url> — в очередь, skip — пропустить, queue — список."
         )
 
     async def disconnect(self) -> None:
@@ -206,6 +254,7 @@ class YouTubeAgent:
 
     async def stop(self) -> None:
         """Stop playback without disconnecting the bot."""
+        self._queue.clear()
         await self._stop_streams()
         self._current_url = None
         self._current_title = None
@@ -223,6 +272,163 @@ class YouTubeAgent:
         await self._send_chat("⏹ Воспроизведение остановлено.")
         logger.info("[Bot] Playback stopped in room '%s'", self.room_name)
 
+    async def skip(self) -> None:
+        """Skip current track, play next from queue. One skip = immediate skip (no voting)."""
+        await self._stop_streams()
+        self._current_url = None
+        self._current_title = None
+        await self._maybe_play_next()
+
+    async def queue_add(self, url_or_query: str) -> None:
+        """Add URL or search query to queue. If nothing playing, start."""
+        raw = url_or_query.strip()
+        if not raw:
+            return
+        # Allow youtube/soundcloud search shorthand: "youtube foo" -> ytsearch1:foo
+        if raw.lower().startswith("youtube ") or raw.lower().startswith("yt "):
+            url = f"ytsearch1:{raw.split(maxsplit=1)[1]}"
+        elif raw.lower().startswith("soundcloud ") or raw.lower().startswith("sc "):
+            url = f"scsearch1:{raw.split(maxsplit=1)[1]}"
+        else:
+            url = raw
+        if not _is_url_safe_for_media(url):
+            await self._send_chat("❌ Недопустимая ссылка (SSRF protection).")
+            return
+        self._queue.append(url)
+        asyncio.create_task(self._resolve_and_cache(url))
+        display = url[:60] + ('…' if len(url) > 60 else '')
+        await self._send_chat(f"➕ В очередь ({len(self._queue)}): {display}")
+        if not self.is_playing:
+            await self._maybe_play_next()
+
+    async def queue_clear(self) -> None:
+        """Clear queue."""
+        n = len(self._queue)
+        self._queue.clear()
+        await self._send_chat(f"🗑 Очередь очищена ({n} треков).")
+
+    async def _resolve_and_cache(self, url: str) -> None:
+        """Resolve URL in background and cache title+link for queue display."""
+        try:
+            _, _, title, webpage_url = await self._resolve(url)
+            self._url_to_meta[url] = (title or url, webpage_url or url)
+        except Exception:
+            pass
+
+    def _format_queue_line(self, i: int, url: str, max_title: int = 50) -> str:
+        """Format queue item: always [text](url) for messageFormatter hyperlinks."""
+        meta = self._url_to_meta.get(url)
+        if meta:
+            title, link = meta
+            display = (title[:max_title] + "…") if len(title) > max_title else title
+            return f"  {i}. [{display}]({link})"
+        if url.startswith("ytsearch"):
+            _, _, rest = url.partition(":")
+            q = rest[:max_title] + ("…" if len(rest) > max_title else rest)
+            link = f"https://www.youtube.com/results?search_query={quote_plus(rest)}"
+            return f"  {i}. 🔍 [{q}]({link})"
+        if url.startswith("scsearch"):
+            _, _, rest = url.partition(":")
+            q = rest[:max_title] + ("…" if len(rest) > max_title else rest)
+            link = f"https://soundcloud.com/search?q={quote_plus(rest)}"
+            return f"  {i}. 🔍 SC [{q}]({link})"
+        if url.startswith("http"):
+            short = url[:max_title] + ("…" if len(url) > max_title else "")
+            return f"  {i}. [{short}]({url})"
+        short = url[:max_title] + ("…" if len(url) > max_title else "")
+        return f"  {i}. {short}"
+
+    async def _show_queue(self) -> None:
+        """Show queue in chat: titles with hyperlinks where cached."""
+        if not self._queue:
+            await self._send_chat("📋 Очередь пуста.")
+            return
+        items = list(self._queue)[:8]
+        lines = [f"📋 Очередь ({len(self._queue)}):"]
+        for i, u in enumerate(items, 1):
+            lines.append(self._format_queue_line(i, u))
+        if len(self._queue) > 8:
+            lines.append(f"  … +{len(self._queue) - 8}")
+        await self._send_chat("\n".join(lines))
+
+    async def _maybe_play_next(self) -> None:
+        """Play next from queue, or stop if empty."""
+        if not self._queue:
+            self._current_url = None
+            self._current_title = None
+            if self._audio_published and self._audio_sid:
+                try:
+                    await self.room.local_participant.unpublish_track(self._audio_sid)
+                except Exception as e:
+                    logger.warning("[Bot] Failed to unpublish audio track: %s", e)
+                self._audio_published = False
+                self._audio_source = None
+                self._audio_sid = None
+            if self._video_published and self._video_sid:
+                try:
+                    await self.room.local_participant.unpublish_track(self._video_sid)
+                except Exception as e:
+                    logger.warning("[Bot] Failed to unpublish video track: %s", e)
+                self._video_published = False
+                self._video_source = None
+                self._video_sid = None
+            await self._send_chat("✅ Воспроизведение завершено.")
+            return
+        await self._stop_streams()
+        url = self._queue.popleft()
+        await self._play_internal(url)
+
+    async def _play_internal(self, url: str) -> None:
+        """Internal: resolve and start streaming. Called by play() and _maybe_play_next()."""
+        label = "🎵 аудио" if self._mode == "audio" else "🎬 видео"
+        src = _classify_source(url)
+        pretty_src = {
+            "youtube": "YouTube",
+            "twitch": "Twitch",
+            "soundcloud": "SoundCloud",
+            "telegram": "Telegram",
+        }.get(src, "другой источник")
+        await self._send_chat(f"⏳ Загружаю [{label}, {pretty_src}]: {url[:60]}{'…' if len(url) > 60 else ''}")
+
+        try:
+            video_url, audio_url, title, webpage_url = await self._resolve(url)
+        except Exception as exc:
+            await self._send_chat(f"❌ Не удалось получить ссылку: {exc}")
+            await self._maybe_play_next()
+            return
+
+        self._url_to_meta[url] = (title or url, webpage_url or url)
+
+        await self._ensure_audio_track()
+        has_video = self._mode == "video" and src not in _AUDIO_ONLY_SOURCES
+        if has_video:
+            await self._ensure_video_track()
+        else:
+            # Аудио-источник (SoundCloud и т.п.) — снимаем видео, чтобы не висел последний кадр
+            if self._video_published and self._video_sid:
+                try:
+                    await self.room.local_participant.unpublish_track(self._video_sid)
+                except Exception as e:
+                    logger.warning("[Bot] Failed to unpublish video track: %s", e)
+                self._video_published = False
+                self._video_source = None
+                self._video_sid = None
+
+        self._current_url = url
+        self._current_title = title
+
+        if has_video:
+            if os.name == "posix":
+                self._audio_task = asyncio.create_task(self._stream_av_combined(video_url, audio_url))
+            else:
+                self._audio_task = asyncio.create_task(self._stream_audio(audio_url))
+                self._video_task = asyncio.create_task(self._stream_video(video_url))
+        else:
+            self._audio_task = asyncio.create_task(self._stream_audio(audio_url))
+
+        icon = "🎵" if self._mode == "audio" else "🎬"
+        await self._send_chat(f"{icon} Играет: {title or url}")
+
     def set_mode(self, mode: str) -> None:
         """Change streaming mode ('audio' | 'video'). Takes effect on next play()."""
         if mode in ("audio", "video"):
@@ -230,6 +436,14 @@ class YouTubeAgent:
             self._mode = mode
             if old != mode:
                 logger.info("[Bot] Mode changed to '%s' in room '%s'", mode, self.room_name)
+
+    def set_quality(self, quality: str) -> None:
+        """Change video quality preset. Takes effect on next play()."""
+        if quality in QUALITY_PRESETS:
+            old = self._quality
+            self._quality = quality
+            if old != quality:
+                logger.info("[Bot] Quality changed to '%s' in room '%s'", quality, self.room_name)
 
     def _on_participant_disconnected(self, participant: rtc.RemoteParticipant) -> None:
         """Leave room when agent is alone (no other participants)."""
@@ -240,6 +454,8 @@ class YouTubeAgent:
     # ── Chat listener ─────────────────────────────────────────────────────────
     def _on_data(self, dp: rtc.DataPacket) -> None:
         try:
+            if dp.participant is not None and getattr(dp.participant, "identity", None) == BOT_IDENTITY:
+                return
             text = dp.data.decode("utf-8")
             try:
                 obj = json.loads(text)
@@ -253,6 +469,29 @@ class YouTubeAgent:
             # стоп / stop
             if STOP_RE.match(text):
                 asyncio.ensure_future(self._run_command(self.stop))
+                return
+
+            # skip / next
+            if SKIP_RE.match(text):
+                asyncio.ensure_future(self._run_command(self.skip))
+                return
+
+            # add <url> / queue <url>
+            m = QUEUE_CMD_RE.match(text)
+            if m:
+                arg = m.group(1).strip()
+                if arg:
+                    asyncio.ensure_future(self._run_command(lambda: self.queue_add(arg)))
+                return
+
+            # queue / list — без lock, чтобы не блокироваться при долгом play
+            if QUEUE_LIST_RE.match(text):
+                asyncio.ensure_future(self._show_queue())
+                return
+
+            # clear
+            if CLEAR_RE.match(text):
+                asyncio.ensure_future(self._run_command(self.queue_clear))
                 return
 
             # аудио <url>
@@ -303,40 +542,12 @@ class YouTubeAgent:
 
     # ── Playback ──────────────────────────────────────────────────────────────
     async def play(self, url: str) -> None:
+        """Play URL now (replaces current, queue unchanged)."""
         if not _is_url_safe_for_media(url):
             await self._send_chat("❌ Недопустимая ссылка (SSRF protection).")
             return
         await self._stop_streams()
-        label = "🎵 аудио" if self._mode == "audio" else "🎬 видео"
-        src = _classify_source(url)
-        pretty_src = {
-            "youtube": "YouTube",
-            "twitch": "Twitch",
-            "soundcloud": "SoundCloud",
-            "telegram": "Telegram",
-        }.get(src, "другой источник")
-        await self._send_chat(f"⏳ Загружаю [{label}, {pretty_src}]: {url}")
-
-        try:
-            video_url, audio_url, title = await self._resolve(url)
-        except Exception as exc:
-            self._current_url = None
-            await self._send_chat(f"❌ Не удалось получить ссылку: {exc}")
-            return
-
-        await self._ensure_audio_track()
-        if self._mode == "video":
-            await self._ensure_video_track()
-
-        self._current_url = url
-        self._current_title = title
-
-        self._audio_task = asyncio.create_task(self._stream_audio(audio_url))
-        if self._mode == "video":
-            self._video_task = asyncio.create_task(self._stream_video(video_url))
-
-        icon = "🎵" if self._mode == "audio" else "🎬"
-        await self._send_chat(f"{icon} Играет: {title or url}")
+        await self._play_internal(url)
 
     # ── Search helpers ──────────────────────────────────────────────────────────
     async def _search_and_play(self, source: str, query: str) -> None:
@@ -371,14 +582,16 @@ class YouTubeAgent:
             env["https_proxy"] = MEDIA_PROXY
         return env
 
-    async def _resolve(self, url: str) -> tuple[str, str, str]:
+    async def _resolve(self, url: str) -> tuple[str, str, str, str]:
+        """Returns (video_url, audio_url, title, webpage_url)."""
+        _, height = self._video_dimensions()
         yt_extra = ["--proxy", MEDIA_PROXY] if MEDIA_PROXY else []
         url_proc = await asyncio.create_subprocess_exec(
             "yt-dlp", "--no-playlist", "--no-warnings", *yt_extra,
             "-f", (
-                f"bestvideo[height<={VIDEO_HEIGHT}][ext=mp4]+bestaudio[ext=m4a]"
-                f"/bestvideo[height<={VIDEO_HEIGHT}]+bestaudio"
-                f"/best[height<={VIDEO_HEIGHT}]/best"
+                f"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
+                f"/bestvideo[height<={height}]+bestaudio"
+                f"/best[height<={height}]/best"
             ),
             "--get-url", url,
             stdout=asyncio.subprocess.PIPE,
@@ -394,19 +607,35 @@ class YouTubeAgent:
         audio_url = lines[1] if len(lines) >= 2 else lines[0]
 
         title = ""
+        webpage_url = url if url.startswith("http") else ""
         try:
-            tp = await asyncio.create_subprocess_exec(
-                "yt-dlp", "--no-playlist", *yt_extra, "--get-title", url,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.DEVNULL,
-                env=self._subprocess_env_for_media(),
-            )
-            tout, _ = await asyncio.wait_for(tp.communicate(), timeout=15)
-            title = tout.decode().strip()
+            async def get_title():
+                p = await asyncio.create_subprocess_exec(
+                    "yt-dlp", "--no-playlist", *yt_extra, "--get-title", url,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.DEVNULL,
+                    env=self._subprocess_env_for_media(),
+                )
+                out, _ = await asyncio.wait_for(p.communicate(), timeout=15)
+                return out.decode().strip()
+
+            async def get_link():
+                p = await asyncio.create_subprocess_exec(
+                    "yt-dlp", "--no-playlist", *yt_extra, "--print", "webpage_url", url,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.DEVNULL,
+                    env=self._subprocess_env_for_media(),
+                )
+                out, _ = await asyncio.wait_for(p.communicate(), timeout=15)
+                return out.decode().strip()
+
+            title, link = await asyncio.gather(get_title(), get_link())
+            if link.startswith("http"):
+                webpage_url = link
         except Exception:
             pass
 
-        return video_url, audio_url, title
+        return video_url, audio_url, title, webpage_url
 
     # ── Track management ──────────────────────────────────────────────────────
     async def _ensure_audio_track(self) -> None:
@@ -425,7 +654,8 @@ class YouTubeAgent:
     async def _ensure_video_track(self) -> None:
         if self._video_published:
             return
-        self._video_source = rtc.VideoSource(VIDEO_WIDTH, VIDEO_HEIGHT)
+        w, h = self._video_dimensions()
+        self._video_source = rtc.VideoSource(w, h)
         track = rtc.LocalVideoTrack.create_video_track("yt-video", self._video_source)
         pub = await self.room.local_participant.publish_track(
             track,
@@ -470,31 +700,21 @@ class YouTubeAgent:
                     )
                 )
         except asyncio.IncompleteReadError:
-            self._current_url = None
-            self._current_title = None
             logger.info("[Bot] Audio stream finished")
-            # Убираем аудио-трек после окончания, чтобы не висел пустой тайл
-            if self._audio_published and self._audio_sid:
-                try:
-                    await self.room.local_participant.unpublish_track(self._audio_sid)
-                except Exception as e:
-                    logger.warning("[Bot] Failed to unpublish audio track: %s", e)
-                self._audio_published = False
-                self._audio_source = None
-                self._audio_sid = None
-            await self._send_chat("✅ Воспроизведение завершено.")
+            asyncio.create_task(self._maybe_play_next())
         except asyncio.CancelledError:
             pass
         except Exception:
             logger.exception("[Bot] Audio stream error")
 
     async def _stream_video(self, url: str) -> None:
-        frame_bytes = VIDEO_WIDTH * VIDEO_HEIGHT * 3 // 2
+        w, h = self._video_dimensions()
+        frame_bytes = w * h * 3 // 2
         frame_duration = 1.0 / VIDEO_FPS
         # Letterbox: сохраняем пропорции, чёрные полосы по краям. Lanczos — лучшее качество.
         vf = (
-            f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=decrease:flags=lanczos,"
-            f"pad={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=black,fps={VIDEO_FPS}"
+            f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
+            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,fps={VIDEO_FPS}"
         )
         cmd = [
             "ffmpeg",
@@ -522,8 +742,8 @@ class YouTubeAgent:
                 raw = await self._ffmpeg_video.stdout.readexactly(frame_bytes)
                 self._video_source.capture_frame(
                     rtc.VideoFrame(
-                        width=VIDEO_WIDTH,
-                        height=VIDEO_HEIGHT,
+                        width=w,
+                        height=h,
                         type=rtc.VideoBufferType.I420,
                         data=bytearray(raw),
                     )
@@ -534,18 +754,135 @@ class YouTubeAgent:
                     await asyncio.sleep(wait)
         except asyncio.IncompleteReadError:
             logger.info("[Bot] Video stream finished")
-            if self._video_published and self._video_sid:
-                try:
-                    await self.room.local_participant.unpublish_track(self._video_sid)
-                except Exception as e:
-                    logger.warning("[Bot] Failed to unpublish video track: %s", e)
-                self._video_published = False
-                self._video_source = None
-                self._video_sid = None
+            # Audio stream triggers _maybe_play_next; we just exit
         except asyncio.CancelledError:
             pass
         except Exception:
             logger.exception("[Bot] Video stream error")
+
+    async def _stream_av_combined(self, video_url: str, audio_url: str) -> None:
+        """Single ffmpeg: audio→stdout, video→pipe. Keeps A/V in sync.
+
+        video_url may be video-only; audio_url may be audio-only (typical for YouTube).
+        When they are the same URL, a single input is used.
+        """
+        w, h = self._video_dimensions()
+        frame_bytes = w * h * 3 // 2
+        bytes_per_frame = AUDIO_SAMPLES_PER_FRAME * AUDIO_CHANNELS * 2
+        frame_duration = 1.0 / VIDEO_FPS
+
+        vf = (
+            f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
+            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,fps={VIDEO_FPS}"
+        )
+        r_video, w_video = os.pipe()
+        reconnect = ["-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5"]
+        try:
+            if video_url == audio_url:
+                # Single muxed file: both streams inside one input
+                cmd = [
+                    "ffmpeg", "-loglevel", "quiet",
+                    *reconnect, "-i", video_url,
+                    "-map", "0:a", "-acodec", "pcm_s16le",
+                    "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
+                    "-f", "s16le", "pipe:1",
+                    "-map", "0:v", "-vf", vf, "-pix_fmt", "yuv420p",
+                    "-f", "rawvideo", f"pipe:{w_video}",
+                ]
+            else:
+                # Separate video and audio streams (typical YouTube dash)
+                cmd = [
+                    "ffmpeg", "-loglevel", "quiet",
+                    *reconnect, "-i", video_url,
+                    *reconnect, "-i", audio_url,
+                    "-map", "1:a", "-acodec", "pcm_s16le",
+                    "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
+                    "-f", "s16le", "pipe:1",
+                    "-map", "0:v", "-vf", vf, "-pix_fmt", "yuv420p",
+                    "-f", "rawvideo", f"pipe:{w_video}",
+                ]
+            ffmpeg_env = self._subprocess_env_for_media()
+            self._ffmpeg_av = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+                pass_fds=(w_video,),
+                env=ffmpeg_env,
+            )
+        finally:
+            os.close(w_video)
+
+        assert self._ffmpeg_av.stdout
+        assert self._audio_source and self._video_source
+
+        loop = asyncio.get_running_loop()
+
+        async def read_audio() -> None:
+            try:
+                while True:
+                    raw = await self._ffmpeg_av.stdout.readexactly(bytes_per_frame)
+                    await self._audio_source.capture_frame(
+                        rtc.AudioFrame(
+                            data=raw,
+                            sample_rate=AUDIO_SAMPLE_RATE,
+                            num_channels=AUDIO_CHANNELS,
+                            samples_per_channel=AUDIO_SAMPLES_PER_FRAME,
+                        )
+                    )
+            except asyncio.IncompleteReadError:
+                pass
+            except asyncio.CancelledError:
+                pass
+
+        async def read_video() -> None:
+            def read_exactly() -> bytes:
+                data = b""
+                while len(data) < frame_bytes:
+                    chunk = os.read(r_video, frame_bytes - len(data))
+                    if not chunk:
+                        raise asyncio.IncompleteReadError(data, frame_bytes)
+                    data += chunk
+                return data
+
+            try:
+                while True:
+                    t0 = loop.time()
+                    raw = await asyncio.to_thread(read_exactly)
+                    self._video_source.capture_frame(
+                        rtc.VideoFrame(
+                            width=w,
+                            height=h,
+                            type=rtc.VideoBufferType.I420,
+                            data=bytearray(raw),
+                        )
+                    )
+                    elapsed = loop.time() - t0
+                    wait = frame_duration - elapsed
+                    if wait > 0:
+                        await asyncio.sleep(wait)
+            except (asyncio.IncompleteReadError, OSError):
+                pass
+            except asyncio.CancelledError:
+                pass
+
+        cancelled = False
+        try:
+            await asyncio.gather(
+                asyncio.create_task(read_audio()),
+                asyncio.create_task(read_video()),
+            )
+        except asyncio.CancelledError:
+            cancelled = True
+        except Exception:
+            logger.exception("[Bot] A/V stream error")
+        finally:
+            try:
+                os.close(r_video)
+            except OSError:
+                pass
+            logger.info("[Bot] A/V stream finished")
+            if not cancelled:
+                asyncio.create_task(self._maybe_play_next())
 
     # ── Internal helpers ──────────────────────────────────────────────────────
     async def _stop_streams(self) -> None:
@@ -557,7 +894,7 @@ class YouTubeAgent:
                 except asyncio.CancelledError:
                     pass
 
-        for proc in (self._ffmpeg_audio, self._ffmpeg_video):
+        for proc in (self._ffmpeg_audio, self._ffmpeg_video, self._ffmpeg_av):
             if proc and proc.returncode is None:
                 try:
                     proc.kill()
@@ -566,7 +903,7 @@ class YouTubeAgent:
                     pass
 
         self._audio_task = self._video_task = None
-        self._ffmpeg_audio = self._ffmpeg_video = None
+        self._ffmpeg_audio = self._ffmpeg_video = self._ffmpeg_av = None
 
     async def _send_chat(self, message: str) -> None:
         if self.room.connection_state != rtc.ConnectionState.CONN_CONNECTED:
