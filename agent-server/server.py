@@ -1,12 +1,15 @@
 """
 HTTP control server for the YouTube Bot.
 
-POST /agent/join   { "room": "…" }              — bot joins the room
-POST /agent/leave  { "room": "…" }              — bot leaves the room
-POST /agent/stop   { "room": "…" }              — stop playback (bot stays)
-POST /agent/mode   { "room": "…", "mode": "…" } — set mode: "audio" | "video"
-GET  /agent/status/<room>                       — full status JSON
-GET  /health                                    — {"ok": true}
+POST /agent/join     { "room": "…" }                  — bot joins the room
+POST /agent/leave    { "room": "…" }                  — bot leaves the room
+POST /agent/stop     { "room": "…" }                  — stop playback (bot stays)
+POST /agent/mode     { "room": "…", "mode": "…" }     — set mode: "audio" | "video"
+POST /agent/quality  { "room": "…", "quality": "…" }   — set quality: "360p" | "480p" | "720p" | "1080p"
+POST /agent/skip     { "room": "…" }                  — skip to next track
+POST /agent/queue    { "room": "…", "url": "…" }      — add URL to queue
+GET  /agent/status/<room>                             — full status JSON
+GET  /health                                          — {"ok": true}
 """
 
 import logging
@@ -22,7 +25,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from agent import YouTubeAgent
+from agent import QUALITY_PRESETS, YouTubeAgent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -111,6 +114,52 @@ class ModeRequest(BaseModel):
         return v
 
 
+class QueueRequest(BaseModel):
+    room: str
+    url: str
+
+    @field_validator("room")
+    @classmethod
+    def validate_room(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("room must not be empty")
+        if len(v) > ROOM_MAX_LENGTH:
+            raise ValueError(f"room must be at most {ROOM_MAX_LENGTH} characters")
+        return v
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("url must not be empty")
+        return v
+
+
+class QualityRequest(BaseModel):
+    room: str
+    quality: str
+
+    @field_validator("room")
+    @classmethod
+    def validate_room(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("room must not be empty")
+        if len(v) > ROOM_MAX_LENGTH:
+            raise ValueError(f"room must be at most {ROOM_MAX_LENGTH} characters")
+        return v
+
+    @field_validator("quality")
+    @classmethod
+    def validate_quality(cls, v: str) -> str:
+        v = v.strip().lower()
+        if v not in QUALITY_PRESETS:
+            raise ValueError(f"quality must be one of: {', '.join(QUALITY_PRESETS)}")
+        return v
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 @app.post("/agent/join", dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
@@ -176,6 +225,42 @@ async def agent_set_mode(request: Request, req: ModeRequest):
     return {"status": "ok", "room": room, "mode": req.mode}
 
 
+@app.post("/agent/quality", dependencies=[Depends(verify_api_key)])
+@limiter.limit("30/minute")
+async def agent_set_quality(request: Request, req: QualityRequest):
+    """Switch video quality. Takes effect on the next play command."""
+    room = req.room
+    agent = _agents.get(room)
+    if not agent:
+        return {"status": "not_in_room", "room": room}
+    agent.set_quality(req.quality)
+    return {"status": "ok", "room": room, "quality": req.quality}
+
+
+@app.post("/agent/skip", dependencies=[Depends(verify_api_key)])
+@limiter.limit("30/minute")
+async def agent_skip(request: Request, req: RoomRequest):
+    """Skip current track, play next from queue."""
+    room = req.room
+    agent = _agents.get(room)
+    if not agent:
+        return {"status": "not_in_room", "room": room}
+    await agent.skip()
+    return {"status": "ok", "room": room}
+
+
+@app.post("/agent/queue", dependencies=[Depends(verify_api_key)])
+@limiter.limit("60/minute")
+async def agent_queue_add(request: Request, req: QueueRequest):
+    """Add URL to queue."""
+    room = req.room
+    agent = _agents.get(room)
+    if not agent:
+        return {"status": "not_in_room", "room": room}
+    await agent.queue_add(req.url)
+    return {"status": "ok", "room": room, "queue_length": len(agent.queue)}
+
+
 @app.get("/agent/status/{room}", dependencies=[Depends(verify_api_key)])
 @limiter.limit("120/minute")
 async def agent_status(
@@ -188,9 +273,13 @@ async def agent_status(
     return {
         "active": True,
         "mode": agent.mode,
+        "quality": agent.quality,
         "playing": agent.is_playing,
         "title": agent.current_title,
         "url": agent.current_url,
+        "queue": agent.queue,
+        "queue_display": agent.queue_display(),
+        "queue_length": len(agent.queue),
     }
 
 
