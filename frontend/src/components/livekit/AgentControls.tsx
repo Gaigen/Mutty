@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRoomContext } from '@livekit/components-react';
+import { RoomEvent } from 'livekit-client';
 import { config, appConfig } from '../../config';
+import { useParticipantVolumes } from '../../context/ParticipantVolumesContext';
+
+const AGENT_CONTROL_TOPIC = 'agent-control';
+const BOT_IDENTITY = 'youtube-bot';
 
 interface Props {
   roomName: string;
@@ -16,17 +22,13 @@ interface AgentStatus {
   mode: Mode;
   quality?: Quality;
   playing: boolean;
+  paused?: boolean;
+  repeat?: boolean;
   title: string | null;
   url: string | null;
   queue?: string[];
-  queue_display?: [string, string][]; // [title, link] for hyperlinks
+  queue_display?: [string, string][];
   queue_length?: number;
-}
-
-function agentHeaders(): Record<string, string> {
-  const h: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (config.agentApiKey) h['X-API-Key'] = config.agentApiKey;
-  return h;
 }
 
 const DEFAULT_STATUS: AgentStatus = {
@@ -37,6 +39,28 @@ const DEFAULT_STATUS: AgentStatus = {
   title: null,
   url: null,
 };
+
+function parseStatusFromAttributes(attrs: Record<string, string> | undefined): AgentStatus | null {
+  const raw = attrs?.['bot:status'];
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw);
+    return {
+      active: true,
+      mode: (data.mode as Mode) || 'video',
+      quality: (data.quality as Quality) || '720p',
+      playing: !!data.playing,
+      paused: !!data.paused,
+      repeat: !!data.repeat,
+      title: data.title ?? null,
+      url: data.url ?? null,
+      queue_length: data.queue_length ?? 0,
+      queue_display: Array.isArray(data.queue_display) ? data.queue_display : [],
+    };
+  } catch {
+    return null;
+  }
+}
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function BotIcon() {
@@ -64,6 +88,44 @@ function SkipIcon() {
     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
       <path strokeWidth={2} strokeLinecap="round" d="M5 4l10 8-10 8V4z" />
       <path strokeWidth={2} strokeLinecap="round" d="M19 5v14" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
+function RepeatIcon({ active }: { active?: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden
+      style={active ? { opacity: 1 } : { opacity: 0.6 }}
+    >
+      <path
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"
+      />
     </svg>
   );
 }
@@ -128,9 +190,11 @@ function MenuButton({
 function MenuAction({
   onClick,
   children,
+  style,
 }: {
   onClick: () => void;
   children: ReactNode;
+  style?: React.CSSProperties;
 }) {
   return (
     <button
@@ -145,6 +209,7 @@ function MenuAction({
         justifyContent: 'flex-start',
         padding: '0.4rem 0.75rem',
         fontSize: 12,
+        ...style,
       }}
     >
       {children}
@@ -152,47 +217,61 @@ function MenuAction({
   );
 }
 
+function sendControlCommand(room: ReturnType<typeof useRoomContext>, cmd: object) {
+  const data = new TextEncoder().encode(JSON.stringify(cmd));
+  room.localParticipant.publishData(data, { reliable: true, topic: AGENT_CONTROL_TOPIC });
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AgentControls({ roomName }: Props) {
+  const room = useRoomContext();
   const [agentState, setAgentState] = useState<AgentState>('idle');
   const [status, setStatus] = useState<AgentStatus>(DEFAULT_STATUS);
   const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [queueInput, setQueueInput] = useState('');
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `${config.agentEndpoint}/agent/status/${encodeURIComponent(roomName)}`,
-        { headers: agentHeaders(), signal: AbortSignal.timeout(5_000) },
-      );
-      if (!res.ok) {
-        if (res.status === 401) setUnavailable(true);
-        else if (res.status !== 429) setUnavailable(true);
-        return;
-      }
-      const data: AgentStatus = await res.json();
-      setStatus(data);
-      setAgentState((prev) => {
-        if (prev === 'loading-join' || prev === 'loading-leave') return prev;
-        return data.active ? 'active' : 'idle';
-      });
-      setUnavailable(false);
-    } catch {
-      setUnavailable(true);
-    }
-  }, [roomName]);
+  const botParticipant = Array.from(room.remoteParticipants.values()).find(
+    (p) => p.identity === BOT_IDENTITY
+  );
+  const { volumes, setVolume: setParticipantVolume } = useParticipantVolumes();
+  const botVolume = volumes[BOT_IDENTITY] ?? 1;
+
+  const updateStatusFromBot = useCallback(() => {
+    const parsed = parseStatusFromAttributes(botParticipant?.attributes);
+    if (parsed) setStatus(parsed);
+  }, [botParticipant?.attributes]);
 
   useEffect(() => {
-    fetchStatus();
-    pollRef.current = setInterval(fetchStatus, 5_000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+    updateStatusFromBot();
+  }, [updateStatusFromBot]);
+
+  useEffect(() => {
+    const onAttrsChanged = (
+      changed: Record<string, string>,
+      participant: { identity: string }
+    ) => {
+      if (participant.identity === BOT_IDENTITY && 'bot:status' in changed) {
+        const parsed = parseStatusFromAttributes({ 'bot:status': changed['bot:status'] });
+        if (parsed) setStatus(parsed);
+      }
     };
-  }, [fetchStatus]);
+    room.on(RoomEvent.ParticipantAttributesChanged, onAttrsChanged);
+    return () => {
+      room.off(RoomEvent.ParticipantAttributesChanged, onAttrsChanged);
+    };
+  }, [room]);
+
+  useEffect(() => {
+    if (botParticipant) {
+      setAgentState((prev) => (prev === 'loading-leave' ? prev : 'active'));
+    } else {
+      setAgentState('idle');
+      setStatus(DEFAULT_STATUS);
+    }
+  }, [botParticipant]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -205,139 +284,94 @@ export default function AgentControls({ roomName }: Props) {
     return () => document.removeEventListener('click', onOutside, true);
   }, [menuOpen]);
 
-  // ── Actions ──────────────────────────────────────────────────────────────
   const callAgent = useCallback(async () => {
     setAgentState('loading-join');
     setError(null);
     try {
-      const res = await fetch(`${config.agentEndpoint}/agent/join`, {
+      const res = await fetch(config.dispatchEndpoint, {
         method: 'POST',
-        headers: agentHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ room: roomName }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail ?? 'join failed');
+      if (!res.ok) throw new Error(data.error ?? 'dispatch failed');
       setAgentState('active');
-      await fetchStatus();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
       setAgentState('idle');
     }
-  }, [roomName, fetchStatus]);
+  }, [roomName]);
 
-  const removeAgent = useCallback(async () => {
+  const removeAgent = useCallback(() => {
     setAgentState('loading-leave');
     setMenuOpen(false);
     setError(null);
-    try {
-      const res = await fetch(`${config.agentEndpoint}/agent/leave`, {
-        method: 'POST',
-        headers: agentHeaders(),
-        body: JSON.stringify({ room: roomName }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail ?? 'leave failed');
-      setAgentState('idle');
-      setStatus(DEFAULT_STATUS);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error');
-      setAgentState('active');
-    }
-  }, [roomName]);
+    sendControlCommand(room, { cmd: 'leave' });
+    // agentState → idle when bot disconnects (useEffect on botParticipant)
+  }, [room]);
 
-  const stopPlayback = useCallback(async () => {
-    try {
-      await fetch(`${config.agentEndpoint}/agent/stop`, {
-        method: 'POST',
-        headers: agentHeaders(),
-        body: JSON.stringify({ room: roomName }),
-      });
-      setStatus((s) => ({ ...s, playing: false, title: null, url: null }));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error');
-    }
-  }, [roomName]);
+  const stopPlayback = useCallback(() => {
+    sendControlCommand(room, { cmd: 'stop' });
+    setStatus((s) => ({ ...s, playing: false, title: null, url: null }));
+  }, [room]);
 
   const setMode = useCallback(
-    async (mode: Mode) => {
-      try {
-        await fetch(`${config.agentEndpoint}/agent/mode`, {
-          method: 'POST',
-          headers: agentHeaders(),
-          body: JSON.stringify({ room: roomName, mode }),
-        });
-        setStatus((s) => ({ ...s, mode }));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error');
-      }
+    (mode: Mode) => {
+      sendControlCommand(room, { cmd: 'mode', mode });
+      setStatus((s) => ({ ...s, mode }));
     },
-    [roomName],
+    [room]
   );
 
   const setQuality = useCallback(
-    async (quality: Quality) => {
-      try {
-        await fetch(`${config.agentEndpoint}/agent/quality`, {
-          method: 'POST',
-          headers: agentHeaders(),
-          body: JSON.stringify({ room: roomName, quality }),
-        });
-        setStatus((s) => ({ ...s, quality }));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error');
-      }
+    (quality: Quality) => {
+      sendControlCommand(room, { cmd: 'quality', quality });
+      setStatus((s) => ({ ...s, quality }));
     },
-    [roomName],
+    [room]
   );
 
-  const skipTrack = useCallback(async () => {
-    try {
-      await fetch(`${config.agentEndpoint}/agent/skip`, {
-        method: 'POST',
-        headers: agentHeaders(),
-        body: JSON.stringify({ room: roomName }),
-      });
-      await fetchStatus();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error');
-    }
-  }, [roomName, fetchStatus]);
+  const skipTrack = useCallback(() => {
+    sendControlCommand(room, { cmd: 'skip' });
+    updateStatusFromBot();
+  }, [room, updateStatusFromBot]);
+
+  const pausePlayback = useCallback(() => {
+    sendControlCommand(room, { cmd: 'pause' });
+    setStatus((s) => ({ ...s, paused: true, playing: false }));
+  }, [room]);
+
+  const resumePlayback = useCallback(() => {
+    sendControlCommand(room, { cmd: 'resume' });
+    setStatus((s) => ({ ...s, paused: false, playing: true }));
+  }, [room]);
+
+  const toggleRepeat = useCallback(() => {
+    const next = !(status.repeat ?? false);
+    sendControlCommand(room, { cmd: 'repeat', repeat: next });
+    setStatus((s) => ({ ...s, repeat: next }));
+  }, [room, status.repeat]);
 
   const addToQueue = useCallback(
-    async (url: string) => {
+    (url: string) => {
       const u = url.trim();
       if (!u) return;
-      try {
-        const res = await fetch(`${config.agentEndpoint}/agent/queue`, {
-          method: 'POST',
-          headers: agentHeaders(),
-          body: JSON.stringify({ room: roomName, url: u }),
-        });
-        if (!res.ok) throw new Error((await res.json()).detail ?? 'Failed');
-        await fetchStatus();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error');
-      }
+      sendControlCommand(room, { cmd: 'queue', url: u });
+      updateStatusFromBot();
     },
-    [roomName, fetchStatus],
+    [room, updateStatusFromBot]
   );
 
   if (unavailable) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-        <span
-          style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}
-          title="Agent service unavailable or requires authorization"
-        >
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
           Service unavailable
         </span>
         <button
           type="button"
           className="lk-button"
-          onClick={() => {
-            setUnavailable(false);
-            fetchStatus();
-          }}
+          onClick={() => setUnavailable(false)}
           style={{ fontSize: 11, padding: '0.2rem 0.4rem' }}
         >
           Retry
@@ -351,7 +385,6 @@ export default function AgentControls({ roomName }: Props) {
   const isLoadingLeave = agentState === 'loading-leave';
   const isLoading = isLoadingJoin || isLoadingLeave;
 
-  // ── Idle: single "Агент" button ────────────────────────────────────────────
   if (!isActive && !isLoading) {
     return (
       <div style={{ position: 'relative' }}>
@@ -370,7 +403,6 @@ export default function AgentControls({ roomName }: Props) {
     );
   }
 
-  // ── Loading join ───────────────────────────────────────────────────────────
   if (isLoadingJoin) {
     return (
       <button
@@ -385,7 +417,6 @@ export default function AgentControls({ roomName }: Props) {
     );
   }
 
-  // ── Loading leave ──────────────────────────────────────────────────────────
   if (isLoadingLeave) {
     return (
       <button
@@ -400,7 +431,6 @@ export default function AgentControls({ roomName }: Props) {
     );
   }
 
-  // ── Active: Bot menu (dropdown) ───────────────────────────────────────────
   const quality = status.quality ?? '720p';
 
   return (
@@ -460,16 +490,10 @@ export default function AgentControls({ roomName }: Props) {
           <div style={{ padding: '0 0.5rem' }}>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>Mode</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              <MenuButton
-                active={status.mode === 'audio'}
-                onClick={() => setMode('audio')}
-              >
+              <MenuButton active={status.mode === 'audio'} onClick={() => setMode('audio')}>
                 🎵 Audio
               </MenuButton>
-              <MenuButton
-                active={status.mode === 'video'}
-                onClick={() => setMode('video')}
-              >
+              <MenuButton active={status.mode === 'video'} onClick={() => setMode('video')}>
                 🎬 Video
               </MenuButton>
             </div>
@@ -489,6 +513,30 @@ export default function AgentControls({ roomName }: Props) {
               </div>
             </div>
           )}
+
+          <div style={{ padding: '0.5rem 0.5rem 0' }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+              Bot volume (saved per user)
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={botVolume}
+                onChange={(e) => setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value))}
+                style={{
+                  flex: 1,
+                  height: 6,
+                  accentColor: 'var(--lk-accent, #0ea5e9)',
+                }}
+              />
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', minWidth: 36 }}>
+                {Math.round(botVolume * 100)}%
+              </span>
+            </div>
+          </div>
 
           <div style={{ padding: '0.5rem 0.5rem 0' }}>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
@@ -528,7 +576,7 @@ export default function AgentControls({ roomName }: Props) {
                 Add
               </button>
             </div>
-            {(status.queue_display ?? status.queue ?? []).length > 0 && (
+            {(status.queue_display ?? []).length > 0 && (
               <div
                 style={{
                   fontSize: 10,
@@ -537,12 +585,28 @@ export default function AgentControls({ roomName }: Props) {
                   overflowY: 'auto',
                 }}
               >
-                {(status.queue_display ?? status.queue?.map((u) => [u.slice(0, 40) + (u.length > 40 ? '…' : ''), u] as [string, string]) ?? []).slice(0, 5).map((item, i) => {
+                {status.queue_display!.slice(0, 5).map((item, i) => {
                   const [title, link] = Array.isArray(item) ? item : [item, ''];
                   return (
-                    <div key={i} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {i + 1}. {link ? (
-                        <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--lk-accent, #0ea5e9)', textDecoration: 'underline' }}>
+                    <div
+                      key={i}
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {i + 1}.{' '}
+                      {link ? (
+                        <a
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'var(--lk-accent, #0ea5e9)',
+                            textDecoration: 'underline',
+                          }}
+                        >
                           {title}
                         </a>
                       ) : (
@@ -562,21 +626,49 @@ export default function AgentControls({ roomName }: Props) {
 
           <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '0.5rem 0' }} />
 
-          {(status.playing || (status.queue_length ?? 0) > 0) && (
+          {status.playing && (
+            <MenuAction onClick={pausePlayback}>
+              <PauseIcon /> Pause
+            </MenuAction>
+          )}
+          {(status.paused ?? false) && status.url && (
+            <MenuAction onClick={resumePlayback}>
+              <PlayIcon /> Resume
+            </MenuAction>
+          )}
+          {(status.playing || status.paused || (status.queue_length ?? 0) > 0) && (
             <MenuAction
-              onClick={() => {
-                skipTrack();
+              onClick={toggleRepeat}
+              style={{
+                backgroundColor: status.repeat
+                  ? 'var(--lk-control-active-bg, rgba(255,255,255,0.2))'
+                  : undefined,
               }}
             >
+              <RepeatIcon active={status.repeat} /> Repeat
+            </MenuAction>
+          )}
+          {(status.playing || (status.queue_length ?? 0) > 0) && (
+            <MenuAction onClick={skipTrack}>
               <SkipIcon /> Skip
             </MenuAction>
           )}
-          {status.playing && (
-            <MenuAction onClick={() => { stopPlayback(); setMenuOpen(false); }}>
+          {(status.playing || status.paused) && (
+            <MenuAction
+              onClick={() => {
+                stopPlayback();
+                setMenuOpen(false);
+              }}
+            >
               <StopIcon /> Stop playback
             </MenuAction>
           )}
-          <MenuAction onClick={() => { removeAgent(); setMenuOpen(false); }}>
+          <MenuAction
+            onClick={() => {
+              removeAgent();
+              setMenuOpen(false);
+            }}
+          >
             <BotIcon /> Remove agent
           </MenuAction>
         </div>

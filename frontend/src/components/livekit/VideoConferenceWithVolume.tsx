@@ -4,7 +4,6 @@
  */
 import {
   CarouselLayout,
-  Chat,
   ConnectionStateToast,
   type MessageFormatter,
   FocusLayout,
@@ -16,6 +15,7 @@ import {
   usePinnedTracks,
   useTracks,
 } from '@livekit/components-react';
+import { ChatWithAttachments } from './ChatWithAttachments';
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
@@ -144,9 +144,10 @@ export function VideoConferenceWithVolume({
               rightControls={rightControls}
             />
           </div>
-          <Chat
+          <ChatWithAttachments
             style={{ display: widgetState.showChat ? 'grid' : 'none' }}
             messageFormatter={chatMessageFormatter}
+            enableAttachments={appConfig.showChatAttachments}
           />
         </LayoutContextProvider>
       )}
