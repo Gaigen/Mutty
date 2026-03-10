@@ -24,12 +24,12 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@livekit/components-react": "^2.9.16",
+    "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
     "@livekit/krisp-noise-filter": "^0.3.4",
     "classnames": "^2.5.1",
     "dotenv": "^17.2.3",
-    "livekit-client": "^2.16.0",
+    "livekit-client": "^2.17.2",
     "livekit-server-sdk": "^2.14.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
