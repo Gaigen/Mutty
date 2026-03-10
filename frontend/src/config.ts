@@ -5,19 +5,18 @@
 
 // ── Env (VITE_* доступны только в frontend) ───────────────────────────────────
 
+const tokenEndpoint = import.meta.env.VITE_TOKEN_ENDPOINT || 'http://127.0.0.1:4000/api/token';
+const tokenBase = tokenEndpoint.replace(/\/api\/token$/, '');
+
 export const config = {
   /** LiveKit WebSocket URL */
   livekitUrl: import.meta.env.VITE_LIVEKIT_URL || 'ws://127.0.0.1:7880',
 
   /** Endpoint для получения токена (POST room, identity) */
-  tokenEndpoint: import.meta.env.VITE_TOKEN_ENDPOINT || 'http://127.0.0.1:4000/api/token',
+  tokenEndpoint,
 
-  /** YouTube Bot agent API */
-  agentEndpoint:
-    (import.meta.env.VITE_AGENT_ENDPOINT as string | undefined) || 'http://localhost:5000',
-
-  /** API-ключ для agent (если задан на сервере — задай тот же во frontend) */
-  agentApiKey: import.meta.env.VITE_AGENT_API_KEY as string | undefined,
+  /** Endpoint для dispatch агента (POST room) — LiveKit Agent Server */
+  dispatchEndpoint: `${tokenBase}/api/agent/dispatch`,
 } as const;
 
 // ── LocalStorage keys ────────────────────────────────────────────────────────
@@ -47,6 +46,9 @@ export const appConfig = {
 
   /** Показывать чат в control bar */
   showChat: true,
+
+  /** Разрешить отправку картинок в чате */
+  showChatAttachments: true,
 
   /** Показывать кнопку Leave */
   showLeave: true,
