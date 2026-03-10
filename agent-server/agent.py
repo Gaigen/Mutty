@@ -8,6 +8,8 @@ YouTube Bot — LiveKit participant that streams audio/video from various source
   queue / list           — показать очередь
   clear                  — очистить очередь
   стоп / stop            — остановить воспроизведение
+  pause / resume         — пауза / продолжить (через agent-control)
+  repeat                 — повтор текущего трека (через agent-control)
   аудио <url>            — только звук по ссылке
   видео <url>            — видео+звук по ссылке
   youtube <запрос>       — поиск трека/видео на YouTube
@@ -27,29 +29,27 @@ from typing import Callable, Optional
 from urllib.parse import quote_plus, urlparse
 
 from livekit import rtc
-from livekit.api import AccessToken, VideoGrants
 
 logger = logging.getLogger(__name__)
+
+AGENT_CONTROL_TOPIC = "agent-control"
 
 # ── Config ────────────────────────────────────────────────────────────────────
 LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
 LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
 LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
 
-# Прокси только для загрузки медиа (yt-dlp, ffmpeg). К LiveKit агент ходит напрямую.
-# Формат: http://host:port или socks5://host:port. Для VLESS — укажи локальный HTTP/SOCKS клиент (v2ray/xray и т.д.).
+# Proxy for yt-dlp/ffmpeg only. Format: http://host:port or socks5://host:port
 MEDIA_PROXY = os.getenv("AGENT_MEDIA_PROXY", "").strip() or None
 
 BOT_IDENTITY = "youtube-bot"
 BOT_NAME = "i meen to go away"
-# Topic для чата. components-react использует "lk-chat-topic"; при проблемах попробуй AGENT_CHAT_TOPIC=lk-chat
 CHAT_TOPIC = os.getenv("AGENT_CHAT_TOPIC", "lk-chat-topic").strip() or "lk-chat-topic"
 
 AUDIO_SAMPLE_RATE = 48_000
 AUDIO_CHANNELS = 2
 AUDIO_SAMPLES_PER_FRAME = 960  # 20 ms at 48 kHz
 
-# Разрешение стрима. Presets для выбора качества; default из env.
 VIDEO_FPS = int(os.getenv("AGENT_VIDEO_FPS", "30"))
 
 QUALITY_PRESETS: dict[str, tuple[int, int]] = {
@@ -101,7 +101,6 @@ def _is_url_safe_for_media(url: str) -> bool:
 
 def _classify_source(url: str) -> str:
     """Вернёт короткое имя источника: youtube / twitch / soundcloud / telegram / other."""
-    # Специальные псевдо-URL для поиска yt-dlp
     if url.startswith("ytsearch"):
         return "youtube"
     if url.startswith("scsearch"):
@@ -136,10 +135,10 @@ SC_SEARCH_RE = re.compile(r"^(?:!?\s*)?(?:sc|soundcloud|саундклауд)\s+
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
 class YouTubeAgent:
-    def __init__(self, room_name: str, on_disconnect: Optional[Callable[[], None]] = None) -> None:
-        self.room_name = room_name
-        self.room = rtc.Room()
-        self._on_disconnect_cb = on_disconnect
+    def __init__(self, room: rtc.Room, on_shutdown: Optional[Callable[[], None]] = None) -> None:
+        self.room = room
+        self.room_name = room.name
+        self._on_shutdown_cb = on_shutdown
 
         self._mode: str = "video"          # "audio" | "video"
         self._quality: str = DEFAULT_QUALITY  # "360p" | "480p" | "720p" | "1080p"
@@ -162,6 +161,11 @@ class YouTubeAgent:
         self._queue: deque[str] = deque()
         self._url_to_meta: dict[str, tuple[str, str]] = {}  # url -> (title, link_url)
 
+        self._paused: bool = False
+        self._pause_position: float = 0.0  # seconds into track when paused
+        self._stream_start_time: float = 0.0
+        self._repeat: bool = False
+
     # ── Public properties ─────────────────────────────────────────────────────
     @property
     def mode(self) -> str:
@@ -176,7 +180,15 @@ class YouTubeAgent:
 
     @property
     def is_playing(self) -> bool:
-        return self._current_url is not None
+        return self._current_url is not None and not self._paused
+
+    @property
+    def is_paused(self) -> bool:
+        return self._paused
+
+    @property
+    def repeat(self) -> bool:
+        return self._repeat
 
     @property
     def current_title(self) -> Optional[str]:
@@ -219,47 +231,36 @@ class YouTubeAgent:
         return out
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
-    async def connect(self) -> None:
-        token = (
-            AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
-            .with_identity(BOT_IDENTITY)
-            .with_name(BOT_NAME)
-            .with_grants(
-                VideoGrants(
-                    room_join=True,
-                    room=self.room_name,
-                    can_publish=True,
-                    can_subscribe=True,
-                )
-            )
-            .to_jwt()
-        )
+    def setup(self) -> None:
+        """Register handlers. Call after ctx.connect()."""
         self.room.on("data_received", self._on_data)
         self.room.on("participant_disconnected", self._on_participant_disconnected)
-        await self.room.connect(LIVEKIT_URL, token)
         logger.info("[Bot] Connected to room '%s'", self.room_name)
+
+    async def run(self) -> None:
+        """Send welcome message and publish initial status."""
         await self._send_chat(
             "👋 YouTube Bot подключён!\n"
             "📎 Отправьте ссылку — начну воспроизведение. add <url> — в очередь, skip — пропустить, queue — список."
         )
+        await self._update_status_attributes()
 
-    async def disconnect(self) -> None:
+    async def shutdown(self) -> None:
+        """Clean shutdown. Called before ctx.shutdown()."""
         await self._stop_streams()
         await self._send_chat("👋 YouTube Bot disconnected.")
-        if self.room.connection_state == rtc.ConnectionState.CONN_CONNECTED:
-            await self.room.disconnect()
         logger.info("[Bot] Disconnected from room '%s'", self.room_name)
-        if self._on_disconnect_cb:
-            self._on_disconnect_cb()
+        if self._on_shutdown_cb:
+            self._on_shutdown_cb()
 
     async def stop(self) -> None:
         """Stop playback without disconnecting the bot."""
+        self._paused = False
         self._queue.clear()
         await self._stop_streams()
         self._current_url = None
         self._current_title = None
 
-        # Полностью убираем видео-трек, чтобы не висел последний кадр.
         if self._video_published and self._video_sid:
             try:
                 await self.room.local_participant.unpublish_track(self._video_sid)
@@ -270,21 +271,50 @@ class YouTubeAgent:
             self._video_sid = None
 
         await self._send_chat("⏹ Воспроизведение остановлено.")
+        await self._update_status_attributes()
         logger.info("[Bot] Playback stopped in room '%s'", self.room_name)
 
     async def skip(self) -> None:
         """Skip current track, play next from queue. One skip = immediate skip (no voting)."""
+        self._paused = False
         await self._stop_streams()
         self._current_url = None
         self._current_title = None
         await self._maybe_play_next()
+        await self._update_status_attributes()
+
+    async def pause(self) -> None:
+        """Pause playback. Keeps current track, can resume from same position."""
+        if not self._current_url or self._paused:
+            return
+        self._pause_position = time.monotonic() - self._stream_start_time
+        self._paused = True
+        await self._stop_streams()
+        await self._send_chat("⏸ Пауза.")
+        await self._update_status_attributes()
+        logger.info("[Bot] Paused at %.1fs in room '%s'", self._pause_position, self.room_name)
+
+    async def resume(self) -> None:
+        """Resume playback from paused position."""
+        if not self._current_url or not self._paused:
+            return
+        self._paused = False
+        seek = max(0.0, self._pause_position)
+        await self._stop_streams()
+        await self._play_internal(self._current_url, seek_seconds=seek)
+        await self._send_chat("▶ Продолжаю воспроизведение.")
+        await self._update_status_attributes()
+
+    def set_repeat(self, repeat: bool) -> None:
+        """Toggle repeat current track."""
+        self._repeat = repeat
+        logger.info("[Bot] Repeat %s in room '%s'", "on" if repeat else "off", self.room_name)
 
     async def queue_add(self, url_or_query: str) -> None:
         """Add URL or search query to queue. If nothing playing, start."""
         raw = url_or_query.strip()
         if not raw:
             return
-        # Allow youtube/soundcloud search shorthand: "youtube foo" -> ytsearch1:foo
         if raw.lower().startswith("youtube ") or raw.lower().startswith("yt "):
             url = f"ytsearch1:{raw.split(maxsplit=1)[1]}"
         elif raw.lower().startswith("soundcloud ") or raw.lower().startswith("sc "):
@@ -298,6 +328,7 @@ class YouTubeAgent:
         asyncio.create_task(self._resolve_and_cache(url))
         display = url[:60] + ('…' if len(url) > 60 else '')
         await self._send_chat(f"➕ В очередь ({len(self._queue)}): {display}")
+        await self._update_status_attributes()
         if not self.is_playing:
             await self._maybe_play_next()
 
@@ -306,6 +337,7 @@ class YouTubeAgent:
         n = len(self._queue)
         self._queue.clear()
         await self._send_chat(f"🗑 Очередь очищена ({n} треков).")
+        await self._update_status_attributes()
 
     async def _resolve_and_cache(self, url: str) -> None:
         """Resolve URL in background and cache title+link for queue display."""
@@ -353,6 +385,10 @@ class YouTubeAgent:
 
     async def _maybe_play_next(self) -> None:
         """Play next from queue, or stop if empty."""
+        if self._paused:
+            return
+        if self._repeat and self._current_url:
+            self._queue.appendleft(self._current_url)
         if not self._queue:
             self._current_url = None
             self._current_title = None
@@ -373,13 +409,16 @@ class YouTubeAgent:
                 self._video_source = None
                 self._video_sid = None
             await self._send_chat("✅ Воспроизведение завершено.")
+            await self._update_status_attributes()
             return
         await self._stop_streams()
         url = self._queue.popleft()
         await self._play_internal(url)
 
-    async def _play_internal(self, url: str) -> None:
-        """Internal: resolve and start streaming. Called by play() and _maybe_play_next()."""
+    async def _play_internal(self, url: str, seek_seconds: float = 0.0) -> None:
+        """Internal: resolve and start streaming. Called by play() and _maybe_play_next().
+        seek_seconds: start from this position (for resume after pause)."""
+        self._stream_start_time = time.monotonic() - seek_seconds
         label = "🎵 аудио" if self._mode == "audio" else "🎬 видео"
         src = _classify_source(url)
         pretty_src = {
@@ -394,6 +433,8 @@ class YouTubeAgent:
             video_url, audio_url, title, webpage_url = await self._resolve(url)
         except Exception as exc:
             await self._send_chat(f"❌ Не удалось получить ссылку: {exc}")
+            self._current_url = None
+            self._current_title = None
             await self._maybe_play_next()
             return
 
@@ -419,15 +460,18 @@ class YouTubeAgent:
 
         if has_video:
             if os.name == "posix":
-                self._audio_task = asyncio.create_task(self._stream_av_combined(video_url, audio_url))
+                self._audio_task = asyncio.create_task(
+                    self._stream_av_combined(video_url, audio_url, seek_seconds)
+                )
             else:
-                self._audio_task = asyncio.create_task(self._stream_audio(audio_url))
-                self._video_task = asyncio.create_task(self._stream_video(video_url))
+                self._audio_task = asyncio.create_task(self._stream_audio(audio_url, seek_seconds))
+                self._video_task = asyncio.create_task(self._stream_video(video_url, seek_seconds))
         else:
-            self._audio_task = asyncio.create_task(self._stream_audio(audio_url))
+            self._audio_task = asyncio.create_task(self._stream_audio(audio_url, seek_seconds))
 
         icon = "🎵" if self._mode == "audio" else "🎬"
         await self._send_chat(f"{icon} Играет: {title or url}")
+        await self._update_status_attributes()
 
     def set_mode(self, mode: str) -> None:
         """Change streaming mode ('audio' | 'video'). Takes effect on next play()."""
@@ -445,15 +489,50 @@ class YouTubeAgent:
             if old != quality:
                 logger.info("[Bot] Quality changed to '%s' in room '%s'", quality, self.room_name)
 
+    def _status_dict(self) -> dict:
+        """Build status dict for attributes."""
+        return {
+            "active": True,
+            "mode": self._mode,
+            "quality": self._quality,
+            "playing": self.is_playing,
+            "paused": self._paused,
+            "repeat": self._repeat,
+            "title": self._current_title,
+            "url": self._current_url,
+            "queue_length": len(self._queue),
+            "queue_display": self.queue_display(),
+        }
+
     def _on_participant_disconnected(self, participant: rtc.RemoteParticipant) -> None:
         """Leave room when agent is alone (no other participants)."""
         if len(self.room.remote_participants) == 0:
             logger.info("[Bot] Alone in room '%s', disconnecting", self.room_name)
-            asyncio.ensure_future(self.disconnect())
+            asyncio.ensure_future(self._request_shutdown())
+
+    async def _request_shutdown(self) -> None:
+        """Request agent shutdown (alone or leave command).
+        Only triggers callback; main loop will call shutdown() to avoid double execution."""
+        if self._on_shutdown_cb:
+            self._on_shutdown_cb()
+
+    async def _update_status_attributes(self) -> None:
+        """Publish status to participant attributes for frontend."""
+        if self.room.connection_state != rtc.ConnectionState.CONN_CONNECTED:
+            return
+        try:
+            await self.room.local_participant.set_attributes({"bot:status": json.dumps(self._status_dict())})
+        except Exception as exc:
+            logger.warning("[Bot] Failed to update status attributes: %s", exc)
 
     # ── Chat listener ─────────────────────────────────────────────────────────
     def _on_data(self, dp: rtc.DataPacket) -> None:
         try:
+            topic = (dp.topic or "") if hasattr(dp, "topic") else ""
+            if topic == AGENT_CONTROL_TOPIC:
+                self._handle_control_command(dp)
+                return
+
             if dp.participant is not None and getattr(dp.participant, "identity", None) == BOT_IDENTITY:
                 return
             text = dp.data.decode("utf-8")
@@ -466,17 +545,14 @@ class YouTubeAgent:
 
             text = text.strip()
 
-            # стоп / stop
             if STOP_RE.match(text):
                 asyncio.ensure_future(self._run_command(self.stop))
                 return
 
-            # skip / next
             if SKIP_RE.match(text):
                 asyncio.ensure_future(self._run_command(self.skip))
                 return
 
-            # add <url> / queue <url>
             m = QUEUE_CMD_RE.match(text)
             if m:
                 arg = m.group(1).strip()
@@ -489,26 +565,22 @@ class YouTubeAgent:
                 asyncio.ensure_future(self._show_queue())
                 return
 
-            # clear
             if CLEAR_RE.match(text):
                 asyncio.ensure_future(self._run_command(self.queue_clear))
                 return
 
-            # аудио <url>
             m = AUDIO_CMD_RE.match(text)
             if m:
                 self._mode = "audio"
                 asyncio.ensure_future(self._run_command(lambda: self.play(m.group(1))))
                 return
 
-            # видео <url>
             m = VIDEO_CMD_RE.match(text)
             if m:
                 self._mode = "video"
                 asyncio.ensure_future(self._run_command(lambda: self.play(m.group(1))))
                 return
 
-            # youtube / yt / ютуб <query>
             m = YT_SEARCH_RE.match(text)
             if m:
                 query = m.group(1).strip()
@@ -516,7 +588,6 @@ class YouTubeAgent:
                     asyncio.ensure_future(self._run_command(lambda: self._search_and_play("youtube", query)))
                 return
 
-            # soundcloud / sc / саундклауд <query>
             m = SC_SEARCH_RE.match(text)
             if m:
                 query = m.group(1).strip()
@@ -524,7 +595,6 @@ class YouTubeAgent:
                     asyncio.ensure_future(self._run_command(lambda: self._search_and_play("soundcloud", query)))
                 return
 
-            # Любой URL — используем текущий режим, но сразу говорим источник
             match = URL_RE.search(text)
             if match:
                 url = match.group(0)
@@ -534,6 +604,48 @@ class YouTubeAgent:
 
         except Exception:
             logger.exception("[Bot] Error in _on_data")
+
+    def _handle_control_command(self, dp: rtc.DataPacket) -> None:
+        """Handle JSON commands from frontend (topic=agent-control)."""
+        try:
+            raw = dp.data
+            if isinstance(raw, str):
+                obj = json.loads(raw)
+            else:
+                obj = json.loads(raw.decode("utf-8"))
+            cmd = obj.get("cmd")
+            if not cmd:
+                return
+            if cmd == "leave":
+                asyncio.ensure_future(self._request_shutdown())
+            elif cmd == "stop":
+                asyncio.ensure_future(self._run_command(self.stop))
+            elif cmd == "skip":
+                asyncio.ensure_future(self._run_command(self.skip))
+            elif cmd == "mode":
+                m = obj.get("mode")
+                if m in ("audio", "video"):
+                    self.set_mode(m)
+                    asyncio.ensure_future(self._run_command(lambda: self._update_status_attributes()))
+            elif cmd == "quality":
+                q = obj.get("quality")
+                if q in QUALITY_PRESETS:
+                    self.set_quality(q)
+                    asyncio.ensure_future(self._run_command(lambda: self._update_status_attributes()))
+            elif cmd == "queue":
+                url = obj.get("url", "").strip()
+                if url:
+                    asyncio.ensure_future(self._run_command(lambda: self.queue_add(url)))
+            elif cmd == "pause":
+                asyncio.ensure_future(self._run_command(self.pause))
+            elif cmd == "resume":
+                asyncio.ensure_future(self._run_command(self.resume))
+            elif cmd == "repeat":
+                r = obj.get("repeat", True)
+                self.set_repeat(bool(r))
+                asyncio.ensure_future(self._run_command(lambda: self._update_status_attributes()))
+        except (json.JSONDecodeError, TypeError, KeyError) as e:
+            logger.warning("[Bot] Invalid control command: %s", e)
 
     async def _run_command(self, coro_fn) -> None:
         """Run command under lock to prevent race conditions."""
@@ -666,12 +778,19 @@ class YouTubeAgent:
         logger.info("[Bot] Video track published")
 
     # ── ffmpeg pipelines ──────────────────────────────────────────────────────
-    async def _stream_audio(self, url: str) -> None:
+    def _ffmpeg_seek_args(self, seek_seconds: float) -> list[str]:
+        """Return -ss args for input seek (fast)."""
+        if seek_seconds <= 0:
+            return []
+        return ["-ss", str(seek_seconds)]
+
+    async def _stream_audio(self, url: str, seek_seconds: float = 0.0) -> None:
         bytes_per_frame = AUDIO_SAMPLES_PER_FRAME * AUDIO_CHANNELS * 2
+        seek_args = self._ffmpeg_seek_args(seek_seconds)
         cmd = [
             "ffmpeg",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
-            "-i", url, "-vn",
+            *seek_args, "-i", url, "-vn",
             "-acodec", "pcm_s16le",
             "-ar", str(AUDIO_SAMPLE_RATE),
             "-ac", str(AUDIO_CHANNELS),
@@ -707,7 +826,7 @@ class YouTubeAgent:
         except Exception:
             logger.exception("[Bot] Audio stream error")
 
-    async def _stream_video(self, url: str) -> None:
+    async def _stream_video(self, url: str, seek_seconds: float = 0.0) -> None:
         w, h = self._video_dimensions()
         frame_bytes = w * h * 3 // 2
         frame_duration = 1.0 / VIDEO_FPS
@@ -716,10 +835,11 @@ class YouTubeAgent:
             f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
             f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,fps={VIDEO_FPS}"
         )
+        seek_args = self._ffmpeg_seek_args(seek_seconds)
         cmd = [
             "ffmpeg",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
-            "-i", url, "-an",
+            *seek_args, "-i", url, "-an",
             "-vf", vf,
             "-pix_fmt", "yuv420p",
             "-f", "rawvideo", "-loglevel", "quiet",
@@ -760,7 +880,9 @@ class YouTubeAgent:
         except Exception:
             logger.exception("[Bot] Video stream error")
 
-    async def _stream_av_combined(self, video_url: str, audio_url: str) -> None:
+    async def _stream_av_combined(
+        self, video_url: str, audio_url: str, seek_seconds: float = 0.0
+    ) -> None:
         """Single ffmpeg: audio→stdout, video→pipe. Keeps A/V in sync.
 
         video_url may be video-only; audio_url may be audio-only (typical for YouTube).
@@ -777,12 +899,13 @@ class YouTubeAgent:
         )
         r_video, w_video = os.pipe()
         reconnect = ["-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5"]
+        seek_args = self._ffmpeg_seek_args(seek_seconds)
         try:
             if video_url == audio_url:
                 # Single muxed file: both streams inside one input
                 cmd = [
                     "ffmpeg", "-loglevel", "quiet",
-                    *reconnect, "-i", video_url,
+                    *reconnect, *seek_args, "-i", video_url,
                     "-map", "0:a", "-acodec", "pcm_s16le",
                     "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
                     "-f", "s16le", "pipe:1",
@@ -793,8 +916,8 @@ class YouTubeAgent:
                 # Separate video and audio streams (typical YouTube dash)
                 cmd = [
                     "ffmpeg", "-loglevel", "quiet",
-                    *reconnect, "-i", video_url,
-                    *reconnect, "-i", audio_url,
+                    *reconnect, *seek_args, "-i", video_url,
+                    *reconnect, *seek_args, "-i", audio_url,
                     "-map", "1:a", "-acodec", "pcm_s16le",
                     "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
                     "-f", "s16le", "pipe:1",

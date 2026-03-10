@@ -1,6 +1,6 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { URL } from 'url';
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, AgentDispatchClient } from 'livekit-server-sdk';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -14,6 +14,7 @@ const {
   LIVEKIT_API_KEY = 'devkey',
   LIVEKIT_API_SECRET = 'secret',
   LIVEKIT_WS_URL = 'ws://127.0.0.1:7880',
+  LIVEKIT_API_URL: _apiUrl,
   TOKEN_SERVER_PORT = '4000',
   TOKEN_SERVER_HOST = '127.0.0.1',
   TOKEN_CORS_ORIGINS = '',
@@ -21,6 +22,9 @@ const {
   TOKEN_IDENTITY_MAX_LENGTH = '100',
   TOKEN_TTL = '10m',
 } = process.env;
+
+const LIVEKIT_API_URL =
+  _apiUrl || (process.env.LIVEKIT_WS_URL || 'ws://127.0.0.1:7880').replace(/^ws/, 'http').replace(/^wss/, 'https');
 
 const port = Number(TOKEN_SERVER_PORT);
 const host = TOKEN_SERVER_HOST;
@@ -74,6 +78,30 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   }
 
   const url = req.url ? new URL(req.url, `http://${req.headers.host}`) : null;
+
+  if (req.method === 'POST' && url?.pathname === '/api/agent/dispatch') {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', async () => {
+      try {
+        const body = JSON.parse(data || '{}');
+        const room = validateRoom(body.room);
+        if (!room) {
+          sendJson(res, 400, { error: 'room is required and must be valid' }, reqOrigin);
+          return;
+        }
+        const client = new AgentDispatchClient(LIVEKIT_API_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
+        await client.createDispatch(room, 'youtube-bot', { metadata: '{}' });
+        sendJson(res, 200, { status: 'dispatched', room }, reqOrigin);
+      } catch (error) {
+        console.error('dispatch error', error);
+        sendJson(res, 500, { error: 'failed to dispatch agent' }, reqOrigin);
+      }
+    });
+    return;
+  }
 
   if (req.method === 'POST' && url?.pathname === '/api/token') {
     let data = '';
