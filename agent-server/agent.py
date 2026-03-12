@@ -22,6 +22,7 @@ import ipaddress
 import json
 import logging
 import os
+import random
 import re
 import time
 import uuid
@@ -125,6 +126,7 @@ SKIP_RE = re.compile(r"^(?:!?\s*)?(skip|next|скип)\s*$", re.IGNORECASE)
 QUEUE_CMD_RE = re.compile(r"^(?:!?\s*)?(?:add|queue|добавить|очередь)\s+(.+)", re.IGNORECASE)
 QUEUE_LIST_RE = re.compile(r"^(?:!?\s*)?(?:queue|list|очередь|список)\s*$", re.IGNORECASE)
 CLEAR_RE = re.compile(r"^(?:!?\s*)?(?:clear|очистить)\s*$", re.IGNORECASE)
+SHUFFLE_RE = re.compile(r"^(?:!?\s*)?(?:shuffle|перемешать|шаффл)\s*$", re.IGNORECASE)
 AUDIO_CMD_RE = re.compile(r"^(?:!?\s*)?аудио\s+(https?://\S+)", re.IGNORECASE)
 VIDEO_CMD_RE = re.compile(r"^(?:!?\s*)?видео\s+(https?://\S+)", re.IGNORECASE)
 
@@ -241,7 +243,8 @@ class YouTubeAgent:
         """Send welcome message and publish initial status."""
         await self._send_chat(
             "👋 YouTube Bot подключён!\n"
-            "📎 Отправьте ссылку — начну воспроизведение. add <url> — в очередь, skip — пропустить, queue — список."
+            "📎 Ссылку — воспроизвести  •  add <url> — в очередь  •  youtube <запрос> — поиск\n"
+            "skip — пропустить  •  shuffle — перемешать  •  clear — очистить  •  queue — список"
         )
         await self._update_status_attributes()
 
@@ -337,6 +340,18 @@ class YouTubeAgent:
         n = len(self._queue)
         self._queue.clear()
         await self._send_chat(f"🗑 Очередь очищена ({n} треков).")
+        await self._update_status_attributes()
+
+    async def shuffle_queue(self) -> None:
+        """Shuffle the queue randomly."""
+        n = len(self._queue)
+        if n < 2:
+            await self._send_chat("🔀 Очередь слишком короткая для перемешивания.")
+            return
+        items = list(self._queue)
+        random.shuffle(items)
+        self._queue = deque(items)
+        await self._send_chat(f"🔀 Очередь перемешана ({n} треков).")
         await self._update_status_attributes()
 
     async def _resolve_and_cache(self, url: str) -> None:
@@ -491,6 +506,17 @@ class YouTubeAgent:
 
     def _status_dict(self) -> dict:
         """Build status dict for attributes."""
+        # If _current_url is a search query (ytsearch/scsearch), resolve to real webpage_url
+        display_url: Optional[str] = None
+        if self._current_url:
+            meta = self._url_to_meta.get(self._current_url)
+            if meta:
+                _, link = meta
+                if link and link.startswith("http"):
+                    display_url = link
+            if not display_url and self._current_url.startswith("http"):
+                display_url = self._current_url
+
         return {
             "active": True,
             "mode": self._mode,
@@ -499,7 +525,7 @@ class YouTubeAgent:
             "paused": self._paused,
             "repeat": self._repeat,
             "title": self._current_title,
-            "url": self._current_url,
+            "url": display_url,
             "queue_length": len(self._queue),
             "queue_display": self.queue_display(),
         }
@@ -567,6 +593,10 @@ class YouTubeAgent:
 
             if CLEAR_RE.match(text):
                 asyncio.ensure_future(self._run_command(self.queue_clear))
+                return
+
+            if SHUFFLE_RE.match(text):
+                asyncio.ensure_future(self._run_command(self.shuffle_queue))
                 return
 
             m = AUDIO_CMD_RE.match(text)
@@ -644,6 +674,10 @@ class YouTubeAgent:
                 r = obj.get("repeat", True)
                 self.set_repeat(bool(r))
                 asyncio.ensure_future(self._run_command(lambda: self._update_status_attributes()))
+            elif cmd == "clear":
+                asyncio.ensure_future(self._run_command(self.queue_clear))
+            elif cmd == "shuffle":
+                asyncio.ensure_future(self._run_command(self.shuffle_queue))
         except (json.JSONDecodeError, TypeError, KeyError) as e:
             logger.warning("[Bot] Invalid control command: %s", e)
 
@@ -790,7 +824,7 @@ class YouTubeAgent:
         cmd = [
             "ffmpeg",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
-            *seek_args, "-i", url, "-vn",
+            *seek_args, "-re", "-i", url, "-vn",
             "-acodec", "pcm_s16le",
             "-ar", str(AUDIO_SAMPLE_RATE),
             "-ac", str(AUDIO_CHANNELS),
@@ -829,7 +863,6 @@ class YouTubeAgent:
     async def _stream_video(self, url: str, seek_seconds: float = 0.0) -> None:
         w, h = self._video_dimensions()
         frame_bytes = w * h * 3 // 2
-        frame_duration = 1.0 / VIDEO_FPS
         # Letterbox: сохраняем пропорции, чёрные полосы по краям. Lanczos — лучшее качество.
         vf = (
             f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
@@ -839,7 +872,10 @@ class YouTubeAgent:
         cmd = [
             "ffmpeg",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
-            *seek_args, "-i", url, "-an",
+            # -re: читать вход со скоростью воспроизведения (real-time).
+            # Без этого флага ffmpeg буферизует поток быстрее реального времени,
+            # что нарушает синхронизацию с аудио-потоком.
+            *seek_args, "-re", "-i", url, "-an",
             "-vf", vf,
             "-pix_fmt", "yuv420p",
             "-f", "rawvideo", "-loglevel", "quiet",
@@ -857,8 +893,6 @@ class YouTubeAgent:
 
         try:
             while True:
-                loop = asyncio.get_running_loop()
-                t0 = loop.time()
                 raw = await self._ffmpeg_video.stdout.readexactly(frame_bytes)
                 self._video_source.capture_frame(
                     rtc.VideoFrame(
@@ -868,10 +902,8 @@ class YouTubeAgent:
                         data=bytearray(raw),
                     )
                 )
-                elapsed = loop.time() - t0
-                wait = frame_duration - elapsed
-                if wait > 0:
-                    await asyncio.sleep(wait)
+                # Throttling не нужен: ffmpeg с флагом -re сам выдаёт кадры в реальном времени.
+                # Пайп естественно блокирует readexactly до появления следующего кадра.
         except asyncio.IncompleteReadError:
             logger.info("[Bot] Video stream finished")
             # Audio stream triggers _maybe_play_next; we just exit
@@ -891,7 +923,6 @@ class YouTubeAgent:
         w, h = self._video_dimensions()
         frame_bytes = w * h * 3 // 2
         bytes_per_frame = AUDIO_SAMPLES_PER_FRAME * AUDIO_CHANNELS * 2
-        frame_duration = 1.0 / VIDEO_FPS
 
         vf = (
             f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,"
@@ -902,10 +933,11 @@ class YouTubeAgent:
         seek_args = self._ffmpeg_seek_args(seek_seconds)
         try:
             if video_url == audio_url:
-                # Single muxed file: both streams inside one input
+                # Single muxed file: both streams inside one input.
+                # -re: выдавать данные в реальном времени (не быстрее скорости воспроизведения).
                 cmd = [
                     "ffmpeg", "-loglevel", "quiet",
-                    *reconnect, *seek_args, "-i", video_url,
+                    *reconnect, *seek_args, "-re", "-i", video_url,
                     "-map", "0:a", "-acodec", "pcm_s16le",
                     "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
                     "-f", "s16le", "pipe:1",
@@ -913,11 +945,14 @@ class YouTubeAgent:
                     "-f", "rawvideo", f"pipe:{w_video}",
                 ]
             else:
-                # Separate video and audio streams (typical YouTube dash)
+                # Separate video and audio streams (typical YouTube DASH).
+                # -re на каждом входе: ffmpeg сам удерживает оба потока в реальном времени.
+                # Без -re ffmpeg буферизует данные пачками → аудио-ридер получает рывки
+                # вместо равномерного потока → Python-sleep в видео-ридере сбивает синхрон.
                 cmd = [
                     "ffmpeg", "-loglevel", "quiet",
-                    *reconnect, *seek_args, "-i", video_url,
-                    *reconnect, *seek_args, "-i", audio_url,
+                    *reconnect, *seek_args, "-re", "-i", video_url,
+                    *reconnect, *seek_args, "-re", "-i", audio_url,
                     "-map", "1:a", "-acodec", "pcm_s16le",
                     "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
                     "-f", "s16le", "pipe:1",
@@ -937,8 +972,6 @@ class YouTubeAgent:
 
         assert self._ffmpeg_av.stdout
         assert self._audio_source and self._video_source
-
-        loop = asyncio.get_running_loop()
 
         async def read_audio() -> None:
             try:
@@ -969,7 +1002,10 @@ class YouTubeAgent:
 
             try:
                 while True:
-                    t0 = loop.time()
+                    # asyncio.to_thread блокируется в os.read до появления данных от ffmpeg.
+                    # Скорость регулируется флагом -re на стороне ffmpeg — ручной sleep не нужен.
+                    # Ранее sleep создавал backpressure на видео-пайп → ffmpeg стопорился →
+                    # аудио доставлялось рывками → рассинхрон.
                     raw = await asyncio.to_thread(read_exactly)
                     self._video_source.capture_frame(
                         rtc.VideoFrame(
@@ -979,10 +1015,6 @@ class YouTubeAgent:
                             data=bytearray(raw),
                         )
                     )
-                    elapsed = loop.time() - t0
-                    wait = frame_duration - elapsed
-                    if wait > 0:
-                        await asyncio.sleep(wait)
             except (asyncio.IncompleteReadError, OSError):
                 pass
             except asyncio.CancelledError:
