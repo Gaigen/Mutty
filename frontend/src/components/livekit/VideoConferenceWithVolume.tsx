@@ -5,7 +5,6 @@
 import {
   CarouselLayout,
   ConnectionStateToast,
-  type MessageFormatter,
   FocusLayout,
   FocusLayoutContainer,
   GridLayout,
@@ -22,28 +21,6 @@ import * as React from 'react';
 import { appConfig } from '../../config';
 import { CustomControlBar } from './CustomControlBar';
 import { CustomRoomAudioRenderer } from './CustomRoomAudioRenderer';
-
-const chatMessageFormatter: MessageFormatter = (message) => {
-  const parts: React.ReactNode[] = [];
-  const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
-  let lastIdx = 0;
-  let m: RegExpExecArray | null;
-  while ((m = linkRe.exec(message)) !== null) {
-    parts.push(message.slice(lastIdx, m.index));
-    parts.push(
-      React.createElement('a', {
-        key: m.index,
-        href: m[2],
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        style: { color: 'var(--lk-accent)', textDecoration: 'underline' },
-      }, m[1])
-    );
-    lastIdx = linkRe.lastIndex;
-  }
-  parts.push(message.slice(lastIdx));
-  return React.createElement(React.Fragment, {}, ...parts);
-};
 
 interface VideoConferenceWithVolumeProps extends React.HTMLAttributes<HTMLDivElement> {
   outputVolume?: number;
@@ -146,7 +123,6 @@ export function VideoConferenceWithVolume({
           </div>
           <ChatWithAttachments
             style={{ display: widgetState.showChat ? 'grid' : 'none' }}
-            messageFormatter={chatMessageFormatter}
             enableAttachments={appConfig.showChatAttachments}
           />
         </LayoutContextProvider>
