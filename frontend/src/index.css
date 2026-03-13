@@ -195,13 +195,48 @@ body {
   margin: 6px 0;
 }
 
-/* ── Chat panel: resizable width, wider default ─────────────────────────────── */
+/* ── Chat panel: side resizer (no corner handle) ─────────────────────────────── */
 .lk-chat {
-  resize: horizontal;
   overflow: auto;
-  min-width: 280px;
-  max-width: min(90ch, 90vw);
-  width: clamp(280px, 65ch, min(90ch, 90vw));
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Draggable divider: визуально между блоками, но не занимает места в layout */
+.chat-resizer {
+  width: 10px;
+  flex-shrink: 0;
+  margin-left: -5px;
+  margin-right: -5px;
+  position: relative;
+  z-index: 1;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+.chat-resizer::before {
+  content: '';
+  width: 2px;
+  height: 40px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.2s ease, height 0.2s ease;
+}
+.chat-resizer:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.chat-resizer:hover::before {
+  background: rgba(255, 255, 255, 0.28);
+  height: 56px;
+}
+.chat-resizer:active {
+  background: rgba(14, 165, 233, 0.08);
+}
+.chat-resizer:active::before {
+  background: var(--lk-accent, #0ea5e9);
+  height: 64px;
 }
 /* Message body: allow full width for code blocks and long content */
 .lk-chat .lk-message-body {

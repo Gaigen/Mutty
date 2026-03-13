@@ -18,9 +18,34 @@ import { ChatWithAttachments } from './ChatWithAttachments';
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
-import { appConfig } from '../../config';
+import { appConfig, LS_KEYS } from '../../config';
 import { CustomControlBar } from './CustomControlBar';
 import { CustomRoomAudioRenderer } from './CustomRoomAudioRenderer';
+
+const CHAT_WIDTH_MIN = 280;
+const CHAT_WIDTH_MAX = 720;
+const CHAT_WIDTH_DEFAULT = 380;
+
+function loadChatWidth(): number {
+  try {
+    const v = localStorage.getItem(LS_KEYS.chatWidth);
+    if (v) {
+      const n = parseInt(v, 10);
+      if (Number.isFinite(n) && n >= CHAT_WIDTH_MIN && n <= CHAT_WIDTH_MAX) return n;
+    }
+  } catch {
+    /* ignore */
+  }
+  return CHAT_WIDTH_DEFAULT;
+}
+
+function saveChatWidth(w: number) {
+  try {
+    localStorage.setItem(LS_KEYS.chatWidth, String(Math.round(w)));
+  } catch {
+    /* ignore */
+  }
+}
 
 interface VideoConferenceWithVolumeProps extends React.HTMLAttributes<HTMLDivElement> {
   outputVolume?: number;
@@ -37,7 +62,34 @@ export function VideoConferenceWithVolume({
     unreadMessages: 0,
     showSettings: false,
   });
+  const [chatWidth, setChatWidth] = React.useState(loadChatWidth);
+  const chatWidthRef = React.useRef(chatWidth);
+  chatWidthRef.current = chatWidth;
   const lastAutoFocusedScreenShareTrack = React.useRef<TrackReferenceOrPlaceholder | null>(null);
+
+  const handleResizeStart = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = chatWidthRef.current;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX;
+      const next = Math.max(CHAT_WIDTH_MIN, Math.min(CHAT_WIDTH_MAX, startW + delta));
+      setChatWidth(next);
+    };
+    const onUp = () => {
+      saveChatWidth(chatWidthRef.current);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
 
   const tracks = useTracks(
     [
@@ -96,7 +148,7 @@ export function VideoConferenceWithVolume({
     <div className="lk-video-conference" {...props}>
       {isWeb() && (
         <LayoutContextProvider value={layoutContext} onWidgetChange={widgetUpdate}>
-          <div className="lk-video-conference-inner">
+          <div className="lk-video-conference-inner" style={{ flex: 1, minWidth: 0 }}>
             {!focusTrack ? (
               <div className="lk-grid-layout-wrapper">
                 <GridLayout tracks={tracks}>
@@ -121,10 +173,30 @@ export function VideoConferenceWithVolume({
               rightControls={rightControls}
             />
           </div>
-          <ChatWithAttachments
-            style={{ display: widgetState.showChat ? 'grid' : 'none' }}
-            enableAttachments={appConfig.showChatAttachments}
-          />
+          {widgetState.showChat && (
+            <>
+              <div
+                className="chat-resizer"
+                onMouseDown={handleResizeStart}
+                role="separator"
+                aria-orientation="vertical"
+                aria-valuenow={chatWidth}
+                aria-valuemin={CHAT_WIDTH_MIN}
+                aria-valuemax={CHAT_WIDTH_MAX}
+              />
+              <ChatWithAttachments
+                className="lk-chat lk-chat-panel"
+                style={{
+                  display: 'grid',
+                  width: chatWidth,
+                  minWidth: chatWidth,
+                  maxWidth: chatWidth,
+                  flexShrink: 0,
+                }}
+                enableAttachments={appConfig.showChatAttachments}
+              />
+            </>
+          )}
         </LayoutContextProvider>
       )}
       {/* Per-participant volume: 200% реально усиливает, не только визуально */}

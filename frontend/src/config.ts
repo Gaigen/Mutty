@@ -27,6 +27,7 @@ export const LS_KEYS = {
   screenShareSettings: 'voice-app:screen-share-settings',
   identity: 'voice-app:identity',
   recentRooms: 'voice-app:recent-rooms',
+  chatWidth: 'voice-app:chat-width',
 } as const;
 
 // ── Переключатели и лимиты ────────────────────────────────────────────────────
