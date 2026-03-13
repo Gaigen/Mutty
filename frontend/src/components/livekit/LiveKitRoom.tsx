@@ -6,6 +6,7 @@ import { config, appConfig } from '../../config';
 import { useAudioSettings, getAudioSettings } from '../../hooks/useAudioSettings';
 import { getCameraSettings } from '../../hooks/useCameraSettings';
 import { getScreenShareSettings } from '../../hooks/useScreenShareSettings';
+import { AudioMuteProvider } from '../../context/AudioMuteContext';
 import { UserChoicesProvider } from '../../context/UserChoicesContext';
 import { ParticipantVolumesProvider } from '../../context/ParticipantVolumesContext';
 import AgentControls from './AgentControls';
@@ -202,6 +203,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
     >
       <UserChoicesProvider>
       <ParticipantVolumesProvider>
+      <AudioMuteProvider>
       <VideoConferenceWithVolume
         outputVolume={audioSettings.outputVolume}
         rightControls={(
@@ -231,6 +233,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       {appConfig.showSettingsButton && (
         <StreamSettings isOpen={showStreamSettings} onClose={() => setShowStreamSettings(false)} />
       )}
+      </AudioMuteProvider>
       </ParticipantVolumesProvider>
       </UserChoicesProvider>
     </LiveKitRoom>
