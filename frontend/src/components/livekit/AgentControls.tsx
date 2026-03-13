@@ -769,7 +769,7 @@ export default function AgentControls({ roomName }: Props) {
               type="range"
               min="0"
               max="1"
-              step="0.05"
+              step="0.01"
               value={botVolume}
               onChange={(e) => setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value))}
               style={{

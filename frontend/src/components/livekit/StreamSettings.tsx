@@ -403,28 +403,35 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
         setSenderStats((prev) => { prevSenderRef.current = prev; return allSender; });
         setReceiverStats((prev) => { prevReceiverRef.current = prev; return allReceiver; });
 
-        // RTT via ICE candidate-pair stats.
-        // room.engine.pcManager.publisher.pc is private in TS but accessible at runtime.
         let newPing: number | null = null;
         try {
-          const eng = room.engine as unknown as {
-            pcManager?: { publisher?: { pc?: RTCPeerConnection } };
-          };
-          const pc = eng.pcManager?.publisher?.pc;
-          if (pc) {
-            const stats = await pc.getStats();
-            stats.forEach((s: RTCStats) => {
-              if (s.type === 'candidate-pair') {
-                const pair = s as RTCIceCandidatePairStats;
-                // nominated + succeeded = the active path
-                if (pair.nominated && pair.state === 'succeeded' &&
-                    pair.currentRoundTripTime !== undefined) {
-                  newPing = Math.round(pair.currentRoundTripTime * 1000);
-                }
-              }
-            });
+          const clientRtt = room.engine.client.rtt;
+          if (typeof clientRtt === 'number' && clientRtt > 0) {
+            newPing = Math.round(clientRtt);
           }
         } catch { /* ignore */ }
+
+        if (newPing === null) {
+          try {
+            const eng = room.engine as unknown as {
+              pcManager?: { publisher?: { pc?: RTCPeerConnection }; subscriber?: { pc?: RTCPeerConnection } };
+            };
+            const pc = eng.pcManager?.publisher?.pc ?? eng.pcManager?.subscriber?.pc;
+            if (pc) {
+              const stats = await pc.getStats();
+              stats.forEach((s: RTCStats) => {
+                if (s.type === 'candidate-pair') {
+                  const pair = s as RTCIceCandidatePairStats;
+                  if (pair.nominated && pair.state === 'succeeded' &&
+                      pair.currentRoundTripTime !== undefined) {
+                    const rtt = pair.currentRoundTripTime;
+                    newPing = rtt > 1 ? Math.round(rtt) : Math.round(rtt * 1000);
+                  }
+                }
+              });
+            }
+          } catch { /* ignore */ }
+        }
         setPingMs(newPing);
         const next = [...pingHistoryRef.current, newPing].slice(-PING_HISTORY_SIZE);
         pingHistoryRef.current = next;
@@ -645,7 +652,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
                     Speaker volume: <span className="text-white">{Math.round(audioSettings.outputVolume * 100)}%</span>
                   </label>
                   <input
-                    type="range" min="0" max="1" step="0.05"
+                    type="range" min="0" max="1" step="0.01"
                     value={Math.min(1, audioSettings.outputVolume)}
                     onChange={(e) => setAudioSettings({ outputVolume: parseFloat(e.target.value) })}
                     className="w-full h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
@@ -959,7 +966,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
 
                       {/* Volume slider */}
                       <input
-                        type="range" min="0" max="1" step="0.05"
+                        type="range" min="0" max="1" step="0.01"
                         value={volume}
                         onChange={(e) => setParticipantVolume(participant.identity, parseFloat(e.target.value))}
                         className="w-full h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
