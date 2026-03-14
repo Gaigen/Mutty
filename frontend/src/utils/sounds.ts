@@ -42,7 +42,7 @@ export function playJoinSound() {
     playNote(ctx, 523, t,        0.12, 0.18); // C5
     playNote(ctx, 784, t + 0.11, 0.20, 0.22); // G5
   } catch {
-    // AudioContext недоступен — молча игнорируем
+    // ignore
   }
 }
 
