@@ -243,6 +243,79 @@ body {
   max-width: 100%;
 }
 
+/* ── Participant tile: action buttons (hide video + focus toggle) ─────────── */
+
+/* Container holding hide + focus buttons together at top-right of tile */
+.lk-tile-controls {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  transition-delay: 0.2s;
+}
+
+.lk-participant-tile:hover .lk-tile-controls,
+.lk-participant-tile:focus-within .lk-tile-controls {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+/* Override FocusToggle's own absolute positioning when inside the group */
+.lk-tile-controls .lk-focus-toggle-button {
+  position: static !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* Hide video button style — mirrors focus-toggle-button */
+.lk-hide-track-button {
+  padding: 0.25rem !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  border-radius: calc(var(--lk-border-radius) / 2) !important;
+  line-height: 0;
+}
+
+.lk-hide-track-button[aria-pressed='true'] {
+  background-color: rgba(14, 165, 233, 0.6) !important;
+  color: #fff;
+}
+
+.lk-hide-track-button:hover {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.lk-hide-track-button[aria-pressed='true']:hover {
+  background-color: rgba(14, 165, 233, 0.85) !important;
+}
+
+/* Overlay shown when video is manually hidden */
+.lk-hidden-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  pointer-events: none;
+  border-radius: var(--lk-border-radius);
+  z-index: 2;
+}
+
+.lk-hidden-video-overlay svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0.7;
+}
+
 /* "Show more / Show less" toggle */
 .chat-expand-btn {
   display: inline-block;

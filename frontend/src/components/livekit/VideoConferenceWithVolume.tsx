@@ -5,15 +5,14 @@
 import {
   CarouselLayout,
   ConnectionStateToast,
-  FocusLayout,
   FocusLayoutContainer,
   GridLayout,
   LayoutContextProvider,
-  ParticipantTile,
   useCreateLayoutContext,
   usePinnedTracks,
   useTracks,
 } from '@livekit/components-react';
+import { ParticipantTileWithActions } from './ParticipantTileWithActions';
 import { ChatWithAttachments } from './ChatWithAttachments';
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
@@ -152,16 +151,16 @@ export function VideoConferenceWithVolume({
             {!focusTrack ? (
               <div className="lk-grid-layout-wrapper">
                 <GridLayout tracks={tracks}>
-                  <ParticipantTile />
+                  <ParticipantTileWithActions />
                 </GridLayout>
               </div>
             ) : (
               <div className="lk-focus-layout-wrapper">
                 <FocusLayoutContainer>
                   <CarouselLayout tracks={carouselTracks}>
-                    <ParticipantTile />
+                    <ParticipantTileWithActions />
                   </CarouselLayout>
-                  {focusTrack && <FocusLayout trackRef={focusTrack} />}
+                  {focusTrack && <ParticipantTileWithActions trackRef={focusTrack} />}
                 </FocusLayoutContainer>
               </div>
             )}
