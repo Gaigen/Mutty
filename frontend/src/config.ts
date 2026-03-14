@@ -39,8 +39,8 @@ export const appConfig = {
   /** Simulcast в LiveKit (false = один слой, проще) */
   simulcast: false,
 
-  /** Включить видео при входе в комнату */
-  showVideo: true,
+  /** Включить видео при входе в комнату (false = камера включается только по клику) */
+  showVideo: false,
 
   /** Включить аудио при входе в комнату */
   showAudio: true,
