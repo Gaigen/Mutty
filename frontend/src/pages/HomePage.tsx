@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LS_KEYS, appConfig } from '../config';
+import { LS_KEYS, appConfig, AVATAR_IDS, type AvatarId } from '../config';
 import { generateRandomNickname } from '../utils/randomNickname';
 
 function loadRecentRooms(): string[] {
@@ -18,15 +18,22 @@ function saveRecentRoom(name: string) {
   localStorage.setItem(LS_KEYS.recentRooms, JSON.stringify(rooms.slice(0, appConfig.maxRecentRooms)));
 }
 
+function isValidAvatarId(id: string): id is AvatarId {
+  return AVATAR_IDS.includes(id as AvatarId);
+}
+
 export default function HomePage() {
   const [roomName, setRoomName] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [avatar, setAvatar] = useState<AvatarId | ''>('');
   const [recentRooms, setRecentRooms] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     const savedIdentity = localStorage.getItem(LS_KEYS.identity);
     if (savedIdentity) setDisplayName(savedIdentity);
+    const savedAvatar = localStorage.getItem(LS_KEYS.avatar);
+    if (savedAvatar && isValidAvatarId(savedAvatar)) setAvatar(savedAvatar);
     setRecentRooms(loadRecentRooms());
   }, []);
 
@@ -37,9 +44,12 @@ export default function HomePage() {
 
     const identity = displayName.trim() || generateRandomNickname();
     localStorage.setItem(LS_KEYS.identity, identity);
+    if (avatar) localStorage.setItem(LS_KEYS.avatar, avatar);
     saveRecentRoom(room);
 
-    navigate(`/room/${room}?identity=${encodeURIComponent(identity)}`);
+    const params = new URLSearchParams({ identity });
+    if (avatar) params.set('avatar', avatar);
+    navigate(`/room/${room}?${params.toString()}`);
   };
 
   const handleRandomNick = () => {
@@ -117,6 +127,33 @@ export default function HomePage() {
                 Empty = random nickname on join
               </p>
             )}
+          </div>
+
+          <div>
+            <span className="block text-sm font-medium text-gray-400 mb-2">Avatar</span>
+            <div className="flex flex-wrap gap-2">
+              {AVATAR_IDS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setAvatar((prev) => (prev === id ? '' : id))}
+                  title={id}
+                  className={`w-10 h-10 rounded-lg border-2 transition flex items-center justify-center overflow-hidden ${
+                    avatar === id
+                      ? 'border-purple-500 bg-purple-500/20'
+                      : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                  }`}
+                  aria-pressed={avatar === id}
+                  aria-label={`Select ${id} avatar`}
+                >
+                  <img
+                    src={`/avatars/${id}.svg`}
+                    alt=""
+                    className="w-7 h-7 object-contain"
+                  />
+                </button>
+              ))}
+            </div>
           </div>
 
           <button

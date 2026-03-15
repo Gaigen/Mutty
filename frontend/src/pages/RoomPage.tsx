@@ -19,11 +19,12 @@ export default function RoomPage() {
   }
 
   const identity = searchParams.get('identity') || undefined;
+  const avatar = searchParams.get('avatar') || undefined;
 
   return (
     <div className="h-screen w-full bg-black">
       <ErrorBoundary onReset={() => navigate('/')}>
-        <LiveKitRoomComponent roomName={roomName} identity={identity} onLeave={() => navigate('/')} />
+        <LiveKitRoomComponent roomName={roomName} identity={identity} avatar={avatar} onLeave={() => navigate('/')} />
       </ErrorBoundary>
     </div>
   );

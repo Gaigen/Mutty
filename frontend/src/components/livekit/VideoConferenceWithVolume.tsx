@@ -223,7 +223,7 @@ export function VideoConferenceWithVolume({
           )}
         </LayoutContextProvider>
       )}
-      {/* Per-participant volume: 200% реально усиливает, не только визуально */}
+      {/* Per-participant volume */}
       <CustomRoomAudioRenderer outputVolume={outputVolume} />
       <ConnectionStateToast />
     </div>

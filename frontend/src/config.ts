@@ -25,9 +25,16 @@ export const LS_KEYS = {
   cameraSettings: 'voice-app:camera-settings',
   screenShareSettings: 'voice-app:screen-share-settings',
   identity: 'voice-app:identity',
+  avatar: 'voice-app:avatar',
   recentRooms: 'voice-app:recent-rooms',
   chatWidth: 'voice-app:chat-width',
 } as const;
+
+export const AVATAR_IDS = [
+  'bear', 'shark', 'hedgehog', 'otter', 'penguin', 'skunk', 'raccoon', 'capybara', 'frog', 'hamster', 'axsolotle',
+] as const;
+
+export type AvatarId = (typeof AVATAR_IDS)[number];
 
 // ── Переключатели и лимиты ────────────────────────────────────────────────────
 
