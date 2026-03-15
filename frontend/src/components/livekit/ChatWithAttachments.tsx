@@ -263,6 +263,7 @@ export function ChatWithAttachments({
   const ulRef = React.useRef<HTMLUListElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const textareaHadFocusRef = React.useRef(false);
 
   const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
   const [isSendingImages, setIsSendingImages] = React.useState(false);
@@ -502,6 +503,17 @@ export function ChatWithAttachments({
     }
   }, [chatMessages, layoutContext?.widget]);
 
+  React.useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta || !textareaHadFocusRef.current || ta.disabled) return;
+    if (
+      document.activeElement !== ta &&
+      (document.activeElement === document.body || document.activeElement === document.documentElement)
+    ) {
+      ta.focus();
+    }
+  });
+
   const busy = isSending || isSendingImages;
   const overLimit = textValue.length > MAX_TEXT_LEN;
   const nearLimit = textValue.length > MAX_TEXT_LEN * 0.85;
@@ -666,6 +678,8 @@ export function ChatWithAttachments({
               setTextValue(e.target.value);
               adjustHeight();
             }}
+            onFocus={() => { textareaHadFocusRef.current = true; }}
+            onBlur={() => { textareaHadFocusRef.current = false; }}
             onKeyDown={(e) => {
               e.stopPropagation();
               if (e.key === 'Enter' && !e.shiftKey) {
