@@ -15,7 +15,7 @@ import {
 import { ParticipantTileWithActions } from './ParticipantTileWithActions';
 import { ChatWithAttachments } from './ChatWithAttachments';
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
-import { RoomEvent, Track } from 'livekit-client';
+import { Track } from 'livekit-client';
 import * as React from 'react';
 import { appConfig, LS_KEYS } from '../../config';
 import { CustomControlBar } from './CustomControlBar';
@@ -24,6 +24,48 @@ import { CustomRoomAudioRenderer } from './CustomRoomAudioRenderer';
 const CHAT_WIDTH_MIN = 280;
 const CHAT_WIDTH_MAX = 720;
 const CHAT_WIDTH_DEFAULT = 380;
+
+interface ChatPanelProps {
+  chatWidth: number;
+  onResizeStart: (e: React.MouseEvent) => void;
+  enableAttachments: boolean;
+}
+
+const MemoizedChatPanel = React.memo(function ChatPanel({
+  chatWidth,
+  onResizeStart,
+  enableAttachments,
+}: ChatPanelProps) {
+  const style = React.useMemo(
+    () => ({
+      display: 'grid' as const,
+      width: chatWidth,
+      minWidth: chatWidth,
+      maxWidth: chatWidth,
+      flexShrink: 0,
+    }),
+    [chatWidth],
+  );
+
+  return (
+    <>
+      <div
+        className="chat-resizer"
+        onMouseDown={onResizeStart}
+        role="separator"
+        aria-orientation="vertical"
+        aria-valuenow={chatWidth}
+        aria-valuemin={CHAT_WIDTH_MIN}
+        aria-valuemax={CHAT_WIDTH_MAX}
+      />
+      <ChatWithAttachments
+        className="lk-chat lk-chat-panel"
+        style={style}
+        enableAttachments={enableAttachments}
+      />
+    </>
+  );
+});
 
 function loadChatWidth(): number {
   try {
@@ -95,7 +137,7 @@ export function VideoConferenceWithVolume({
       { source: Track.Source.Camera, withPlaceholder: true },
       { source: Track.Source.ScreenShare, withPlaceholder: false },
     ],
-    { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false },
+    { onlySubscribed: false },
   );
 
   const widgetUpdate = React.useCallback((state: Partial<typeof widgetState>) => {
@@ -173,28 +215,11 @@ export function VideoConferenceWithVolume({
             />
           </div>
           {widgetState.showChat && (
-            <>
-              <div
-                className="chat-resizer"
-                onMouseDown={handleResizeStart}
-                role="separator"
-                aria-orientation="vertical"
-                aria-valuenow={chatWidth}
-                aria-valuemin={CHAT_WIDTH_MIN}
-                aria-valuemax={CHAT_WIDTH_MAX}
-              />
-              <ChatWithAttachments
-                className="lk-chat lk-chat-panel"
-                style={{
-                  display: 'grid',
-                  width: chatWidth,
-                  minWidth: chatWidth,
-                  maxWidth: chatWidth,
-                  flexShrink: 0,
-                }}
-                enableAttachments={appConfig.showChatAttachments}
-              />
-            </>
+            <MemoizedChatPanel
+              chatWidth={chatWidth}
+              onResizeStart={handleResizeStart}
+              enableAttachments={appConfig.showChatAttachments}
+            />
           )}
         </LayoutContextProvider>
       )}
