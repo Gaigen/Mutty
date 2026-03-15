@@ -19,6 +19,7 @@ import { VideoConferenceWithVolume } from './VideoConferenceWithVolume';
 interface LiveKitRoomProps {
   roomName: string;
   identity?: string;
+  avatar?: string;
   onLeave: () => void;
 }
 
@@ -46,7 +47,7 @@ function GearIcon() {
   );
 }
 
-export default function LiveKitRoomComponent({ roomName, identity: providedIdentity, onLeave }: LiveKitRoomProps) {
+export default function LiveKitRoomComponent({ roomName, identity: providedIdentity, avatar, onLeave }: LiveKitRoomProps) {
   const defaultServerUrl = config.livekitUrl;
   const tokenEndpoint = config.tokenEndpoint;
 
@@ -72,7 +73,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room: roomName, identity }),
+        body: JSON.stringify({ room: roomName, identity, avatar: avatar || undefined }),
       });
       if (!response.ok) throw new Error(`Token request failed with status ${response.status}`);
       const data = await response.json();
@@ -84,7 +85,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       setError('Failed to get LiveKit token. Check that the token server is running.');
       setStatus('error');
     }
-  }, [tokenEndpoint, roomName, identity, defaultServerUrl]);
+  }, [tokenEndpoint, roomName, identity, avatar, defaultServerUrl]);
 
   const handleDisconnected = useCallback((reason?: DisconnectReason) => {
     setConnection(null);

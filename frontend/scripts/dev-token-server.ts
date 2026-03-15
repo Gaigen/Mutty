@@ -37,6 +37,17 @@ const ROOM_MAX_LENGTH = Number(TOKEN_ROOM_MAX_LENGTH) || 100;
 const IDENTITY_MAX_LENGTH = Number(TOKEN_IDENTITY_MAX_LENGTH) || 100;
 const ROOM_IDENTITY_REGEX = /^[a-zA-Z0-9_\-\u0400-\u04FF\s.]+$/;
 
+const ALLOWED_AVATARS = new Set([
+  'bear', 'shark', 'hedgehog', 'otter', 'penguin', 'skunk', 'raccoon', 'capybara', 'frog', 'hamster', 'axsolotle',
+]);
+
+function validateAvatar(avatar: unknown): string | null {
+  if (avatar == null || avatar === '') return null;
+  const s = String(avatar).trim().toLowerCase();
+  if (!s || !ALLOWED_AVATARS.has(s)) return null;
+  return s;
+}
+
 function validateRoom(room: string): string | null {
   const s = (room || '').trim();
   if (!s || s.length > ROOM_MAX_LENGTH) return null;
@@ -119,9 +130,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
           return;
         }
 
+        const avatar = validateAvatar(body.avatar);
         const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
           identity,
           name: identity,
+          metadata: avatar ? JSON.stringify({ avatar }) : undefined,
         });
         at.ttl = TOKEN_TTL;
         at.addGrant({

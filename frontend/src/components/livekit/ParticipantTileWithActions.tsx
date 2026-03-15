@@ -23,7 +23,38 @@ import {
   useMaybeTrackRefContext,
   useParticipantTile,
 } from '@livekit/components-react';
+import { AVATAR_IDS, type AvatarId } from '../../config';
 import { hiddenTrackKey, toggleHiddenTrack, useHiddenTracks } from '../../store/hiddenTracks';
+
+function parseAvatarFromMetadata(metadata: string | undefined): AvatarId | null {
+  if (!metadata?.trim()) return null;
+  try {
+    const parsed = JSON.parse(metadata) as { avatar?: string };
+    const a = parsed?.avatar;
+    if (typeof a === 'string' && AVATAR_IDS.includes(a as AvatarId)) return a as AvatarId;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function AvatarPlaceholder() {
+  const participant = useMaybeParticipantContext();
+  const avatarId = participant?.metadata ? parseAvatarFromMetadata(participant.metadata) : null;
+
+  if (avatarId) {
+    return (
+      <img
+        src={`/avatars/${avatarId}.svg`}
+        alt=""
+        className="lk-participant-placeholder-avatar"
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    );
+  }
+
+  return <ParticipantPlaceholder />;
+}
 
 function TrackRefContextIfNeeded({
   trackRef,
@@ -184,7 +215,7 @@ export const ParticipantTileWithActions = React.forwardRef<
                 className="lk-participant-placeholder"
                 style={isVideoHidden && isVideoSource ? { opacity: 1 } : undefined}
               >
-                <ParticipantPlaceholder />
+                <AvatarPlaceholder />
               </div>
 
               {/* Overlay shown when video is manually hidden */}
