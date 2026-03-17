@@ -8,7 +8,10 @@ import { getTrackReferenceId, isTrackReference } from '@livekit/components-core'
 import { Track } from 'livekit-client';
 import { useEffect } from 'react';
 import { useAudioMute } from '../../context/AudioMuteContext';
-import { useParticipantVolumes } from '../../context/ParticipantVolumesContext';
+import {
+  getParticipantVolume,
+  useParticipantVolumes,
+} from '../../context/ParticipantVolumesContext';
 
 interface CustomRoomAudioRendererProps {
   outputVolume?: number;
@@ -43,7 +46,11 @@ export function CustomRoomAudioRenderer({ outputVolume = 1 }: CustomRoomAudioRen
     <div style={{ display: 'none' }}>
       {!isAudioMuted &&
         tracks.map((trackRef) => {
-          const participantVolume = volumes[trackRef.participant.identity] ?? 1;
+          const participantVolume = getParticipantVolume(
+            volumes,
+            trackRef.participant.identity,
+            trackRef.publication.source,
+          );
           const rawVolume = participantVolume * masterVolume;
           const volume = Math.min(1, Math.max(0, rawVolume));
           return (
