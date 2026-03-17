@@ -239,13 +239,13 @@ export function VideoConferenceWithVolume({
             )}
             <MemoizedControlBar controls={CONTROL_BAR_CONTROLS} rightControls={rightControls} />
           </div>
-          {widgetState.showChat && (
+          <div style={{ display: widgetState.showChat ? 'contents' : 'none' }}>
             <MemoizedChatPanel
               chatWidth={chatWidth}
               onResizeStart={handleResizeStart}
               enableAttachments={appConfig.showChatAttachments}
             />
-          )}
+          </div>
         </LayoutContextProvider>
       )}
       {/* Per-participant volume */}
