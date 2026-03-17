@@ -48,7 +48,7 @@ function AvatarPlaceholder() {
         src={`/avatars/${avatarId}.svg`}
         alt=""
         className="lk-participant-placeholder-avatar"
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        style={{  objectFit: 'contain' }}
       />
     );
   }
