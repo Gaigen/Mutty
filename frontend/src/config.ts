@@ -38,6 +38,8 @@ export type AvatarId = (typeof AVATAR_IDS)[number];
 
 // ── Переключатели и лимиты ────────────────────────────────────────────────────
 
+export const BOT_IDENTITY = 'youtube-bot';
+
 export const appConfig = {
   /** Макс. кол-во недавних комнат на главной */
   maxRecentRooms: 5,

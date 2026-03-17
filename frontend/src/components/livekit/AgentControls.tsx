@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useRoomContext } from '@livekit/components-react';
+import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';
 import { RoomEvent } from 'livekit-client';
-import { config, appConfig } from '../../config';
+import { config, appConfig, BOT_IDENTITY } from '../../config';
 import { useParticipantVolumes } from '../../context/ParticipantVolumesContext';
 
 const AGENT_CONTROL_TOPIC = 'agent-control';
-const BOT_IDENTITY = 'youtube-bot';
 
 interface Props {
   roomName: string;
@@ -349,6 +348,7 @@ function PlayingBars() {
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AgentControls({ roomName }: Props) {
   const room = useRoomContext();
+  const remoteParticipants = useRemoteParticipants();
   const [agentState, setAgentState] = useState<AgentState>('idle');
   const [status, setStatus] = useState<AgentStatus>(DEFAULT_STATUS);
   const [error, setError] = useState<string | null>(null);
@@ -357,20 +357,16 @@ export default function AgentControls({ roomName }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const queueInputRef = useRef<HTMLInputElement>(null);
 
-  const botParticipant = Array.from(room.remoteParticipants.values()).find(
+  const botParticipant = remoteParticipants.find(
     (p) => p.identity === BOT_IDENTITY
   );
   const { volumes, setVolume: setParticipantVolume } = useParticipantVolumes();
   const botVolume = volumes[BOT_IDENTITY] ?? 1;
 
-  const updateStatusFromBot = useCallback(() => {
+  useEffect(() => {
     const parsed = parseStatusFromAttributes(botParticipant?.attributes);
     if (parsed) setStatus(parsed);
-  }, [botParticipant?.attributes]);
-
-  useEffect(() => {
-    updateStatusFromBot();
-  }, [updateStatusFromBot]);
+  }, [botParticipant?.identity]);
 
   useEffect(() => {
     const onAttrsChanged = (
