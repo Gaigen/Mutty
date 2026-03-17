@@ -145,6 +145,20 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
     [saveVideoInputEnabled],
   );
 
+  const onAudioDeviceChange = React.useCallback(
+    (_kind: MediaDeviceKind, deviceId: string | undefined) => {
+      saveAudioInputDeviceId(deviceId ?? 'default');
+    },
+    [saveAudioInputDeviceId],
+  );
+
+  const onVideoDeviceChange = React.useCallback(
+    (_kind: MediaDeviceKind, deviceId: string | undefined) => {
+      saveVideoInputDeviceId(deviceId ?? 'default');
+    },
+    [saveVideoInputDeviceId],
+  );
+
   return (
     <div
       className="lk-control-bar"
@@ -168,12 +182,7 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
             Microphone
           </TrackToggle>
           <div className="lk-button-group-menu">
-            <MediaDeviceMenu
-              kind="audioinput"
-              onActiveDeviceChange={(_kind, deviceId) =>
-                saveAudioInputDeviceId(deviceId ?? 'default')
-              }
-            />
+            <MediaDeviceMenu kind="audioinput" onActiveDeviceChange={onAudioDeviceChange} />
           </div>
         </div>
       )}
@@ -202,12 +211,7 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
             Camera
           </TrackToggle>
           <div className="lk-button-group-menu">
-            <MediaDeviceMenu
-              kind="videoinput"
-              onActiveDeviceChange={(_kind, deviceId) =>
-                saveVideoInputDeviceId(deviceId ?? 'default')
-              }
-            />
+            <MediaDeviceMenu kind="videoinput" onActiveDeviceChange={onVideoDeviceChange} />
           </div>
         </div>
       )}
