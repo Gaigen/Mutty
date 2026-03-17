@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';
-import { RoomEvent } from 'livekit-client';
+import { RoomEvent, Track } from 'livekit-client';
 import { config, appConfig, BOT_IDENTITY } from '../../config';
-import { useParticipantVolumes } from '../../context/ParticipantVolumesContext';
+import {
+  getParticipantVolume,
+  useParticipantVolumes,
+} from '../../context/ParticipantVolumesContext';
 
 const AGENT_CONTROL_TOPIC = 'agent-control';
 
@@ -361,7 +364,8 @@ export default function AgentControls({ roomName }: Props) {
     (p) => p.identity === BOT_IDENTITY
   );
   const { volumes, setVolume: setParticipantVolume } = useParticipantVolumes();
-  const botVolume = volumes[BOT_IDENTITY] ?? 1;
+  const botVoiceVolume = getParticipantVolume(volumes, BOT_IDENTITY, Track.Source.Microphone);
+  const botScreenVolume = getParticipantVolume(volumes, BOT_IDENTITY, Track.Source.ScreenShareAudio);
 
   useEffect(() => {
     const parsed = parseStatusFromAttributes(botParticipant?.attributes);
@@ -754,27 +758,46 @@ export default function AgentControls({ roomName }: Props) {
 
           {/* ── Bot volume ────────────────────────────────────── */}
           <div style={{ padding: '0 0.6rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <VolumeIcon />
               <SectionLabel>Volume</SectionLabel>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginLeft: 'auto', marginBottom: 5 }}>
-                {Math.round(botVolume * 100)}%
-              </span>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={botVolume}
-              onChange={(e) => setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value))}
-              style={{
-                width: '100%',
-                height: 4,
-                marginBottom: '0.4rem',
-                accentColor: 'var(--lk-accent, #0ea5e9)',
-              }}
-            />
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', width: 48 }}>Voice</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={botVoiceVolume}
+                  onChange={(e) =>
+                    setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value), Track.Source.Microphone)
+                  }
+                  style={{ flex: 1, height: 4, accentColor: 'var(--lk-accent, #0ea5e9)' }}
+                />
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
+                  {Math.round(botVoiceVolume * 100)}%
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', width: 48 }}>Screen</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={botScreenVolume}
+                  onChange={(e) =>
+                    setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value), Track.Source.ScreenShareAudio)
+                  }
+                  style={{ flex: 1, height: 4, accentColor: 'var(--lk-accent, #0ea5e9)' }}
+                />
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
+                  {Math.round(botScreenVolume * 100)}%
+                </span>
+              </div>
+            </div>
           </div>
 
           <Divider />

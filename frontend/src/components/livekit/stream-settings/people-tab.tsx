@@ -1,4 +1,6 @@
 import type { RemoteParticipant, Room } from 'livekit-client';
+import { Track } from 'livekit-client';
+import { getParticipantVolume } from '../../../context/ParticipantVolumesContext';
 import { getAvatarColor, getInitials } from '../../../lib/avatar-utils';
 import { useActiveSpeakers } from '../../../hooks/useActiveSpeakers';
 
@@ -6,7 +8,7 @@ interface PeopleTabProps {
   room: Room;
   humanParticipants: RemoteParticipant[];
   participantVolumes: Record<string, number>;
-  setParticipantVolume: (identity: string, volume: number) => void;
+  setParticipantVolume: (identity: string, volume: number, source?: Track.Source) => void;
 }
 
 export function PeopleTab({
@@ -39,11 +41,21 @@ export function PeopleTab({
       <div className="space-y-2">
         {humanParticipants.map((participant) => {
           const name = participant.name || participant.identity;
-          const volume = participantVolumes[participant.identity] ?? 1;
+          const voiceVolume = getParticipantVolume(
+            participantVolumes,
+            participant.identity,
+            Track.Source.Microphone,
+          );
+          const screenVolume = getParticipantVolume(
+            participantVolumes,
+            participant.identity,
+            Track.Source.ScreenShareAudio,
+          );
           const isSpeaking = activeSpeakerIds.has(participant.identity);
           const color = getAvatarColor(participant.identity);
           const initials = getInitials(name);
-          const isAtDefault = Math.abs(volume - 1) < 0.01;
+          const voiceAtDefault = Math.abs(voiceVolume - 1) < 0.01;
+          const screenAtDefault = Math.abs(screenVolume - 1) < 0.01;
 
           return (
             <div
@@ -51,7 +63,7 @@ export function PeopleTab({
               className="bg-[#252525] rounded-lg p-3 border transition-colors"
               style={{ borderColor: isSpeaking ? color + '66' : '#2a2a2a' }}
             >
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-3">
                 <div
                   className="relative shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white select-none"
                   style={{ background: color }}
@@ -74,14 +86,59 @@ export function PeopleTab({
                   </div>
                   <span className="text-[10px] text-gray-500">{participant.identity}</span>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[10px] text-gray-400 w-8 text-right">{Math.round(volume * 100)}%</span>
-                  {!isAtDefault && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-400 w-20 shrink-0">Voice</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={voiceVolume}
+                    onChange={(e) =>
+                      setParticipantVolume(participant.identity, parseFloat(e.target.value), Track.Source.Microphone)
+                    }
+                    className="flex-1 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
+                    style={{ accentColor: color }}
+                  />
+                  <span className="text-[10px] text-gray-400 w-8 text-right">{Math.round(voiceVolume * 100)}%</span>
+                  {!voiceAtDefault && (
                     <button
                       type="button"
                       title="Reset to 100%"
-                      onClick={() => setParticipantVolume(participant.identity, 1)}
+                      onClick={() => setParticipantVolume(participant.identity, 1, Track.Source.Microphone)}
+                      className="text-[10px] text-gray-500 hover:text-white px-1.5 py-0.5 rounded bg-[#333] hover:bg-[#3a3a3a] transition-colors"
+                    >
+                      ↺
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-400 w-20 shrink-0">Screen</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={screenVolume}
+                    onChange={(e) =>
+                      setParticipantVolume(
+                        participant.identity,
+                        parseFloat(e.target.value),
+                        Track.Source.ScreenShareAudio,
+                      )
+                    }
+                    className="flex-1 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
+                    style={{ accentColor: color }}
+                  />
+                  <span className="text-[10px] text-gray-400 w-8 text-right">{Math.round(screenVolume * 100)}%</span>
+                  {!screenAtDefault && (
+                    <button
+                      type="button"
+                      title="Reset to 100%"
+                      onClick={() => setParticipantVolume(participant.identity, 1, Track.Source.ScreenShareAudio)}
                       className="text-[10px] text-gray-500 hover:text-white px-1.5 py-0.5 rounded bg-[#333] hover:bg-[#3a3a3a] transition-colors"
                     >
                       ↺
@@ -89,14 +146,6 @@ export function PeopleTab({
                   )}
                 </div>
               </div>
-
-              <input
-                type="range" min="0" max="1" step="0.01"
-                value={volume}
-                onChange={(e) => setParticipantVolume(participant.identity, parseFloat(e.target.value))}
-                className="w-full h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
-                style={{ accentColor: color }}
-              />
             </div>
           );
         })}
