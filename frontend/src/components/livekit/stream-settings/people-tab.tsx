@@ -1,19 +1,21 @@
-import type { RemoteParticipant } from 'livekit-client';
+import type { RemoteParticipant, Room } from 'livekit-client';
 import { getAvatarColor, getInitials } from '../../../lib/avatar-utils';
+import { useActiveSpeakers } from '../../../hooks/useActiveSpeakers';
 
 interface PeopleTabProps {
+  room: Room;
   humanParticipants: RemoteParticipant[];
   participantVolumes: Record<string, number>;
-  activeSpeakerIds: Set<string>;
   setParticipantVolume: (identity: string, volume: number) => void;
 }
 
 export function PeopleTab({
+  room,
   humanParticipants,
   participantVolumes,
-  activeSpeakerIds,
   setParticipantVolume,
 }: PeopleTabProps) {
+  const activeSpeakerIds = useActiveSpeakers(room);
   if (humanParticipants.length === 0) {
     return (
       <>

@@ -5,7 +5,6 @@ import { useAudioSettings } from '../../hooks/useAudioSettings';
 import { useCameraSettings } from '../../hooks/useCameraSettings';
 import { useScreenShareSettings } from '../../hooks/useScreenShareSettings';
 import { useMicLevel } from '../../hooks/useMicLevel';
-import { useActiveSpeakers } from '../../hooks/useActiveSpeakers';
 import { useAudioOutputs } from '../../hooks/useAudioOutputs';
 import { useStatsPolling } from '../../hooks/useStatsPolling';
 import { BOT_IDENTITY } from '../../config';
@@ -32,7 +31,6 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
   const audioOutputs = useAudioOutputs();
   const remoteParticipants = useRemoteParticipants();
   const { volumes: participantVolumes, setVolume: setParticipantVolume } = useParticipantVolumes();
-  const activeSpeakerIds = useActiveSpeakers(room);
   const micLevel = useMicLevel(isOpen && activeTab === 'audio', room, audioSettings);
   const statsPolling = useStatsPolling(room, isOpen && activeTab === 'stats');
 
@@ -112,9 +110,9 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
         )}
         {activeTab === 'people' && (
           <PeopleTab
+            room={room}
             humanParticipants={humanParticipants}
             participantVolumes={participantVolumes}
-            activeSpeakerIds={activeSpeakerIds}
             setParticipantVolume={setParticipantVolume}
           />
         )}

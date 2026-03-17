@@ -15,10 +15,28 @@ import {
 import { ParticipantTileWithActions } from './ParticipantTileWithActions';
 import { ChatWithAttachments } from './ChatWithAttachments';
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
-import { Track } from 'livekit-client';
+import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
 import { appConfig, LS_KEYS } from '../../config';
+
+const CONTROL_BAR_CONTROLS = {
+  chat: appConfig.showChat,
+  leave: appConfig.showLeave,
+} as const;
 import { CustomControlBar } from './CustomControlBar';
+
+const MemoizedControlBar = React.memo(CustomControlBar, (prev, next) => {
+  if (prev.rightControls !== next.rightControls) return false;
+  const pc = prev.controls ?? {};
+  const nc = next.controls ?? {};
+  return (
+    (pc.chat === nc.chat || (pc.chat === undefined && nc.chat === undefined)) &&
+    (pc.leave === nc.leave || (pc.leave === undefined && nc.leave === undefined)) &&
+    (pc.microphone === nc.microphone || (pc.microphone === undefined && nc.microphone === undefined)) &&
+    (pc.camera === nc.camera || (pc.camera === undefined && nc.camera === undefined)) &&
+    (pc.screenShare === nc.screenShare || (pc.screenShare === undefined && nc.screenShare === undefined))
+  );
+});
 import { CustomRoomAudioRenderer } from './CustomRoomAudioRenderer';
 
 const CHAT_WIDTH_MIN = 280;
@@ -137,7 +155,20 @@ export function VideoConferenceWithVolume({
       { source: Track.Source.Camera, withPlaceholder: true },
       { source: Track.Source.ScreenShare, withPlaceholder: false },
     ],
-    { onlySubscribed: false },
+    {
+      onlySubscribed: false,
+      updateOnlyOn: [
+        RoomEvent.ParticipantConnected,
+        RoomEvent.ParticipantDisconnected,
+        RoomEvent.TrackPublished,
+        RoomEvent.TrackUnpublished,
+        RoomEvent.TrackSubscribed,
+        RoomEvent.TrackUnsubscribed,
+        RoomEvent.LocalTrackPublished,
+        RoomEvent.LocalTrackUnpublished,
+        RoomEvent.TrackSubscriptionStatusChanged,
+      ],
+    },
   );
 
   const widgetUpdate = React.useCallback((state: Partial<typeof widgetState>) => {
@@ -206,13 +237,7 @@ export function VideoConferenceWithVolume({
                 </FocusLayoutContainer>
               </div>
             )}
-            <CustomControlBar
-              controls={{
-                chat: appConfig.showChat,
-                leave: appConfig.showLeave,
-              }}
-              rightControls={rightControls}
-            />
+            <MemoizedControlBar controls={CONTROL_BAR_CONTROLS} rightControls={rightControls} />
           </div>
           {widgetState.showChat && (
             <MemoizedChatPanel

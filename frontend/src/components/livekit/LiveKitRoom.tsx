@@ -1,7 +1,7 @@
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { type RoomOptions, DisconnectReason } from 'livekit-client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { config, appConfig } from '../../config';
 import { useAudioSettings, getAudioSettings } from '../../hooks/useAudioSettings';
 import { getCameraSettings } from '../../hooks/useCameraSettings';
@@ -47,6 +47,38 @@ function GearIcon() {
   );
 }
 
+interface MemoizedRightControlsProps {
+  roomName: string;
+  showStreamSettings: boolean;
+  onToggleSettings: () => void;
+}
+
+const MemoizedRightControls = React.memo(function MemoizedRightControls({
+  roomName,
+  showStreamSettings,
+  onToggleSettings,
+}: MemoizedRightControlsProps) {
+  return (
+    <>
+      <AgentControls roomName={roomName} />
+      {appConfig.showSettingsButton && (
+        <button
+          type="button"
+          className="lk-button"
+          title="Stream Settings"
+          aria-label="Stream Settings"
+          aria-pressed={showStreamSettings}
+          onClick={onToggleSettings}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
+        >
+          <GearIcon />
+          <span>Settings</span>
+        </button>
+      )}
+    </>
+  );
+});
+
 export default function LiveKitRoomComponent({ roomName, identity: providedIdentity, avatar, onLeave }: LiveKitRoomProps) {
   const defaultServerUrl = config.livekitUrl;
   const tokenEndpoint = config.tokenEndpoint;
@@ -63,7 +95,19 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
   const [error, setError] = useState<string | null>(null);
   const [disconnectReason, setDisconnectReason] = useState<DisconnectReason | null>(null);
   const [showStreamSettings, setShowStreamSettings] = useState(false);
+  const toggleStreamSettings = useCallback(() => setShowStreamSettings((p) => !p), []);
   const { settings: audioSettings } = useAudioSettings();
+
+  const rightControls = useMemo(
+    () => (
+      <MemoizedRightControls
+        roomName={roomName}
+        showStreamSettings={showStreamSettings}
+        onToggleSettings={toggleStreamSettings}
+      />
+    ),
+    [roomName, showStreamSettings, toggleStreamSettings],
+  );
 
   const fetchToken = useCallback(async () => {
     setStatus('loading');
@@ -207,25 +251,7 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       <AudioMuteProvider>
       <VideoConferenceWithVolume
         outputVolume={audioSettings.outputVolume}
-        rightControls={(
-          <>
-            <AgentControls roomName={roomName} />
-            {appConfig.showSettingsButton && (
-            <button
-              type="button"
-              className="lk-button"
-              title="Stream Settings"
-              aria-label="Stream Settings"
-              aria-pressed={showStreamSettings}
-              onClick={() => setShowStreamSettings((p) => !p)}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}
-            >
-              <GearIcon />
-              <span>Settings</span>
-            </button>
-            )}
-          </>
-        )}
+        rightControls={rightControls}
       />
       <AudioHandler />
       <SoundHandler />

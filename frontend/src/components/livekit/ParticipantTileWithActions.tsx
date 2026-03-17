@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { Participant } from 'livekit-client';
 import { RemoteTrackPublication, Track } from 'livekit-client';
 import type { ParticipantClickEvent, TrackReferenceOrPlaceholder } from '@livekit/components-core';
-import { isTrackReference, isTrackReferencePinned } from '@livekit/components-core';
+import { isEqualTrackRef, isTrackReference, isTrackReferencePinned } from '@livekit/components-core';
 import {
   AudioTrack,
   ConnectionQualityIndicator,
@@ -132,10 +132,10 @@ export interface ParticipantTileWithActionsProps extends React.HTMLAttributes<HT
   onParticipantClick?: (event: ParticipantClickEvent) => void;
 }
 
-export const ParticipantTileWithActions = React.forwardRef<
+const ParticipantTileWithActionsInner = React.forwardRef<
   HTMLDivElement,
   ParticipantTileWithActionsProps
->(function ParticipantTileWithActions(
+>(function ParticipantTileWithActionsInner(
   { trackRef, children, onParticipantClick, disableSpeakingIndicator, ...htmlProps },
   ref,
 ) {
@@ -262,3 +262,16 @@ export const ParticipantTileWithActions = React.forwardRef<
     </div>
   );
 });
+
+function participantTilePropsAreEqual(
+  prev: ParticipantTileWithActionsProps,
+  next: ParticipantTileWithActionsProps,
+): boolean {
+  if (prev.trackRef !== next.trackRef) {
+    if (!prev.trackRef || !next.trackRef) return false;
+    return isEqualTrackRef(prev.trackRef, next.trackRef);
+  }
+  return prev.disableSpeakingIndicator === next.disableSpeakingIndicator;
+}
+
+export const ParticipantTileWithActions = React.memo(ParticipantTileWithActionsInner, participantTilePropsAreEqual);
