@@ -30,6 +30,7 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    document.title = 'Mutty';
     const savedIdentity = localStorage.getItem(LS_KEYS.identity);
     if (savedIdentity) setDisplayName(savedIdentity);
     const savedAvatar = localStorage.getItem(LS_KEYS.avatar);
@@ -64,7 +65,7 @@ export default function HomePage() {
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
       <div className="p-8 bg-gray-900 rounded-lg border border-gray-800 shadow-xl w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-          Voice App
+          Mutty
         </h1>
 
         <form onSubmit={joinRoom} className="flex flex-col gap-4">

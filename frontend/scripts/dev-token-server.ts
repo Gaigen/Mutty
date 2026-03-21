@@ -38,7 +38,19 @@ const IDENTITY_MAX_LENGTH = Number(TOKEN_IDENTITY_MAX_LENGTH) || 100;
 const ROOM_IDENTITY_REGEX = /^[a-zA-Z0-9_\-\u0400-\u04FF\s.]+$/;
 
 const ALLOWED_AVATARS = new Set([
-  'bear', 'shark', 'hedgehog', 'otter', 'penguin', 'skunk', 'raccoon', 'capybara', 'frog', 'hamster', 'axsolotle',
+  'bear',
+  'shark',
+  'hedgehog',
+  'otter',
+  'penguin',
+  'skunk',
+  'raccoon',
+  'capybara',
+  'frog',
+  'hamster',
+  'axsolotle',
+  'fox',
+  'monkey',
 ]);
 
 function validateAvatar(avatar: unknown): string | null {

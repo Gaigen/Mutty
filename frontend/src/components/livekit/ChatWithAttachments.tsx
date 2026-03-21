@@ -15,6 +15,7 @@ import * as React from 'react';
 import ReactDOM from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { playChatNotificationSound } from '../../lib/play-chat-notification';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ACCEPT_IMAGES = 'image/jpeg,image/png,image/gif,image/webp';
@@ -278,7 +279,23 @@ export function ChatWithAttachments({
   const lastReadMsgAt = React.useRef(0);
 
   const { chatMessages, send, isSending } = useChat();
+  const prevChatLenForSoundRef = React.useRef<number | null>(null);
   const [fullscreenImage, setFullscreenImage] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const len = chatMessages.length;
+    if (prevChatLenForSoundRef.current === null) {
+      prevChatLenForSoundRef.current = len;
+      return;
+    }
+    if (len > prevChatLenForSoundRef.current) {
+      const added = chatMessages.slice(prevChatLenForSoundRef.current);
+      if (added.some((m) => !m.from?.isLocal)) {
+        playChatNotificationSound();
+      }
+    }
+    prevChatLenForSoundRef.current = len;
+  }, [chatMessages]);
 
   const openFullscreen = React.useCallback((src: string) => setFullscreenImage(src), []);
   const closeFullscreen = React.useCallback(() => setFullscreenImage(null), []);

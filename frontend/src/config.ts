@@ -31,7 +31,19 @@ export const LS_KEYS = {
 } as const;
 
 export const AVATAR_IDS = [
-  'bear', 'shark', 'hedgehog', 'otter', 'penguin', 'skunk', 'raccoon', 'capybara', 'frog', 'hamster', 'axsolotle',
+  'bear',
+  'shark',
+  'hedgehog',
+  'otter',
+  'penguin',
+  'skunk',
+  'raccoon',
+  'capybara',
+  'frog',
+  'hamster',
+  'axsolotle',
+  'fox',
+  'monkey',
 ] as const;
 
 export type AvatarId = (typeof AVATAR_IDS)[number];
@@ -67,4 +79,8 @@ export const appConfig = {
 
   /** Режим агента по умолчанию: 'audio' | 'video' */
   agentDefaultMode: 'video' as const,
+  /** Вероятность звука уведомления о новом сообщении */
+  chatNotificationRareChance: 0.05,
+  /** Источник звука уведомления о новом сообщении */
+  chatNotificationRareSrc: '/sounds/rare-sound.m4a',
 } as const;
