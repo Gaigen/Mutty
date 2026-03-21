@@ -19,8 +19,8 @@ import remarkGfm from 'remark-gfm';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ACCEPT_IMAGES = 'image/jpeg,image/png,image/gif,image/webp';
 const IMG_PREFIX = 'data:image/';
-const MAX_TEXT_LEN = 2000;
-const COLLAPSE_CHARS = 500;
+const MAX_TEXT_LEN = 20000;
+const COLLAPSE_CHARS = 1000;
 const COLLAPSE_LINES = 8;
 
 interface ChatWithAttachmentsProps extends React.HTMLAttributes<HTMLDivElement> {
