@@ -14,6 +14,14 @@ export default function RoomPage() {
     }
   }, [roomName, navigate]);
 
+  useEffect(() => {
+    if (!roomName) return;
+    document.title = `Mutty · ${roomName}`;
+    return () => {
+      document.title = 'Mutty';
+    };
+  }, [roomName]);
+
   if (!roomName) {
     return null;
   }
