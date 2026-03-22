@@ -10,6 +10,7 @@ import { AudioMuteProvider } from '../../context/AudioMuteContext';
 import { UserChoicesProvider } from '../../context/UserChoicesContext';
 import { ParticipantVolumesProvider } from '../../context/ParticipantVolumesContext';
 import AgentControls from './AgentControls';
+import { InviteRoomButton } from './invite-room-button';
 import AudioHandler from './AudioHandler';
 import ScreenShareHandler from './ScreenShareHandler';
 import SoundHandler from './SoundHandler';
@@ -60,6 +61,7 @@ const MemoizedRightControls = React.memo(function MemoizedRightControls({
 }: MemoizedRightControlsProps) {
   return (
     <>
+      <InviteRoomButton roomName={roomName} />
       <AgentControls roomName={roomName} />
       {appConfig.showSettingsButton && (
         <button

@@ -249,6 +249,52 @@ body {
   background: var(--lk-accent, #0ea5e9);
   height: 64px;
 }
+/* Pinned tile: only the video shell goes browser-fullscreen (not carousel / chrome) */
+.lk-participant-stream-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+
+.lk-participant-stream-shell video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lk-participant-stream-shell:fullscreen {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.lk-participant-stream-shell:fullscreen video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lk-stream-fs-exit {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 30;
+  padding: 0.25rem !important;
+  line-height: 0;
+  background-color: rgba(0, 0, 0, 0.55) !important;
+}
+
+.lk-tile-controls-cluster {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 /* Message body: allow full width for code blocks and long content */
 .lk-chat .lk-message-body {
   max-width: 100%;
