@@ -7,7 +7,7 @@ import type {
   RemoteVideoTrack,
 } from 'livekit-client';
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { PING_HISTORY_SIZE } from '../components/livekit/stream-settings/constants';
+import { PING_HISTORY_SIZE } from '../lib/stream-stats';
 
 export function useStatsPolling(
   room: Room | null,

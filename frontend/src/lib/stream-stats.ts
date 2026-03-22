@@ -1,5 +1,7 @@
 import type { VideoSenderStats, VideoReceiverStats } from 'livekit-client';
 
+export const PING_HISTORY_SIZE = 60;
+
 export function computeBitrate(
   current: VideoSenderStats | VideoReceiverStats,
   prev?: VideoSenderStats | VideoReceiverStats,

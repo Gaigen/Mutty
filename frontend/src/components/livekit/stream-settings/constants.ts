@@ -31,5 +31,3 @@ export const CONTENT_HINTS: { value: ContentHint; label: string; desc: string }[
   { value: 'detail', label: 'Detail', desc: 'Code, design — prioritize sharpness.' },
   { value: 'text', label: 'Text', desc: 'Documents, spreadsheets — max text clarity.' },
 ];
-
-export const PING_HISTORY_SIZE = 60;

@@ -54,11 +54,13 @@ export function StatsTab({
         </div>
       </div>
 
-      <div className="bg-[#222] rounded-lg p-3 border border-[#2a2a2a]">
-        <div className="flex items-center justify-between mb-2">
-          <SectionHeader emoji="📈" label="RTT History" />
+      <div className="bg-[#222] rounded-lg p-4 border border-[#2a2a2a]">
+        <div className="flex items-baseline justify-between gap-3 mb-3">
+          <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wide flex items-center gap-2">
+            <span aria-hidden>📈</span> RTT History
+          </h3>
           {pingMs !== null && (
-            <span className={`text-xs font-mono font-semibold mb-3 ${pingColor(pingMs)}`}>
+            <span className={`text-base font-mono font-semibold tabular-nums shrink-0 ${pingColor(pingMs)}`}>
               {pingMs} ms
             </span>
           )}
