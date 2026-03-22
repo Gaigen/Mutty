@@ -252,6 +252,46 @@ body {
 /* Message body: allow full width for code blocks and long content */
 .lk-chat .lk-message-body {
   max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lk-chat .lk-chat-messages,
+.lk-chat .lk-chat-entry {
+  min-width: 0;
+}
+
+.chat-shared-image-trigger {
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  display: block;
+  max-width: 100%;
+  width: fit-content;
+}
+
+.chat-shared-image-thumb {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: min(280px, 50vh);
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.chat-attach-button {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  min-height: 2.5rem;
+  min-width: 2.75rem;
+  padding: 0 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Participant tile: action buttons (hide video + focus toggle) ─────────── */
