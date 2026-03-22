@@ -126,6 +126,22 @@ function EyeOffIcon() {
   );
 }
 
+function FullscreenEnterIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+    </svg>
+  );
+}
+
+function FullscreenExitIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 14v4h4M20 10V6h-4M4 10V6h4M20 14v4h-4" />
+    </svg>
+  );
+}
+
 export interface ParticipantTileWithActionsProps extends React.HTMLAttributes<HTMLDivElement> {
   trackRef?: TrackReferenceOrPlaceholder;
   disableSpeakingIndicator?: boolean;
@@ -188,43 +204,89 @@ const ParticipantTileWithActionsInner = React.forwardRef<
       trackReference.source === Track.Source.Camera ||
       trackReference.source === Track.Source.ScreenShare);
 
+  const streamShellRef = React.useRef<HTMLDivElement>(null);
+  const [streamShellFullscreen, setStreamShellFullscreen] = React.useState(false);
+
+  const isPinned =
+    !!layoutContext?.pin.state &&
+    isTrackReferencePinned(trackReference, layoutContext.pin.state);
+
+  React.useEffect(() => {
+    const shell = streamShellRef.current;
+    const onFs = () => setStreamShellFullscreen(!!shell && document.fullscreenElement === shell);
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+
+  React.useEffect(() => {
+    const shell = streamShellRef.current;
+    if (!isPinned && shell && document.fullscreenElement === shell) {
+      void document.exitFullscreen().catch(() => {});
+    }
+  }, [isPinned]);
+
+  const toggleStreamFullscreen = React.useCallback(() => {
+    const el = streamShellRef.current;
+    if (!el) return;
+    if (document.fullscreenElement === el) {
+      void document.exitFullscreen().catch(() => {});
+    } else {
+      void el.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
   return (
     <div ref={ref} style={{ position: 'relative' }} {...elementProps}>
       <TrackRefContextIfNeeded trackRef={trackReference}>
         <ParticipantContextIfNeeded participant={trackReference.participant}>
           {children ?? (
             <>
-              {isVideoSource ? (
-                <VideoTrack
-                  trackRef={trackReference}
-                  onSubscriptionStatusChanged={handleSubscribe}
-                  manageSubscription={autoManageSubscription}
-                  style={isVideoHidden ? { visibility: 'hidden' } : undefined}
-                />
-              ) : (
-                isTrackReference(trackReference) && (
-                  <AudioTrack
+              <div ref={streamShellRef} className="lk-participant-stream-shell">
+                {isVideoSource ? (
+                  <VideoTrack
                     trackRef={trackReference}
                     onSubscriptionStatusChanged={handleSubscribe}
+                    manageSubscription={autoManageSubscription}
+                    style={isVideoHidden ? { visibility: 'hidden' } : undefined}
                   />
-                )
-              )}
+                ) : (
+                  isTrackReference(trackReference) && (
+                    <AudioTrack
+                      trackRef={trackReference}
+                      onSubscriptionStatusChanged={handleSubscribe}
+                    />
+                  )
+                )}
 
-              {/* Placeholder when video muted OR manually hidden */}
-              <div
-                className="lk-participant-placeholder"
-                style={isVideoHidden && isVideoSource ? { opacity: 1 } : undefined}
-              >
-                <AvatarPlaceholder />
-              </div>
-
-              {/* Overlay shown when video is manually hidden */}
-              {isVideoHidden && isVideoSource && (
-                <div className="lk-hidden-video-overlay" aria-hidden="true">
-                  <EyeOffIcon />
-                  <span>Video hidden</span>
+                <div
+                  className="lk-participant-placeholder"
+                  style={isVideoHidden && isVideoSource ? { opacity: 1 } : undefined}
+                >
+                  <AvatarPlaceholder />
                 </div>
-              )}
+
+                {isVideoHidden && isVideoSource && (
+                  <div className="lk-hidden-video-overlay" aria-hidden="true">
+                    <EyeOffIcon />
+                    <span>Video hidden</span>
+                  </div>
+                )}
+
+                {isPinned && isVideoSource && streamShellFullscreen && (
+                  <button
+                    type="button"
+                    className="lk-button lk-stream-fs-exit"
+                    title="Exit fullscreen"
+                    aria-label="Exit fullscreen"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void document.exitFullscreen().catch(() => {});
+                    }}
+                  >
+                    <FullscreenExitIcon />
+                  </button>
+                )}
+              </div>
 
               <div className="lk-participant-metadata">
                 <div className="lk-participant-metadata-item">
@@ -252,8 +314,22 @@ const ParticipantTileWithActionsInner = React.forwardRef<
             </>
           )}
 
-          {/* Action buttons group: hide toggle + focus toggle */}
-          <div className="lk-tile-controls">
+          <div className="lk-tile-controls lk-tile-controls-cluster">
+            {isPinned && isVideoSource && (
+              <button
+                type="button"
+                className="lk-button lk-hide-track-button lk-tile-fs-btn"
+                title={streamShellFullscreen ? 'Exit fullscreen' : 'Fullscreen (stream only)'}
+                aria-label={streamShellFullscreen ? 'Exit fullscreen' : 'Fullscreen stream'}
+                aria-pressed={streamShellFullscreen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleStreamFullscreen();
+                }}
+              >
+                {streamShellFullscreen ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
+              </button>
+            )}
             {isVideoSource && <HideTrackButton trackRef={trackReference} />}
             <FocusToggle trackRef={trackReference} />
           </div>
