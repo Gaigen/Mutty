@@ -2,8 +2,14 @@ import { PING_HISTORY_SIZE } from '../../../lib/stream-stats';
 
 export function SectionHeader({ emoji, label }: { emoji: string; label: string }) {
   return (
-    <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
-      <span>{emoji}</span> {label}
+    <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2.5">
+      <span
+        className="inline-flex h-6 w-7 shrink-0 items-center justify-center text-base leading-none"
+        aria-hidden
+      >
+        {emoji}
+      </span>
+      <span className="min-w-0">{label}</span>
     </h3>
   );
 }
@@ -52,24 +58,44 @@ export function MicLevelBar({
   );
 }
 
+function pingChartMaxMs(valid: number[]): number {
+  const peak = Math.max(1, ...valid);
+  const padded = peak * 1.35;
+  let cap = Math.ceil(padded / 5) * 5;
+  if (cap < 20) cap = 20;
+  if (cap > 300) cap = 300;
+  return cap;
+}
+
+function pingChartTicks(maxMs: number): number[] {
+  if (maxMs <= 30) return [10, 20, 30].filter((t) => t <= maxMs);
+  if (maxMs <= 60) return [20, 40, 60].filter((t) => t <= maxMs);
+  if (maxMs <= 120) return [40, 80, 120].filter((t) => t <= maxMs);
+  const step = maxMs <= 200 ? 50 : 100;
+  const ticks: number[] = [];
+  for (let t = step; t < maxMs; t += step) ticks.push(t);
+  ticks.push(maxMs);
+  return [...new Set(ticks)].sort((a, b) => a - b);
+}
+
 export function PingChart({ history }: { history: (number | null)[] }) {
   const W = 400;
-  const H = 132;
-  const leftPad = 52;
-  const rightPad = 10;
-  const topPad = 12;
-  const bottomPad = 26;
+  const H = 86;
+  const leftPad = 44;
+  const rightPad = 8;
+  const topPad = 8;
+  const bottomPad = 18;
 
   const valid = history.filter((v): v is number => v !== null);
   if (valid.length < 2) {
     return (
-      <div className="flex items-center justify-center min-h-[132px] rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] px-4 text-sm text-gray-400">
-        Collecting data…
+      <div className="flex min-h-[72px] items-center justify-center rounded-md border border-[#2a2a2a] bg-[#1a1a1a] px-3 text-xs text-gray-500">
+        Collecting samples…
       </div>
     );
   }
 
-  const maxVal = Math.max(300, ...valid);
+  const maxVal = pingChartMaxMs(valid);
   const plotW = W - leftPad - rightPad;
   const plotH = H - topPad - bottomPad;
 
@@ -83,13 +109,13 @@ export function PingChart({ history }: { history: (number | null)[] }) {
 
   const latest = valid[valid.length - 1];
   const lineColor = latest < 100 ? '#22c55e' : latest < 250 ? '#f59e0b' : '#ef4444';
-  const gridMs = [100, 200, 300].filter((v) => v <= maxVal);
+  const gridMs = pingChartTicks(maxVal);
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full block h-[clamp(132px,28vw,188px)]"
+        className="block h-[72px] w-full max-h-[88px]"
         role="img"
         aria-label="Round-trip time over the last minute"
       >
@@ -98,7 +124,7 @@ export function PingChart({ history }: { history: (number | null)[] }) {
           y={topPad}
           width={plotW}
           height={plotH}
-          rx={4}
+          rx={3}
           fill="#141414"
           stroke="#2a2a2a"
           strokeWidth={1}
@@ -114,17 +140,17 @@ export function PingChart({ history }: { history: (number | null)[] }) {
                 y2={y}
                 stroke="#3f3f46"
                 strokeWidth={1}
-                strokeOpacity={0.9}
+                strokeOpacity={0.85}
               />
               <text
-                x={leftPad - 8}
+                x={leftPad - 6}
                 y={y}
                 textAnchor="end"
                 dominantBaseline="middle"
                 fill="#a1a1aa"
-                style={{ fontSize: 11, fontWeight: 500 }}
+                style={{ fontSize: 10, fontWeight: 500 }}
               >
-                {ms} ms
+                {ms}ms
               </text>
             </g>
           );
@@ -133,19 +159,19 @@ export function PingChart({ history }: { history: (number | null)[] }) {
           points={pts.join(' ')}
           fill="none"
           stroke={lineColor}
-          strokeWidth={2.25}
+          strokeWidth={2}
           strokeLinejoin="round"
           strokeLinecap="round"
         />
         {pts.length > 0 &&
           (() => {
             const last = pts[pts.length - 1].split(',');
-            return <circle cx={last[0]} cy={last[1]} r={3.5} fill={lineColor} stroke="#0a0a0a" strokeWidth={1} />;
+            return <circle cx={last[0]} cy={last[1]} r={3} fill={lineColor} stroke="#0a0a0a" strokeWidth={1} />;
           })()}
-        <text x={leftPad} y={H - 6} fill="#a1a1aa" style={{ fontSize: 11 }}>
+        <text x={leftPad} y={H - 4} fill="#71717a" style={{ fontSize: 10 }}>
           60s ago
         </text>
-        <text x={leftPad + plotW} y={H - 6} textAnchor="end" fill="#a1a1aa" style={{ fontSize: 11 }}>
+        <text x={leftPad + plotW} y={H - 4} textAnchor="end" fill="#71717a" style={{ fontSize: 10 }}>
           Now
         </text>
       </svg>

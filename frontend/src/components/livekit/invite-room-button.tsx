@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Check, UserPlus } from 'lucide-react';
 import { AVATAR_IDS } from '../../config';
 import { generateRandomNickname } from '../../utils/randomNickname';
 
@@ -30,9 +31,12 @@ export function InviteRoomButton({ roomName }: { roomName: string }) {
       type="button"
       className="lk-button"
       onClick={onClick}
+      aria-label="Copy invite link"
       title="Copy invite link (random guest name and avatar for each new link)"
     >
-      {copied ? 'Copied!' : 'Invite'}
+      {copied
+        ? <Check size={15} aria-hidden />
+        : <UserPlus size={15} aria-hidden />}
     </button>
   );
 }

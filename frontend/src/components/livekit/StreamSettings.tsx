@@ -85,7 +85,7 @@ export default function StreamSettings({ isOpen, onClose }: StreamSettingsProps)
         </button>
       </div>
 
-      <div className="p-4 max-h-[62vh] overflow-y-auto space-y-5">
+      <div className="min-w-0 max-h-[62vh] space-y-5 overflow-y-auto px-4 py-4">
         {activeTab === 'audio' && (
           <AudioTab
             micLevel={micLevel}

@@ -23,24 +23,26 @@ const PROCESSING_TOGGLES: {
 export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutputs }: AudioTabProps) {
   return (
     <>
-      <div className="bg-[#222] rounded-lg p-3 border border-[#2a2a2a]">
+      <div>
         <SectionHeader emoji="🎤" label="Microphone Input" />
-        <MicLevelBar
-          level={micLevel}
-          gateThreshold={audioSettings.noiseGateThreshold}
-          gateEnabled={audioSettings.noiseGateEnabled}
-        />
-        <p className="text-[10px] text-gray-600 mt-2">
-          Device: use the Microphone dropdown in the control bar
-        </p>
+        <div className="rounded-lg border border-[#2a2a2a] bg-[#222] p-3">
+          <MicLevelBar
+            level={micLevel}
+            gateThreshold={audioSettings.noiseGateThreshold}
+            gateEnabled={audioSettings.noiseGateEnabled}
+          />
+          <p className="mt-2 text-[10px] text-gray-600">
+            Device: use the Microphone dropdown in the control bar
+          </p>
+        </div>
       </div>
 
       <div>
         <SectionHeader emoji="🎛" label="Processing" />
         <div className="space-y-2">
           {PROCESSING_TOGGLES.map(({ key, label, desc }) => (
-            <label key={key} className="flex items-center justify-between gap-3 py-1 cursor-pointer">
-              <div>
+            <label key={key} className="flex cursor-pointer items-center justify-between gap-3 py-1">
+              <div className="min-w-0 flex-1 pr-1">
                 <span className="text-xs text-white">{label}</span>
                 <span className="block text-[10px] text-gray-500">{desc}</span>
               </div>
@@ -58,8 +60,8 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
         <p className="text-[10px] text-gray-500 mb-3">
           Mutes mic when silent to cut background noise between speech
         </p>
-        <label className="flex items-center justify-between gap-3 py-1 cursor-pointer mb-3">
-          <div>
+        <label className="mb-3 flex cursor-pointer items-center justify-between gap-3 py-1">
+          <div className="min-w-0 flex-1 pr-1">
             <span className="text-xs text-white">Enable Noise Gate</span>
             <span className="block text-[10px] text-gray-500">
               {audioSettings.noiseGateEnabled ? 'Active — mic muted below threshold' : 'Inactive'}
@@ -72,7 +74,7 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
         </label>
 
         {audioSettings.noiseGateEnabled && (
-          <div className="space-y-3 pl-3 border-l-2 border-[#2a2a2a]">
+          <div className="mt-2 space-y-3 rounded-lg border border-[#2a2a2a] bg-[#1e1e1e]/90 p-3">
             <div>
               <label className="block text-xs text-gray-400 mb-1.5">
                 Threshold: <span className="text-white">{audioSettings.noiseGateThreshold} dB</span>
@@ -169,8 +171,8 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
 
       <div>
         <SectionHeader emoji="🔔" label="Notifications" />
-        <label className="flex items-center justify-between gap-3 py-1 cursor-pointer">
-          <div>
+        <label className="flex cursor-pointer items-center justify-between gap-3 py-1">
+          <div className="min-w-0 flex-1 pr-1">
             <span className="text-xs text-white">Join / Leave sounds</span>
             <span className="block text-[10px] text-gray-500">Chime when participants join or leave</span>
           </div>

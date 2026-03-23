@@ -180,21 +180,6 @@ function Spinner() {
   );
 }
 
-function ChevronIcon({ up }: { up: boolean }) {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      style={{ transform: up ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }}
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
 
 // ── Small reusable UI primitives ───────────────────────────────────────────────
 function Divider() {
@@ -527,11 +512,11 @@ export default function AgentControls({ roomName }: Props) {
           type="button"
           className="lk-button"
           title="Invite YouTube agent"
+          aria-label="Invite YouTube agent"
           onClick={callAgent}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <BotIcon />
-          <span>Agent</span>
         </button>
         {error && <ErrorTooltip>{error}</ErrorTooltip>}
       </div>
@@ -544,10 +529,11 @@ export default function AgentControls({ roomName }: Props) {
         type="button"
         className="lk-button"
         disabled
-        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', opacity: 0.6 }}
+        aria-label="Connecting agent…"
+        title="Connecting…"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}
       >
         <Spinner />
-        <span>Connecting…</span>
       </button>
     );
   }
@@ -558,10 +544,11 @@ export default function AgentControls({ roomName }: Props) {
         type="button"
         className="lk-button"
         disabled
-        style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', opacity: 0.6 }}
+        aria-label="Disconnecting agent…"
+        title="Disconnecting…"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}
       >
         <Spinner />
-        <span>Disconnecting…</span>
       </button>
     );
   }
@@ -574,11 +561,12 @@ export default function AgentControls({ roomName }: Props) {
         type="button"
         className="lk-button"
         title="Bot menu"
+        aria-label="Bot menu"
         onClick={() => setMenuOpen((o) => !o)}
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.35rem',
+          justifyContent: 'center',
           position: 'relative',
           backgroundColor: menuOpen
             ? 'var(--lk-control-active-bg, rgba(255,255,255,0.2))'
@@ -586,31 +574,34 @@ export default function AgentControls({ roomName }: Props) {
         }}
       >
         <BotIcon />
-        <span>Agent</span>
         {/* Queue count badge */}
         {queueLen > 0 && (
           <span
             style={{
+              position: 'absolute',
+              top: -4,
+              right: -4,
               background: 'var(--lk-accent, #0ea5e9)',
               color: '#fff',
               borderRadius: 8,
               fontSize: 9,
               fontWeight: 700,
-              padding: '1px 5px',
+              padding: '1px 4px',
               lineHeight: '14px',
-              minWidth: 16,
+              minWidth: 14,
               textAlign: 'center',
+              pointerEvents: 'none',
             }}
           >
             {queueLen > 99 ? '99+' : queueLen}
           </span>
         )}
-        <ChevronIcon up={menuOpen} />
       </button>
 
       {/* Dropdown menu */}
       {menuOpen && (
         <div
+          className="mutty-agent-dropdown"
           style={{
             position: 'absolute',
             bottom: 'calc(100% + 6px)',
