@@ -31,28 +31,29 @@ export function MarkdownMessage({ content }: { content: string }) {
   const lines = content.split('\n');
   const isLong = content.length > COLLAPSE_CHARS || lines.length > COLLAPSE_LINES;
 
-  const displayContent =
-    isLong && !expanded
-      ? lines.length > COLLAPSE_LINES
-        ? lines.slice(0, COLLAPSE_LINES).join('\n')
-        : content.slice(0, COLLAPSE_CHARS)
-      : content;
-
   return (
     <div className="chat-markdown">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          pre: ({ children }) => <PreWithCopy>{children}</PreWithCopy>,
-          a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer">
-              {children}
-            </a>
-          ),
-        }}
+      <div
+        className={
+          isLong && !expanded
+            ? 'chat-markdown-body chat-markdown-collapsed'
+            : 'chat-markdown-body'
+        }
       >
-        {displayContent}
-      </ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            pre: ({ children }) => <PreWithCopy>{children}</PreWithCopy>,
+            a: ({ children, href }) => (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            ),
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
       {isLong && (
         <button
           type="button"

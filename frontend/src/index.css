@@ -85,8 +85,15 @@ body {
   line-height: 1.5;
   word-break: break-word;
 }
-.chat-markdown > *:first-child { margin-top: 0; }
-.chat-markdown > *:last-child  { margin-bottom: 0; }
+.chat-markdown-body {
+  min-width: 0;
+}
+.chat-markdown-collapsed {
+  max-height: 15rem;
+  overflow: hidden;
+}
+.chat-markdown-body > *:first-child { margin-top: 0; }
+.chat-markdown-body > *:last-child { margin-bottom: 0; }
 .chat-markdown p { margin: 0 0 4px; }
 .chat-markdown strong { font-weight: 600; }
 .chat-markdown em    { font-style: italic; }

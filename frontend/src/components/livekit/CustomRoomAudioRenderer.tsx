@@ -12,6 +12,7 @@ import {
   getParticipantVolume,
   useParticipantVolumes,
 } from '../../context/ParticipantVolumesContext';
+import { hiddenTrackKey, useHiddenTracks } from '../../store/hiddenTracks';
 
 interface CustomRoomAudioRendererProps {
   outputVolume?: number;
@@ -21,24 +22,32 @@ export function CustomRoomAudioRenderer({ outputVolume = 1 }: CustomRoomAudioRen
   const room = useRoomContext();
   const { volumes } = useParticipantVolumes();
   const { isAudioMuted } = useAudioMute();
+  const hiddenSet = useHiddenTracks();
+
   const tracks = useTracks(
     [Track.Source.Microphone, Track.Source.ScreenShareAudio, Track.Source.Unknown],
     { updateOnlyOn: [], onlySubscribed: !isAudioMuted },
   )
     .filter((ref) => !ref.participant.isLocal && ref.publication.kind === Track.Kind.Audio)
-    .filter(isTrackReference);
+    .filter(isTrackReference)
+    .filter((ref) => {
+      if (ref.publication.source !== Track.Source.ScreenShareAudio) return true;
+      return !hiddenSet.has(hiddenTrackKey(ref.participant.identity, Track.Source.ScreenShare));
+    });
 
   const participantKeys = room ? Array.from(room.remoteParticipants.keys()).join(',') : '';
 
   useEffect(() => {
     if (!room) return;
-    const subscribe = !isAudioMuted;
     for (const p of room.remoteParticipants.values()) {
       for (const pub of p.audioTrackPublications.values()) {
-        pub.setSubscribed(subscribe);
+        const screenShareHidden =
+          pub.source === Track.Source.ScreenShareAudio &&
+          hiddenSet.has(hiddenTrackKey(p.identity, Track.Source.ScreenShare));
+        pub.setSubscribed(!isAudioMuted && !screenShareHidden);
       }
     }
-  }, [room, isAudioMuted, participantKeys]);
+  }, [room, isAudioMuted, participantKeys, hiddenSet]);
 
   const masterVolume = Math.min(1, Math.max(0, outputVolume));
 
