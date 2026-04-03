@@ -661,7 +661,7 @@ body {
 
 /* Container: prevent overflow causing horizontal scroll */
 .mutty-cb {
-  overflow: hidden;
+  overflow: visible;
   min-width: 0;
   flex-wrap: nowrap;
   flex-shrink: 0;
