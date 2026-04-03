@@ -10,7 +10,7 @@ export function BurgerMenu({ children }: BurgerMenuProps) {
   const [open, setOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const [position, setPosition] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [position, setPosition] = React.useState<{ bottom: number; right: number }>({ bottom: 0, right: 0 });
 
   React.useEffect(() => {
     if (!open) return;
@@ -37,8 +37,8 @@ export function BurgerMenu({ children }: BurgerMenuProps) {
     const updatePosition = () => {
       const rect = triggerRef.current!.getBoundingClientRect();
       setPosition({
-        x: rect.right,
-        y: rect.top,
+        bottom: window.innerHeight - rect.top + 8,
+        right: window.innerWidth - rect.right,
       });
     };
     updatePosition();
@@ -57,9 +57,9 @@ export function BurgerMenu({ children }: BurgerMenuProps) {
       role="menu"
       style={{
         position: 'fixed',
-        top: position.y - 8,
-        right: window.innerWidth - position.x,
-        bottom: 'auto',
+        bottom: position.bottom,
+        right: position.right,
+        top: 'auto',
       }}
     >
       {children}
