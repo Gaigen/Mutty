@@ -1,0 +1,707 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-900 text-white;
+}
+
+/* ── LiveKit: исправление отображения видео при разных размерах окна и в фокусе ── */
+
+/* Flex-дети должны иметь min-height: 0 иначе overflow при ресайзе */
+.lk-video-conference-inner,
+.lk-focus-layout-wrapper,
+.lk-grid-layout-wrapper {
+  min-height: 0;
+}
+
+.lk-focus-layout-container,
+.lk-focus-layout,
+.lk-grid-layout {
+  min-height: 0;
+}
+
+/* В фокусе — contain, чтобы видеть весь стрим без обрезки (важно для широкого видео) */
+.lk-focused-participant .lk-participant-media-video {
+  object-fit: contain !important;
+}
+
+/* Стрим бота (camera) — contain для сохранения пропорций при любом размере окна */
+.lk-participant-tile[data-lk-source=camera] .lk-participant-media-video {
+  object-fit: contain;
+}
+
+/* Custom avatar in participant placeholder */
+.lk-participant-placeholder .lk-participant-placeholder-avatar {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+}
+
+/* ── Agent: анимация полосок воспроизведения ─────────────────────────────── */
+.agent-playing-bar {
+  display: inline-block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--lk-accent, #0ea5e9);
+  animation: agent-bar-bounce 0.8s ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes agent-bar-bounce {
+  from { height: 4px; opacity: 0.6; }
+  to   { height: 12px; opacity: 1; }
+}
+
+/* Focus layout — занимает всё доступное место */
+.lk-focus-layout-wrapper {
+  flex: 1;
+}
+
+.lk-focus-layout {
+  height: 100%;
+  max-height: 100%;
+}
+
+.lk-focused-participant {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Контейнер видео в фокусе — заполняет область */
+.lk-focused-participant .lk-participant-tile,
+.lk-focused-participant video {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Chat: Markdown rendering ─────────────────────────────────────────────── */
+.chat-markdown {
+  line-height: 1.5;
+  word-break: break-word;
+}
+.chat-markdown-body {
+  min-width: 0;
+}
+.chat-markdown-collapsed {
+  max-height: 15rem;
+  overflow: hidden;
+}
+.chat-markdown-body > *:first-child { margin-top: 0; }
+.chat-markdown-body > *:last-child { margin-bottom: 0; }
+.chat-markdown p { margin: 0 0 4px; }
+.chat-markdown strong { font-weight: 600; }
+.chat-markdown em    { font-style: italic; }
+.chat-markdown del   { text-decoration: line-through; opacity: 0.7; }
+
+/* Inline code */
+.chat-markdown code {
+  font-family: 'Fira Code', 'Cascadia Code', ui-monospace, 'Courier New', monospace;
+  font-size: 0.83em;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* Code block wrapper */
+.chat-code-block-wrapper {
+  position: relative;
+  margin: 6px 0;
+}
+.chat-code-block-wrapper pre {
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 10px 12px;
+  padding-right: 52px; /* room for copy button */
+  overflow-x: auto;
+  margin: 0;
+}
+.chat-code-block-wrapper pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82em;
+  line-height: 1.55;
+}
+
+/* Copy button */
+.chat-code-copy {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 4px;
+  color: rgba(255,255,255,0.6);
+  font-size: 10px;
+  padding: 2px 7px;
+  cursor: pointer;
+  line-height: 1.5;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit;
+}
+.chat-code-copy:hover {
+  background: rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.9);
+}
+
+/* Blockquote */
+.chat-markdown blockquote {
+  border-left: 3px solid rgba(255,255,255,0.25);
+  margin: 4px 0;
+  padding-left: 10px;
+  color: rgba(255,255,255,0.6);
+}
+
+/* Lists */
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.chat-markdown li { margin: 2px 0; }
+
+/* Headings */
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3 {
+  font-weight: 600;
+  margin: 6px 0 2px;
+  line-height: 1.3;
+}
+.chat-markdown h1 { font-size: 1.1em; }
+.chat-markdown h2 { font-size: 1.0em; }
+.chat-markdown h3 { font-size: 0.95em; }
+
+/* Links */
+.chat-markdown a {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.chat-markdown a:hover { color: #a5b4fc; }
+
+/* Tables */
+.chat-markdown table {
+  border-collapse: collapse;
+  font-size: 0.85em;
+  margin: 4px 0;
+  width: 100%;
+}
+.chat-markdown th,
+.chat-markdown td {
+  border: 1px solid rgba(255,255,255,0.14);
+  padding: 3px 8px;
+  text-align: left;
+}
+.chat-markdown th {
+  background: rgba(255,255,255,0.07);
+  font-weight: 600;
+}
+
+/* Horizontal rule */
+.chat-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  margin: 6px 0;
+}
+
+/* ── Chat panel: side resizer (no corner handle) ─────────────────────────────── */
+.lk-chat {
+  overflow: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Draggable divider: визуально между блоками, но не занимает места в layout */
+.chat-resizer {
+  width: 10px;
+  flex-shrink: 0;
+  margin-left: -5px;
+  margin-right: -5px;
+  position: relative;
+  z-index: 1;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+.chat-resizer::before {
+  content: '';
+  width: 2px;
+  height: 40px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.2s ease, height 0.2s ease;
+}
+.chat-resizer:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.chat-resizer:hover::before {
+  background: rgba(255, 255, 255, 0.28);
+  height: 56px;
+}
+.chat-resizer:active {
+  background: rgba(14, 165, 233, 0.08);
+}
+.chat-resizer:active::before {
+  background: var(--lk-accent, #0ea5e9);
+  height: 64px;
+}
+/* Pinned tile: only the video shell goes browser-fullscreen (not carousel / chrome) */
+.lk-participant-stream-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+
+.lk-participant-stream-shell video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lk-participant-stream-shell:fullscreen {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.lk-participant-stream-shell:fullscreen video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lk-stream-fs-exit {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 30;
+  padding: 0.25rem !important;
+  line-height: 0;
+  background-color: rgba(0, 0, 0, 0.55) !important;
+}
+
+.lk-tile-controls-cluster {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Message body: allow full width for code blocks and long content */
+.lk-chat .lk-message-body {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lk-chat .lk-chat-messages,
+.lk-chat .lk-chat-entry {
+  min-width: 0;
+}
+
+.chat-shared-image-trigger {
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  display: block;
+  max-width: 100%;
+  width: fit-content;
+}
+
+.chat-shared-image-thumb {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: min(280px, 50vh);
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.chat-attach-button {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  min-height: 2.5rem;
+  min-width: 2.75rem;
+  padding: 0 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Participant tile: action buttons (hide video + focus toggle) ─────────── */
+
+/* Container holding hide + focus buttons together at top-right of tile */
+.lk-tile-controls {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  transition-delay: 0.2s;
+}
+
+.lk-participant-tile:hover .lk-tile-controls,
+.lk-participant-tile:focus-within .lk-tile-controls {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+/* Override FocusToggle's own absolute positioning when inside the group */
+.lk-tile-controls .lk-focus-toggle-button {
+  position: static !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* Hide video button style — mirrors focus-toggle-button */
+.lk-hide-track-button {
+  padding: 0.25rem !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  border-radius: calc(var(--lk-border-radius) / 2) !important;
+  line-height: 0;
+}
+
+.lk-hide-track-button[aria-pressed='true'] {
+  background-color: rgba(14, 165, 233, 0.6) !important;
+  color: #fff;
+}
+
+.lk-hide-track-button:hover {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.lk-hide-track-button[aria-pressed='true']:hover {
+  background-color: rgba(14, 165, 233, 0.85) !important;
+}
+
+/* Overlay shown when video is manually hidden */
+.lk-hidden-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  pointer-events: none;
+  border-radius: var(--lk-border-radius);
+  z-index: 2;
+}
+
+.lk-hidden-video-overlay svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0.7;
+}
+
+/* "Show more / Show less" toggle */
+.chat-expand-btn {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.chat-expand-btn:hover { color: rgba(255,255,255,0.7); }
+
+@layer base {
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: (0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+  }
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.45 0.2 264);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(0.23 0 0);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+  .theme {
+    --font-sans: 'Geist Variable', sans-serif;
+  }
+  * {
+    @apply border-border;
+    outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ── Control bar redesign ─────────────────────────────────────────────────── */
+
+/* Primary buttons: 42×42, rounded rectangle */
+.mutty-cb .lk-button {
+  width: 42px;
+  height: 42px;
+  min-width: unset;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-cb .lk-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+}
+
+/* Split button wrapper (mic / camera) */
+.mutty-split {
+  display: flex !important;
+  flex-shrink: 0;
+  gap: 0 !important;
+  position: relative;
+}
+
+/* Main toggle button — round left corners only, right border acts as separator */
+.mutty-split > .lk-button {
+  border-radius: 10px 0 0 10px !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  width: 42px;
+  height: 42px;
+}
+
+/* Chevron trigger inside lk-button-group-menu */
+.mutty-split .lk-button-group-menu {
+  display: flex;
+  position: static !important;
+}
+
+/* The button rendered by MediaDeviceMenu inside lk-button-group-menu */
+.mutty-split .lk-button-group-menu button {
+  width: 20px !important;
+  height: 42px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  border-radius: 0 10px 10px 0 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #64748b !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-split .lk-button-group-menu button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #94a3b8 !important;
+}
+
+/* Reposition the device dropdown to open above the mic/cam button group.
+   Containing block is now .mutty-split (position:relative) instead of
+   lk-button-group-menu, so left:0 aligns with the left edge of the group. */
+.mutty-split .lk-device-menu {
+  top: auto !important;
+  bottom: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: auto !important;
+}
+
+/* ── Reset overrides inside device-select dropdown ─────────────────────────
+   .mutty-cb .lk-button is too broad — the same class is used for device list
+   items inside .lk-device-menu. Restore LiveKit's own styles for those. */
+.mutty-cb .lk-device-menu .lk-button {
+  width: 100% !important;
+  height: auto !important;
+  min-width: unset !important;
+  min-height: unset !important;
+  border-radius: var(--lk-border-radius, 0.5rem) !important;
+  background: none !important;
+  color: var(--lk-fg) !important;
+  padding: 0.5rem !important;
+  justify-content: flex-start !important;
+  font-size: inherit !important;
+}
+
+.mutty-cb .lk-device-menu .lk-button:hover {
+  background: var(--lk-bg3, rgba(255,255,255,0.08)) !important;
+  color: var(--lk-fg) !important;
+}
+
+/* Active / selected device */
+.mutty-cb .lk-device-menu [data-lk-active="true"] .lk-button {
+  background: var(--lk-accent-bg, #1f8cf9) !important;
+  color: var(--lk-accent-fg, #fff) !important;
+}
+
+/* Thin vertical divider between primary and secondary groups */
+.mutty-cb-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Secondary controls (36×36) — only the three compact toolbar buttons.
+   Do NOT use a descendant selector: AgentControls dropdown also lives under
+   .mutty-cb-secondary and uses .lk-button for full-width panel actions. */
+.mutty-cb-secondary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mutty-cb-secondary > button.lk-button,
+.mutty-cb-secondary > div > button.lk-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #64748b !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-cb-secondary > button.lk-button:hover,
+.mutty-cb-secondary > div > button.lk-button:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: #94a3b8 !important;
+}
+
+/* Agent dropdown: only undo fixed box from .mutty-cb .lk-button (do not use unset — inline styles must win) */
+.mutty-cb .mutty-agent-dropdown .lk-button {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Leave button */
+.mutty-cb .mutty-danger {
+  background: #ef4444 !important;
+  color: #fff !important;
+}
+
+.mutty-cb .mutty-danger:hover {
+  background: #dc2626 !important;
+}
+
+/* Hide StartMediaButton until LiveKit activates it */
+.mutty-cb .lk-start-media-button,
+.mutty-cb [data-lk-start-media-button] {
+  display: none;
+}
+
+.mutty-cb .lk-start-media-button[data-lk-media-unresolved],
+.mutty-cb [data-lk-start-media-button][data-lk-media-unresolved] {
+  display: flex;
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}

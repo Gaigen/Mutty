@@ -1,0 +1,242 @@
+import { Track } from 'livekit-client';
+import * as React from 'react';
+import {
+  MediaDeviceMenu,
+  DisconnectButton,
+  TrackToggle,
+  ChatToggle,
+  StartMediaButton,
+  useLocalParticipantPermissions,
+  useRoomContext,
+  useLocalParticipant,
+} from '@livekit/components-react';
+import {
+  Mic, MicOff,
+  Video, VideoOff,
+  Headphones, HeadphoneOff,
+  ScreenShare, ScreenShareOff,
+  MessageSquare,
+  LogOut,
+} from 'lucide-react';
+import { useUserChoicesContext } from '../../context/UserChoicesContext';
+import { useAudioMute } from '../../context/AudioMuteContext';
+import { supportsScreenSharing } from '@livekit/components-core';
+
+type CustomControlBarControls = {
+  microphone?: boolean;
+  camera?: boolean;
+  chat?: boolean;
+  screenShare?: boolean;
+  leave?: boolean;
+};
+
+export interface CustomControlBarProps extends React.HTMLAttributes<HTMLDivElement> {
+  controls?: CustomControlBarControls;
+  rightControls?: React.ReactNode;
+}
+
+const trackSourceToProtocol = (source: Track.Source) => {
+  switch (source) {
+    case Track.Source.Camera:      return 1;
+    case Track.Source.Microphone:  return 2;
+    case Track.Source.ScreenShare: return 3;
+    default:                       return 0;
+  }
+};
+
+export function CustomControlBar({ controls, rightControls, style, ...props }: CustomControlBarProps) {
+  const visibleControls: CustomControlBarControls = { leave: true, ...controls };
+  const room = useRoomContext();
+  const { isAudioMuted, toggleAudioMuted } = useAudioMute();
+  const { isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const micEnabledBeforeFullMute = React.useRef<boolean | null>(null);
+
+  const localPermissions = useLocalParticipantPermissions();
+
+  React.useEffect(() => {
+    if (!room) return;
+    if (isAudioMuted) {
+      micEnabledBeforeFullMute.current = room.localParticipant.isMicrophoneEnabled;
+      room.localParticipant.setMicrophoneEnabled(false);
+    } else {
+      if (micEnabledBeforeFullMute.current !== null) {
+        room.localParticipant.setMicrophoneEnabled(micEnabledBeforeFullMute.current);
+        micEnabledBeforeFullMute.current = null;
+      }
+    }
+  }, [room, isAudioMuted]);
+
+  React.useEffect(() => {
+    if (!room || !isAudioMuted) return;
+    if (room.localParticipant.isMicrophoneEnabled) {
+      room.localParticipant.setMicrophoneEnabled(false);
+    }
+  });
+
+  if (!localPermissions) {
+    visibleControls.camera = false;
+    visibleControls.chat = false;
+    visibleControls.microphone = false;
+    visibleControls.screenShare = false;
+  } else {
+    const canPublishSource = (source: Track.Source) =>
+      localPermissions.canPublish &&
+      (localPermissions.canPublishSources.length === 0 ||
+        localPermissions.canPublishSources.includes(trackSourceToProtocol(source)));
+
+    visibleControls.camera ??= canPublishSource(Track.Source.Camera);
+    visibleControls.microphone ??= canPublishSource(Track.Source.Microphone);
+    visibleControls.screenShare ??= canPublishSource(Track.Source.ScreenShare);
+    visibleControls.chat ??= localPermissions.canPublishData && (controls?.chat ?? true);
+  }
+
+  const browserSupportsScreenSharing = supportsScreenSharing();
+  const [isScreenShareEnabled, setIsScreenShareEnabled] = React.useState(false);
+
+  const onScreenShareChange = React.useCallback((enabled: boolean) => {
+    setIsScreenShareEnabled(enabled);
+  }, []);
+
+  const userChoices = useUserChoicesContext();
+  const saveAudioInputEnabled  = userChoices?.saveAudioInputEnabled  ?? (() => {});
+  const saveVideoInputEnabled  = userChoices?.saveVideoInputEnabled  ?? (() => {});
+  const saveAudioInputDeviceId = userChoices?.saveAudioInputDeviceId ?? (() => {});
+  const saveVideoInputDeviceId = userChoices?.saveVideoInputDeviceId ?? (() => {});
+
+  const microphoneOnChange = React.useCallback(
+    (enabled: boolean, isUserInitiated: boolean) => {
+      if (isUserInitiated) saveAudioInputEnabled(enabled);
+    },
+    [saveAudioInputEnabled],
+  );
+
+  const cameraOnChange = React.useCallback(
+    (enabled: boolean, isUserInitiated: boolean) => {
+      if (isUserInitiated) saveVideoInputEnabled(enabled);
+    },
+    [saveVideoInputEnabled],
+  );
+
+  const onAudioDeviceChange = React.useCallback(
+    (_kind: MediaDeviceKind, deviceId: string | undefined) => {
+      saveAudioInputDeviceId(deviceId ?? 'default');
+    },
+    [saveAudioInputDeviceId],
+  );
+
+  const onVideoDeviceChange = React.useCallback(
+    (_kind: MediaDeviceKind, deviceId: string | undefined) => {
+      saveVideoInputDeviceId(deviceId ?? 'default');
+    },
+    [saveVideoInputDeviceId],
+  );
+
+  return (
+    <div
+      className="lk-control-bar mutty-cb"
+      style={{ ...(style || {}), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+      {...props}
+    >
+      {/* Mic + device picker */}
+      {visibleControls.microphone && (
+        <div className="lk-button-group mutty-split">
+          <TrackToggle
+            source={Track.Source.Microphone}
+            showIcon={false}
+            onChange={microphoneOnChange}
+            aria-label={isMicrophoneEnabled ? 'Mute microphone' : 'Unmute microphone'}
+            title={isMicrophoneEnabled ? 'Mute microphone' : 'Unmute microphone'}
+          >
+            {isMicrophoneEnabled ? <Mic size={18} aria-hidden /> : <MicOff size={18} aria-hidden />}
+          </TrackToggle>
+          <div className="lk-button-group-menu">
+            <MediaDeviceMenu kind="audioinput" onActiveDeviceChange={onAudioDeviceChange} />
+          </div>
+        </div>
+      )}
+
+      {/* Camera + device picker */}
+      {visibleControls.camera && (
+        <div className="lk-button-group mutty-split">
+          <TrackToggle
+            source={Track.Source.Camera}
+            showIcon={false}
+            onChange={cameraOnChange}
+            aria-label={isCameraEnabled ? 'Turn off camera' : 'Turn on camera'}
+            title={isCameraEnabled ? 'Turn off camera' : 'Turn on camera'}
+          >
+            {isCameraEnabled ? <Video size={18} aria-hidden /> : <VideoOff size={18} aria-hidden />}
+          </TrackToggle>
+          <div className="lk-button-group-menu">
+            <MediaDeviceMenu kind="videoinput" onActiveDeviceChange={onVideoDeviceChange} />
+          </div>
+        </div>
+      )}
+
+      {/* Mute all audio (headphones) */}
+      {visibleControls.microphone && (
+        <button
+          type="button"
+          className="lk-button"
+          aria-pressed={isAudioMuted}
+          aria-label={isAudioMuted ? 'Unmute all audio' : 'Mute all audio'}
+          title={isAudioMuted ? 'Unmute all audio' : 'Mute all audio'}
+          onClick={toggleAudioMuted}
+        >
+          {isAudioMuted
+            ? <HeadphoneOff size={18} aria-hidden />
+            : <Headphones size={18} aria-hidden />}
+        </button>
+      )}
+
+      {/* Screen share */}
+      {visibleControls.screenShare && browserSupportsScreenSharing && (
+        <TrackToggle
+          source={Track.Source.ScreenShare}
+          captureOptions={{ audio: true, selfBrowserSurface: 'include' }}
+          showIcon={false}
+          onChange={onScreenShareChange}
+          aria-label={isScreenShareEnabled ? 'Stop screen share' : 'Share screen'}
+          title={isScreenShareEnabled ? 'Stop screen share' : 'Share screen'}
+        >
+          {isScreenShareEnabled
+            ? <ScreenShareOff size={18} aria-hidden />
+            : <ScreenShare size={18} aria-hidden />}
+        </TrackToggle>
+      )}
+
+      {/* Chat */}
+      {visibleControls.chat && (
+        <ChatToggle
+          aria-label="Toggle chat"
+          title="Chat"
+        >
+          <MessageSquare size={18} aria-hidden />
+        </ChatToggle>
+      )}
+
+      {/* Leave */}
+      {visibleControls.leave && (
+        <DisconnectButton
+          aria-label="Leave room"
+          title="Leave room"
+          className="lk-button mutty-danger"
+        >
+          <LogOut size={18} aria-hidden />
+        </DisconnectButton>
+      )}
+
+      {/* Secondary controls: Invite, Bot, Settings */}
+      {rightControls && (
+        <>
+          <div className="mutty-cb-divider" />
+          <div className="mutty-cb-secondary">
+            {rightControls}
+          </div>
+        </>
+      )}
+
+      <StartMediaButton />
+    </div>
+  );
+}
