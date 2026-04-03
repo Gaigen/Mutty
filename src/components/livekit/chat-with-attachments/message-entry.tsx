@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import type { ChatMessageRow } from './types';
+import type { AvatarId } from '../../../config';
 
-const AVATAR_POOL = [
+const AVATAR_POOL: AvatarId[] = [
   'axsolotle', 'bear', 'capybara', 'fox', 'frog',
   'hamster', 'hedgehog', 'monkey', 'otter', 'penguin',
   'raccoon', 'shark', 'skunk',
 ];
 
-function getAvatar(identity: string): string {
+function getFallbackAvatar(identity: string): AvatarId {
   let hash = 0;
   for (let i = 0; i < identity.length; i++) {
     hash = ((hash << 5) - hash) + identity.charCodeAt(i);
@@ -19,12 +20,16 @@ function getAvatar(identity: string): string {
 export function MessageEntry({
   msg,
   hideName,
+  hideAvatar,
   formatter,
+  avatarMap,
 }: {
   msg: ChatMessageRow;
   hideName: boolean;
+  hideAvatar: boolean;
   hideTimestamp: boolean;
   formatter: (m: string) => ReactNode;
+  avatarMap: Map<string, string>;
 }) {
   const isLocal = !!msg.from?.isLocal;
   const identity = msg.from?.identity ?? msg.from?.name ?? '';
@@ -33,7 +38,7 @@ export function MessageEntry({
   const lang = typeof navigator !== 'undefined' ? navigator.language : 'en-US';
   const isEdited = !!msg.editTimestamp;
   const timeStr = ts.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
-  const avatarName = getAvatar(identity);
+  const avatarName = avatarMap.get(identity) ?? getFallbackAvatar(identity);
 
   return (
     <div
@@ -41,9 +46,11 @@ export function MessageEntry({
       data-lk-message-origin={isLocal ? 'local' : 'remote'}
     >
       <div className="msg-row" data-origin={isLocal ? 'local' : 'remote'}>
-        <div className="msg-avatar">
-          <img src={`/avatars/${avatarName}.svg`} alt={name} />
-        </div>
+        {!hideAvatar && (
+          <div className="msg-avatar">
+            <img src={`/avatars/${avatarName}.svg`} alt={name} />
+          </div>
+        )}
 
         <div className="msg-bubble" data-origin={isLocal ? 'local' : 'remote'}>
           {!isLocal && !hideName && (

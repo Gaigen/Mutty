@@ -337,13 +337,13 @@ body {
   min-width: 0;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 12px;
 }
 
 .msg-row {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
+  gap: 8px;
   max-width: 100%;
 }
 
@@ -352,8 +352,8 @@ body {
 }
 
 .msg-avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   display: flex;
@@ -362,6 +362,7 @@ body {
   flex-shrink: 0;
   user-select: none;
   overflow: hidden;
+  margin-bottom: 2px;
 }
 
 .msg-avatar img {

@@ -1,6 +1,8 @@
 import {
   useChat,
   useMaybeLayoutContext,
+  useRemoteParticipants,
+  useLocalParticipant,
   type MessageFormatter,
 } from '@livekit/components-react';
 import * as React from 'react';
@@ -53,6 +55,24 @@ export function ChatWithAttachments({
   const dragCounterRef = React.useRef(0);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [textValue, setTextValue] = React.useState('');
+
+  const localParticipant = useLocalParticipant();
+  const remoteParticipants = useRemoteParticipants();
+
+  const avatarMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    const allParticipants = [localParticipant.localParticipant, ...remoteParticipants];
+    for (const p of allParticipants) {
+      if (!p?.identity) continue;
+      try {
+        if (p.metadata) {
+          const meta = JSON.parse(p.metadata) as { avatar?: string };
+          if (meta.avatar) map.set(p.identity, meta.avatar);
+        }
+      } catch { /* ignore */ }
+    }
+    return map;
+  }, [localParticipant.localParticipant, remoteParticipants]);
 
   const atBottomRef = React.useRef(true);
   const [atBottom, setAtBottom] = React.useState(true);
@@ -348,13 +368,16 @@ export function ChatWithAttachments({
           const hideName = idx >= 1 && allMsg[idx - 1].from === msg.from;
           const hideTimestamp =
             idx >= 1 && (msg.timestamp ?? 0) - (allMsg[idx - 1].timestamp ?? 0) < 60_000;
+          const hideAvatar = idx < allMsg.length - 1 && allMsg[idx + 1].from === msg.from;
           return (
             <MessageEntry
               key={msg.id ?? idx}
               msg={msg as ChatMessageRow}
               hideName={hideName}
               hideTimestamp={hideTimestamp}
+              hideAvatar={hideAvatar}
               formatter={effectiveFormatter}
+              avatarMap={avatarMap}
             />
           );
         })}
