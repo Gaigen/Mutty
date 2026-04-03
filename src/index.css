@@ -957,20 +957,47 @@ body {
   margin: 4px 0;
 }
 
-/* Right controls inside burger */
+/* Right controls inside burger — reset to compact icon buttons */
 .mutty-burger-right {
-  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
 }
 
 /* Reset secondary container styles when inside burger */
 .mutty-burger-right .mutty-cb-secondary {
   background: none !important;
   padding: 0 !important;
+  gap: 4px !important;
 }
 
-/* Agent dropdown inside burger */
+/* Compact buttons inside burger right controls */
+.mutty-burger-right > .lk-button,
+.mutty-burger-right > div > .lk-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #94a3b8 !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-burger-right > .lk-button:hover,
+.mutty-burger-right > div > .lk-button:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Agent dropdown inside burger — constrain width */
 .mutty-burger-right .mutty-agent-dropdown {
-  width: 100%;
+  width: 220px !important;
 }
 
 @keyframes slide-in-right {
