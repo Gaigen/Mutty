@@ -610,7 +610,7 @@ export default function AgentControls({ roomName }: Props) {
             background: 'var(--lk-bg2, #1e1e1e)',
             borderRadius: 10,
             boxShadow: '0 6px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)',
-            zIndex: 50,
+            zIndex: 999,
             overflow: 'hidden',
           }}
         >
