@@ -1126,3 +1126,66 @@ body {
   text-decoration: none;
   font-size: 13px;
 }
+
+/* ── Chat: close button (hidden on desktop, shown on mobile) ─────────────── */
+.lk-chat-close-button {
+  display: none;
+}
+
+/* ── Chat: mobile fullscreen overlay ─────────────────────────────── */
+@media (max-width: 767px) {
+  .lk-chat.lk-chat-panel {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
+    width: 100% !important;
+    min-width: unset !important;
+    max-width: unset !important;
+    z-index: 100 !important;
+    animation: chat-slide-in 0.25s ease-out;
+  }
+
+  .chat-resizer {
+    display: none !important;
+  }
+
+  .lk-chat-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .lk-chat-close-button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    padding: 4px !important;
+    border-radius: 8px !important;
+    transition: background 0.15s !important;
+  }
+
+  .lk-chat-close-button:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .lk-chat-close-button svg {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}
+
+@keyframes chat-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

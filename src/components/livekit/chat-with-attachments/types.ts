@@ -12,4 +12,5 @@ export interface ChatMessageRow {
 export interface ChatWithAttachmentsProps extends HTMLAttributes<HTMLDivElement> {
   messageFormatter?: MessageFormatter;
   enableAttachments?: boolean;
+  onClose?: () => void;
 }

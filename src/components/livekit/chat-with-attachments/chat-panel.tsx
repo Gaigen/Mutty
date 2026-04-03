@@ -16,7 +16,7 @@ import {
 import { FileThumbnail } from './file-thumbnail';
 import { FullscreenImageOverlay } from './fullscreen-overlay';
 import { fileToDataUrl } from './helpers';
-import { AttachIcon } from './icons';
+import { AttachIcon, CloseIcon } from './icons';
 import { LinkPreview } from './link-preview';
 import { findFirstUrl, hasMultipleUrls } from './link-preview/helpers';
 import { MarkdownMessage } from './markdown-message';
@@ -43,6 +43,7 @@ function sendNativeNotification(title: string, body: string) {
 export function ChatWithAttachments({
   messageFormatter,
   enableAttachments = true,
+  onClose,
   ...props
 }: ChatWithAttachmentsProps) {
   const ulRef = React.useRef<HTMLUListElement>(null);
@@ -361,6 +362,18 @@ export function ChatWithAttachments({
 
       <div className="lk-chat-header">
         <span className="lk-chat-header-title">Messages</span>
+        {onClose && (
+          <div
+            className="lk-chat-close-button"
+            onClick={onClose}
+            role="button"
+            aria-label="Close chat"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
+          >
+            <CloseIcon />
+          </div>
+        )}
       </div>
 
       <ul className="lk-list lk-chat-messages" ref={ulRef} onScroll={handleScroll}>

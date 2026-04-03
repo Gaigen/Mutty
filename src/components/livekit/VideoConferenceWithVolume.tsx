@@ -47,12 +47,14 @@ interface ChatPanelProps {
   chatWidth: number;
   onResizeStart: (e: React.MouseEvent) => void;
   enableAttachments: boolean;
+  onClose?: () => void;
 }
 
 const MemoizedChatPanel = React.memo(function ChatPanel({
   chatWidth,
   onResizeStart,
   enableAttachments,
+  onClose,
 }: ChatPanelProps) {
   const style = React.useMemo(
     () => ({
@@ -80,6 +82,7 @@ const MemoizedChatPanel = React.memo(function ChatPanel({
         className="lk-chat lk-chat-panel"
         style={style}
         enableAttachments={enableAttachments}
+        onClose={onClose}
       />
     </>
   );
@@ -244,6 +247,7 @@ export function VideoConferenceWithVolume({
               chatWidth={chatWidth}
               onResizeStart={handleResizeStart}
               enableAttachments={appConfig.showChatAttachments}
+              onClose={() => layoutContext.widget.dispatch?.({ msg: 'hide_chat' })}
             />
           </div>
         </LayoutContextProvider>
