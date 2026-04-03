@@ -879,7 +879,6 @@ body {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
   z-index: 9999;
   animation: mutty-burger-fade 0.15s ease-out;
-  overflow: hidden;
   padding: 4px;
 }
 
