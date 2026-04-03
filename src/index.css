@@ -16,6 +16,12 @@ body {
 .lk-focus-layout-wrapper,
 .lk-grid-layout-wrapper {
   min-height: 0;
+  min-width: 0;
+}
+
+.lk-video-conference {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .lk-focus-layout-container,
@@ -653,6 +659,14 @@ body {
 
 /* ── Control bar redesign ─────────────────────────────────────────────────── */
 
+/* Container: prevent overflow causing horizontal scroll */
+.mutty-cb {
+  overflow: hidden;
+  min-width: 0;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
 /* Primary buttons: 42×42, rounded rectangle */
 .mutty-cb .lk-button {
   width: 42px;
@@ -821,6 +835,129 @@ body {
 .mutty-cb .lk-start-media-button[data-lk-media-unresolved],
 .mutty-cb [data-lk-start-media-button][data-lk-media-unresolved] {
   display: flex;
+}
+
+/* ── Burger menu (overflow controls) ────────────────────────────────────── */
+
+/* Burger trigger button */
+.mutty-burger-trigger {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e2e8f0 !important;
+  border: none !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+
+.mutty-burger-trigger:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.mutty-burger-trigger[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Wrapper for positioning context */
+.mutty-burger-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Dropdown panel */
+.mutty-burger-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  animation: mutty-burger-fade 0.15s ease-out;
+}
+
+@keyframes mutty-burger-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Item wrapper for controls inside burger */
+.mutty-burger-item-wrap {
+  display: flex;
+  width: 100%;
+}
+
+/* LiveKit buttons inside burger — full width, icon + label */
+.mutty-burger-dropdown .mutty-burger-lk-button {
+  width: 100% !important;
+  height: 40px !important;
+  min-width: unset !important;
+  padding: 0 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #e2e8f0 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s, color 0.15s !important;
+  font-size: 14px !important;
+}
+
+.mutty-burger-dropdown .mutty-burger-lk-button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.mutty-burger-dropdown .mutty-burger-lk-button[data-lk-active="true"] {
+  background: rgba(99, 179, 237, 0.2) !important;
+  color: #63b3ed !important;
+}
+
+/* Label text inside burger items */
+.mutty-burger-item-label {
+  font-size: 14px;
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+
+/* Right controls inside burger — reset their layout */
+.mutty-burger-right {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+
+/* Reset secondary container styles when inside burger */
+.mutty-burger-right .mutty-cb-secondary {
+  background: none !important;
+  padding: 0 !important;
+}
+
+/* Agent dropdown inside burger */
+.mutty-burger-right .mutty-agent-dropdown {
+  width: 100%;
 }
 
 @keyframes slide-in-right {
