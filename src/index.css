@@ -995,11 +995,6 @@ body {
   color: #e2e8f0 !important;
 }
 
-/* Agent dropdown inside burger — constrain width */
-.mutty-burger-right .mutty-agent-dropdown {
-  width: 220px !important;
-}
-
 @keyframes slide-in-right {
   from {
     opacity: 0;
