@@ -15,6 +15,8 @@ import { FileThumbnail } from './file-thumbnail';
 import { FullscreenImageOverlay } from './fullscreen-overlay';
 import { fileToDataUrl } from './helpers';
 import { AttachIcon } from './icons';
+import { LinkPreview } from './link-preview';
+import { findFirstUrl, hasMultipleUrls } from './link-preview/helpers';
 import { MarkdownMessage } from './markdown-message';
 import { MessageEntry } from './message-entry';
 import type { ChatMessageRow, ChatWithAttachmentsProps } from './types';
@@ -105,8 +107,15 @@ export function ChatWithAttachments({
           </button>
         );
       }
-      if (messageFormatter) return messageFormatter(message);
-      return <MarkdownMessage content={message} />;
+      const url = findFirstUrl(message);
+      const multiple = hasMultipleUrls(message);
+      const content = messageFormatter ? messageFormatter(message) : <MarkdownMessage content={message} />;
+      return (
+        <div className="chat-message-content">
+          {content}
+          {url && !multiple && <LinkPreview url={url} />}
+        </div>
+      );
     },
     [messageFormatter, openFullscreen],
   );
