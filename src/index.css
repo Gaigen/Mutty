@@ -873,17 +873,13 @@ body {
 
 /* Dropdown panel — positioned via JS (portal to body) */
 .mutty-burger-dropdown {
-  min-width: 200px;
-  background: #1e1e2e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  width: 240px;
+  background: var(--lk-bg2, #1e1e1e);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
   z-index: 9999;
   animation: mutty-burger-fade 0.15s ease-out;
+  overflow: hidden;
 }
 
 @keyframes mutty-burger-fade {
@@ -897,53 +893,71 @@ body {
   }
 }
 
-/* Item wrapper for controls inside burger */
-.mutty-burger-item-wrap {
-  display: flex;
+/* Burger menu items — styled like AgentControls dropdown items */
+.mutty-burger-item {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.6rem 0.75rem;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+  border-radius: 0;
 }
 
-/* LiveKit buttons inside burger — full width, icon + label */
-.mutty-burger-dropdown .mutty-burger-lk-button {
-  width: 100% !important;
-  height: 40px !important;
-  min-width: unset !important;
-  padding: 0 12px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 10px !important;
-  border-radius: 8px !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: #e2e8f0 !important;
-  border: none !important;
-  cursor: pointer !important;
-  transition: background 0.15s, color 0.15s !important;
-  font-size: 14px !important;
+.mutty-burger-item:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.mutty-burger-dropdown .mutty-burger-lk-button:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+.mutty-burger-item:active {
+  background: rgba(255, 255, 255, 0.12);
 }
 
-.mutty-burger-dropdown .mutty-burger-lk-button[data-lk-active="true"] {
-  background: rgba(99, 179, 237, 0.2) !important;
-  color: #63b3ed !important;
+.mutty-burger-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  color: #94a3b8;
 }
 
-/* Label text inside burger items */
 .mutty-burger-item-label {
   font-size: 14px;
   color: #e2e8f0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Right controls inside burger — reset their layout */
+/* Danger variant */
+.mutty-burger-item.mutty-burger-danger {
+  color: #ef4444;
+}
+
+.mutty-burger-item.mutty-burger-danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.mutty-burger-item.mutty-burger-danger .mutty-burger-item-icon {
+  color: #ef4444;
+}
+
+/* Divider inside burger */
+.mutty-burger-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}
+
+/* Right controls inside burger */
 .mutty-burger-right {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px 0;
+  padding: 0.5rem;
 }
 
 /* Reset secondary container styles when inside burger */

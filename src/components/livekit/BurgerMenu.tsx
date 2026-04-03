@@ -83,3 +83,33 @@ export function BurgerMenu({ children }: BurgerMenuProps) {
     </div>
   );
 }
+
+export function BurgerMenuItem({
+  icon,
+  label,
+  onClick,
+  danger,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={`mutty-burger-item${danger ? ' mutty-burger-danger' : ''}`}
+      role="menuitem"
+      onClick={onClick}
+    >
+      <span className="mutty-burger-item-icon" aria-hidden>
+        {icon}
+      </span>
+      <span className="mutty-burger-item-label">{label}</span>
+    </button>
+  );
+}
+
+export function BurgerMenuDivider() {
+  return <div className="mutty-burger-divider" />;
+}

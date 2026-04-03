@@ -22,7 +22,7 @@ import { useUserChoicesContext } from '../../context/UserChoicesContext';
 import { useAudioMute } from '../../context/AudioMuteContext';
 import { supportsScreenSharing } from '@livekit/components-core';
 import { useOverflowControls, type ControlDef } from '../../hooks/useOverflowControls';
-import { BurgerMenu } from './BurgerMenu';
+import { BurgerMenu, BurgerMenuItem, BurgerMenuDivider } from './BurgerMenu';
 
 type CustomControlBarControls = {
   microphone?: boolean;
@@ -286,28 +286,24 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
       {showBurger && hasBurgerContent && (
         <BurgerMenu>
           {burgerIds.has('screenShare') && visibleControls.screenShare && browserSupportsScreenSharing && (
-            <div className="mutty-burger-item-wrap">
-              <TrackToggle
-                source={Track.Source.ScreenShare}
-                captureOptions={{ audio: true, selfBrowserSurface: 'include' }}
-                showIcon={false}
-                onChange={onScreenShareChange}
-                className="mutty-burger-lk-button"
-              >
-                {isScreenShareEnabled
-                  ? <ScreenShareOff size={16} aria-hidden />
-                  : <ScreenShare size={16} aria-hidden />}
-                <span className="mutty-burger-item-label">{isScreenShareEnabled ? 'Stop screen share' : 'Share screen'}</span>
-              </TrackToggle>
-            </div>
+            <BurgerMenuItem
+              icon={isScreenShareEnabled ? <ScreenShareOff size={16} /> : <ScreenShare size={16} />}
+              label={isScreenShareEnabled ? 'Stop screen share' : 'Share screen'}
+              onClick={() => onScreenShareChange(!isScreenShareEnabled)}
+            />
           )}
           {burgerIds.has('chat') && visibleControls.chat && (
-            <div className="mutty-burger-item-wrap">
-              <ChatToggle className="mutty-burger-lk-button">
-                <MessageSquare size={16} aria-hidden />
-                <span className="mutty-burger-item-label">Chat</span>
-              </ChatToggle>
-            </div>
+            <BurgerMenuItem
+              icon={<MessageSquare size={16} />}
+              label="Chat"
+              onClick={() => {
+                const toggle = containerRef.current?.querySelector<HTMLButtonElement>('[data-control-id="chat"] .lk-button');
+                toggle?.click();
+              }}
+            />
+          )}
+          {(burgerIds.has('screenShare') || burgerIds.has('chat')) && burgerIds.has('rightControls') && (
+            <BurgerMenuDivider />
           )}
           {burgerIds.has('rightControls') && rightControls && (
             <div className="mutty-burger-right">
