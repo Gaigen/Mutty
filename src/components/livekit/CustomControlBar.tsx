@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useUserChoicesContext } from '../../context/UserChoicesContext';
 import { useAudioMute } from '../../context/AudioMuteContext';
+import { playMicMuteSound, playMicUnmuteSound } from '../../utils/sounds';
 import { supportsScreenSharing } from '@livekit/components-core';
 import { useOverflowControls, type ControlDef } from '../../hooks/useOverflowControls';
 import { BurgerMenu, BurgerMenuItem, BurgerMenuDivider } from './BurgerMenu';
@@ -117,7 +118,11 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
 
   const microphoneOnChange = React.useCallback(
     (enabled: boolean, isUserInitiated: boolean) => {
-      if (isUserInitiated) saveAudioInputEnabled(enabled);
+      if (isUserInitiated) {
+        saveAudioInputEnabled(enabled);
+        if (enabled) playMicUnmuteSound();
+        else playMicMuteSound();
+      }
     },
     [saveAudioInputEnabled],
   );
