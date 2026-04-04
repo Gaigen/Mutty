@@ -344,6 +344,7 @@ export default function AgentControls({ roomName }: Props) {
   const [queueInput, setQueueInput] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const queueInputRef = useRef<HTMLInputElement>(null);
+  const [dropdownBottom, setDropdownBottom] = useState(60);
 
   const botParticipant = remoteParticipants.find(
     (p) => p.identity === BOT_IDENTITY
@@ -392,6 +393,20 @@ export default function AgentControls({ roomName }: Props) {
     };
     document.addEventListener('click', onOutside, true);
     return () => document.removeEventListener('click', onOutside, true);
+  }, [menuOpen]);
+
+  // Calculate dropdown bottom based on button position to avoid burger overlap
+  useEffect(() => {
+    if (!menuOpen) return;
+    const updatePosition = () => {
+      const rect = menuRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const bottom = window.innerHeight - rect.top + 6;
+      setDropdownBottom(bottom);
+    };
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
   }, [menuOpen]);
 
   // Focus queue input when menu opens
@@ -555,7 +570,7 @@ export default function AgentControls({ roomName }: Props) {
 
   // ── Active state ───────────────────────────────────────────────────────────
   return (
-    <div ref={menuRef} style={{ position: 'relative' }}>
+    <div ref={menuRef}>
       {/* Trigger button */}
       <button
         type="button"
@@ -598,15 +613,17 @@ export default function AgentControls({ roomName }: Props) {
         )}
       </button>
 
-      {/* Dropdown menu */}
+      {/* Dropdown menu — fixed, centered like StreamSettings */}
       {menuOpen && (
         <div
           className="mutty-agent-dropdown"
           style={{
-            position: 'absolute',
-            bottom: 'calc(100% + 6px)',
-            right: 0,
-            width: 272,
+            position: 'fixed',
+            bottom: dropdownBottom,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '92vw',
+            maxWidth: 320,
             background: 'var(--lk-bg2, #1e1e1e)',
             borderRadius: 10,
             boxShadow: '0 6px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)',
