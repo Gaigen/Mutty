@@ -11,6 +11,38 @@ const HOTKEY_ACTIONS: { key: keyof HotkeySettings; label: string; description: s
   { key: 'toggleFullMute', label: 'Toggle Full Mute', description: 'Mute/unmute all incoming audio' },
 ];
 
+const MODIFIER_KEYS = new Set(['ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'ShiftLeft', 'ShiftRight', 'MetaLeft', 'MetaRight']);
+
+function displayKey(code: string): string {
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return code.slice(6);
+  const map: Record<string, string> = {
+    Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']',
+    Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',',
+    Period: '.', Slash: '/', Backquote: '`', Space: 'Space',
+    Tab: 'Tab', Enter: 'Enter', Backspace: 'Backspace',
+    Delete: 'Del', Insert: 'Ins', Escape: 'Esc',
+    ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
+    Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn',
+  };
+  return map[code] || code;
+}
+
+function formatHotkey(raw: string): string {
+  if (!raw) return 'None';
+  const parts = raw.split('+');
+  const mainKey = displayKey(parts[parts.length - 1] || '');
+  const mods = parts.slice(0, -1).map(m => {
+    if (m === 'Ctrl') return 'Ctrl';
+    if (m === 'Alt') return 'Alt';
+    if (m === 'Shift') return 'Shift';
+    if (m === 'Meta') return 'Win';
+    return m;
+  });
+  return [...mods, mainKey].join(' + ');
+}
+
 function HotkeyRecorder({
   value,
   onChange,
@@ -24,16 +56,26 @@ function HotkeyRecorder({
     (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
       if (e.code === 'Escape') {
         setRecording(false);
         return;
       }
-      const key = e.key.toUpperCase();
-      const isFunctionKey = /^F(1[0-2]|[1-9])$/.test(key);
-      if (/^[A-Z0-9]$/.test(key) || isFunctionKey) {
-        onChange(key);
-        setRecording(false);
-      }
+
+      if (MODIFIER_KEYS.has(e.code)) return;
+
+      const modifiers: string[] = [];
+      if (e.ctrlKey) modifiers.push('Ctrl');
+      if (e.altKey) modifiers.push('Alt');
+      if (e.shiftKey) modifiers.push('Shift');
+      if (e.metaKey) modifiers.push('Meta');
+
+      const hotkey = modifiers.length > 0
+        ? modifiers.join('+') + '+' + e.code
+        : e.code;
+
+      onChange(hotkey);
+      setRecording(false);
     },
     [onChange],
   );
@@ -46,22 +88,26 @@ function HotkeyRecorder({
   }, [recording, handleKeyDown]);
 
   return (
-    <button
-      type="button"
-      onClick={() => setRecording(!recording)}
-      className={`px-3 py-1.5 text-xs font-mono rounded-md border transition-colors min-w-[60px] text-center ${
-        recording
-          ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 animate-pulse'
-          : 'border-[#3a3a3a] bg-[#222] text-gray-300 hover:border-[#555]'
-      }`}
-      title="Click to record, Escape to cancel"
-    >
-      {recording ? '...' : value || 'None'}
-    </button>
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={() => setRecording(!recording)}
+        className={`px-3 py-1.5 text-xs font-mono rounded-md border transition-colors min-w-[100px] text-center ${
+          recording
+            ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 animate-pulse'
+            : 'border-[#3a3a3a] bg-[#222] text-gray-300 hover:border-[#555]'
+        }`}
+        title="Click to record, Escape to cancel"
+      >
+        {recording ? '...' : formatHotkey(value)}
+      </button>
+    </div>
   );
 }
 
 export function HotkeysTab({ settings, setSettings }: HotkeysTabProps) {
+  const hasConflict = settings.toggleMicrophone === settings.toggleFullMute;
+
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-white mb-3">Global Hotkeys</h3>
@@ -87,6 +133,11 @@ export function HotkeysTab({ settings, setSettings }: HotkeysTabProps) {
           </div>
         ))}
       </div>
+      {hasConflict && (
+        <p className="text-xs text-red-400 mt-2 px-3">
+          Warning: Both hotkeys are the same.
+        </p>
+      )}
     </div>
   );
 }

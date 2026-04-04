@@ -17,6 +17,7 @@ import ScreenShareHandler from './ScreenShareHandler';
 import SoundHandler from './SoundHandler';
 import StreamSettings from './StreamSettings';
 import { VideoConferenceWithVolume } from './VideoConferenceWithVolume';
+import { useHotkeySettings } from '../../hooks/useHotkeySettings';
 import { TrayStateSync } from './TrayStateSync';
 
 interface LiveKitRoomProps {
@@ -76,6 +77,33 @@ const MemoizedRightControls = React.memo(function MemoizedRightControls({
 function HotkeyListener() {
   const { localParticipant } = useLocalParticipant();
   const { toggleAudioMuted } = useAudioMute();
+  const { settings } = useHotkeySettings();
+
+  function matchesHotkey(e: KeyboardEvent, raw: string): boolean {
+    if (!raw) return false;
+    const parts = raw.split('+');
+    const mainCode = parts[parts.length - 1];
+    const mods = parts.slice(0, -1);
+
+    if (e.code !== mainCode) return false;
+
+    const hasCtrl = mods.includes('Ctrl');
+    const hasAlt = mods.includes('Alt');
+    const hasShift = mods.includes('Shift');
+    const hasMeta = mods.includes('Meta');
+
+    if (hasCtrl && !e.ctrlKey) return false;
+    if (hasAlt && !e.altKey) return false;
+    if (hasShift && !e.shiftKey) return false;
+    if (hasMeta && !e.metaKey) return false;
+
+    if (!hasCtrl && e.ctrlKey) return false;
+    if (!hasAlt && e.altKey) return false;
+    if (!hasShift && e.shiftKey) return false;
+    if (!hasMeta && e.metaKey) return false;
+
+    return true;
+  }
 
   useEffect(() => {
     let unlistenMic: (() => void) | undefined;
@@ -95,13 +123,11 @@ function HotkeyListener() {
         });
         console.log('[HotkeyListener] Tauri event listeners registered');
       } catch {
-        // Not in Tauri, fallback to local keydown
         const handler = (e: KeyboardEvent) => {
           if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
-          const key = e.key.toUpperCase();
-          if (key === 'M') {
+          if (matchesHotkey(e, settings.toggleMicrophone)) {
             localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled);
-          } else if (key === 'F') {
+          } else if (matchesHotkey(e, settings.toggleFullMute)) {
             toggleAudioMuted();
           }
         };
@@ -115,7 +141,7 @@ function HotkeyListener() {
       unlistenMic?.();
       unlistenFullMute?.();
     };
-  }, []);
+  }, [localParticipant, toggleAudioMuted, settings]);
 
   return null;
 }

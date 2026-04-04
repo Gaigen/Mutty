@@ -27,44 +27,68 @@ mod global_hotkey {
         pub full_mute_key: String,
     }
 
-    fn vk_from_str(s: &str) -> i32 {
-        match s {
-            "A" => 0x41,
-            "B" => 0x42,
-            "C" => 0x43,
-            "D" => 0x44,
-            "E" => 0x45,
-            "F" => 0x46,
-            "G" => 0x47,
-            "H" => 0x48,
-            "I" => 0x49,
-            "J" => 0x4A,
-            "K" => 0x4B,
-            "L" => 0x4C,
-            "M" => 0x4D,
-            "N" => 0x4E,
-            "O" => 0x4F,
-            "P" => 0x50,
-            "Q" => 0x51,
-            "R" => 0x52,
-            "S" => 0x53,
-            "T" => 0x54,
-            "U" => 0x55,
-            "V" => 0x56,
-            "W" => 0x57,
-            "X" => 0x58,
-            "Y" => 0x59,
-            "Z" => 0x5A,
-            "0" => 0x30,
-            "1" => 0x31,
-            "2" => 0x32,
-            "3" => 0x33,
-            "4" => 0x34,
-            "5" => 0x35,
-            "6" => 0x36,
-            "7" => 0x37,
-            "8" => 0x38,
-            "9" => 0x39,
+    pub struct ParsedHotkey {
+        pub modifiers: Vec<String>,
+        pub main_key: String,
+    }
+
+    fn parse_hotkey(raw: &str) -> Option<ParsedHotkey> {
+        if raw.is_empty() {
+            return None;
+        }
+        let parts: Vec<&str> = raw.split('+').collect();
+        let main_key = parts.last().unwrap().to_string();
+        let modifiers: Vec<String> = parts[..parts.len() - 1]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        if main_key.is_empty() {
+            return None;
+        }
+        Some(ParsedHotkey {
+            modifiers,
+            main_key,
+        })
+    }
+
+    fn vk_from_code(code: &str) -> i32 {
+        match code {
+            "KeyA" => 0x41,
+            "KeyB" => 0x42,
+            "KeyC" => 0x43,
+            "KeyD" => 0x44,
+            "KeyE" => 0x45,
+            "KeyF" => 0x46,
+            "KeyG" => 0x47,
+            "KeyH" => 0x48,
+            "KeyI" => 0x49,
+            "KeyJ" => 0x4A,
+            "KeyK" => 0x4B,
+            "KeyL" => 0x4C,
+            "KeyM" => 0x4D,
+            "KeyN" => 0x4E,
+            "KeyO" => 0x4F,
+            "KeyP" => 0x50,
+            "KeyQ" => 0x51,
+            "KeyR" => 0x52,
+            "KeyS" => 0x53,
+            "KeyT" => 0x54,
+            "KeyU" => 0x55,
+            "KeyV" => 0x56,
+            "KeyW" => 0x57,
+            "KeyX" => 0x58,
+            "KeyY" => 0x59,
+            "KeyZ" => 0x5A,
+            "Digit0" => 0x30,
+            "Digit1" => 0x31,
+            "Digit2" => 0x32,
+            "Digit3" => 0x33,
+            "Digit4" => 0x34,
+            "Digit5" => 0x35,
+            "Digit6" => 0x36,
+            "Digit7" => 0x37,
+            "Digit8" => 0x38,
+            "Digit9" => 0x39,
             "F1" => 0x70,
             "F2" => 0x71,
             "F3" => 0x72,
@@ -77,8 +101,58 @@ mod global_hotkey {
             "F10" => 0x79,
             "F11" => 0x7A,
             "F12" => 0x7B,
+            "Space" => 0x20,
+            "Tab" => 0x09,
+            "Enter" => 0x0D,
+            "Backspace" => 0x08,
+            "Delete" => 0x2E,
+            "Insert" => 0x2D,
+            "Escape" => 0x1B,
+            "ArrowUp" => 0x26,
+            "ArrowDown" => 0x28,
+            "ArrowLeft" => 0x25,
+            "ArrowRight" => 0x27,
+            "Home" => 0x24,
+            "End" => 0x23,
+            "PageUp" => 0x21,
+            "PageDown" => 0x22,
+            "Minus" => 0xBD,
+            "Equal" => 0xBB,
+            "BracketLeft" => 0xDB,
+            "BracketRight" => 0xDD,
+            "Backslash" => 0xDC,
+            "Semicolon" => 0xBA,
+            "Quote" => 0xDE,
+            "Comma" => 0xBC,
+            "Period" => 0xBE,
+            "Slash" => 0xBF,
+            "Backquote" => 0xC0,
             _ => 0,
         }
+    }
+
+    fn check_modifier(modifier: &str) -> bool {
+        let vk = match modifier {
+            "Ctrl" => unsafe { GetAsyncKeyState(0xA2) < 0 || GetAsyncKeyState(0xA3) < 0 },
+            "Alt" => unsafe { GetAsyncKeyState(0xA4) < 0 || GetAsyncKeyState(0xA5) < 0 },
+            "Shift" => unsafe { GetAsyncKeyState(0xA0) < 0 || GetAsyncKeyState(0xA1) < 0 },
+            "Meta" => unsafe { GetAsyncKeyState(0x5B) < 0 || GetAsyncKeyState(0x5C) < 0 },
+            _ => false,
+        };
+        vk
+    }
+
+    fn hotkey_pressed(hk: &ParsedHotkey) -> bool {
+        for m in &hk.modifiers {
+            if !check_modifier(m) {
+                return false;
+            }
+        }
+        let vk = vk_from_code(&hk.main_key);
+        if vk == 0 {
+            return false;
+        }
+        unsafe { GetAsyncKeyState(vk) < 0 }
     }
 
     pub fn start_poller(state: Arc<Mutex<HotkeyState>>, app: AppHandle) {
@@ -86,21 +160,21 @@ mod global_hotkey {
             let mut mic_down = false;
             let mut fm_down = false;
             loop {
-                let (mic_vk, fm_vk) = {
+                let (mic_hk, fm_hk) = {
                     let s = state.lock().unwrap();
-                    (vk_from_str(&s.mic_key), vk_from_str(&s.full_mute_key))
+                    (parse_hotkey(&s.mic_key), parse_hotkey(&s.full_mute_key))
                 };
 
-                if mic_vk != 0 {
-                    let is_down = unsafe { GetAsyncKeyState(mic_vk) } < 0;
+                if let Some(ref hk) = mic_hk {
+                    let is_down = hotkey_pressed(hk);
                     if is_down && !mic_down {
                         let _ = app.emit("global-hotkey-mic", ());
                     }
                     mic_down = is_down;
                 }
 
-                if fm_vk != 0 {
-                    let is_down = unsafe { GetAsyncKeyState(fm_vk) } < 0;
+                if let Some(ref hk) = fm_hk {
+                    let is_down = hotkey_pressed(hk);
                     if is_down && !fm_down {
                         let _ = app.emit("global-hotkey-full-mute", ());
                     }
@@ -241,8 +315,8 @@ fn main() {
             #[cfg(target_os = "windows")]
             {
                 let hotkey_state = Arc::new(Mutex::new(HotkeyState {
-                    mic_key: String::from("M"),
-                    full_mute_key: String::from("F"),
+                    mic_key: String::from("Ctrl+KeyM"),
+                    full_mute_key: String::from("Ctrl+KeyF"),
                 }));
                 app.manage(hotkey_state.clone());
                 global_hotkey::start_poller(hotkey_state, app.handle().clone());

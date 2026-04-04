@@ -7,8 +7,8 @@ export interface HotkeySettings {
 }
 
 export const DEFAULT_HOTKEYS: HotkeySettings = {
-  toggleMicrophone: 'M',
-  toggleFullMute: 'F',
+  toggleMicrophone: 'Ctrl+KeyM',
+  toggleFullMute: 'Ctrl+KeyF',
 };
 
 function loadSettings(): HotkeySettings {
