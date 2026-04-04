@@ -375,7 +375,7 @@ export default function AgentControls({ roomName }: Props) {
 
   useEffect(() => {
     if (botParticipant) {
-      setAgentState((prev) => (prev === 'loading-leave' ? prev : 'active'));
+      setAgentState((prev) => (prev === 'loading-join' ? prev : 'active'));
     } else {
       setAgentState('idle');
       setStatus(DEFAULT_STATUS);
