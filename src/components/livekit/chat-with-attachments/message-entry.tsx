@@ -1,3 +1,4 @@
+import * as React from 'react';
 import type { ReactNode } from 'react';
 import type { ChatMessageRow } from './types';
 import type { AvatarId } from '../../../config';
@@ -39,6 +40,14 @@ export function MessageEntry({
   const isEdited = !!msg.editTimestamp;
   const timeStr = ts.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
   const avatarName = avatarMap.get(identity) ?? getFallbackAvatar(identity);
+  const [copied, setCopied] = React.useState(false);
+
+  const handleDoubleClick = React.useCallback(() => {
+    navigator.clipboard.writeText(msg.message).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    }).catch(() => {});
+  }, [msg.message]);
 
   return (
     <div
@@ -52,7 +61,12 @@ export function MessageEntry({
           </div>
         )}
 
-        <div className="msg-bubble" data-origin={isLocal ? 'local' : 'remote'}>
+        <div
+          className={`msg-bubble${copied ? ' msg-bubble-copied' : ''}`}
+          data-origin={isLocal ? 'local' : 'remote'}
+          onDoubleClick={handleDoubleClick}
+          title="Double-click to copy"
+        >
           {!isLocal && !hideName && (
             <div className="msg-name">{name}</div>
           )}
@@ -61,6 +75,7 @@ export function MessageEntry({
             {isEdited && 'edited '}
             {timeStr}
           </div>
+          {copied && <span className="msg-copied-badge">Copied!</span>}
         </div>
       </div>
     </div>
