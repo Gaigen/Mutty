@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { LS_KEYS } from '../config';
+import { storeGet, storeSet } from '../lib/store';
 import type { VideoCodec } from './useScreenShareSettings';
 
 export interface CameraSettings {
   videoCodec: VideoCodec;
-  maxBitrate: number;   // bps
+  maxBitrate: number;
   maxFramerate: number;
   width: number;
   height: number;
@@ -18,28 +19,33 @@ const DEFAULT_SETTINGS: CameraSettings = {
   height: 720,
 };
 
-function loadSettings(): CameraSettings {
+async function loadSettings(): Promise<CameraSettings> {
   try {
-    const stored = localStorage.getItem(LS_KEYS.cameraSettings);
-    if (stored) {
-      return { ...DEFAULT_SETTINGS, ...(JSON.parse(stored) as Partial<CameraSettings>) };
-    }
+    const stored = await storeGet<Partial<CameraSettings>>(LS_KEYS.cameraSettings);
+    if (stored) return { ...DEFAULT_SETTINGS, ...stored };
   } catch (e) {
     console.warn('Failed to load camera settings:', e);
   }
   return { ...DEFAULT_SETTINGS };
 }
 
-function saveSettings(s: CameraSettings) {
-  try { localStorage.setItem(LS_KEYS.cameraSettings, JSON.stringify(s)); }
+async function saveSettings(s: CameraSettings) {
+  try { await storeSet(LS_KEYS.cameraSettings, s); }
   catch (e) { console.warn('Failed to save camera settings:', e); }
 }
 
-let currentSettings: CameraSettings = loadSettings();
+let currentSettings: CameraSettings = { ...DEFAULT_SETTINGS };
 const listeners = new Set<(s: CameraSettings) => void>();
 
 export function useCameraSettings() {
   const [settings, setSettingsState] = useState<CameraSettings>(currentSettings);
+
+  useEffect(() => {
+    loadSettings().then((s) => {
+      currentSettings = s;
+      setSettingsState(s);
+    });
+  }, []);
 
   useEffect(() => {
     const listener = (s: CameraSettings) => setSettingsState(s);

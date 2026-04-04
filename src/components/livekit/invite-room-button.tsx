@@ -2,9 +2,10 @@ import { useCallback, useState } from 'react';
 import { Check, UserPlus } from 'lucide-react';
 import { AVATAR_IDS, LS_KEYS, getServerConfig } from '../../config';
 import { generateRandomNickname } from '../../utils/randomNickname';
+import { storeGetSync } from '../../lib/store';
 
 function getWebAppUrl(): string {
-  const saved = localStorage.getItem(LS_KEYS.webAppUrl);
+  const saved = storeGetSync<string>(LS_KEYS.webAppUrl);
   if (saved) return saved;
   const serverConfig = getServerConfig();
   if (serverConfig) return serverConfig.webAppUrl;

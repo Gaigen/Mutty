@@ -2,11 +2,11 @@
 
 ## Tauri Plugins
 
-### Window State (`window-state`)
-- [ ] Добавить `tauri-plugin-window-state` в Cargo.toml
-- [ ] Зарегистрировать плагин в main.rs
-- [ ] Настроить сохранение: размер, позиция, maximized/minimized state
-- [ ] Настроить capabilites
+### Window State (`window-state`) — ✅ Done
+- [x] Добавить `tauri-plugin-window-state` в Cargo.toml
+- [x] Зарегистрировать плагин в main.rs
+- [x] Настроить сохранение: размер, позиция, maximized/minimized state
+- [x] Настроить capabilites
 
 ### Autostart (`autostart`)
 - [ ] Добавить `tauri-plugin-autostart` в Cargo.toml
@@ -21,21 +21,11 @@
 - [ ] Добавить UI: проверка обновлений, прогресс, перезапуск
 - [ ] Настроить `tauri.conf.json` updater секцию
 
-### Dialog (`dialog`)
-- [ ] Добавить `tauri-plugin-dialog` в Cargo.toml
-- [ ] Зарегистрировать плагин в main.rs
-- [ ] Использовать для: выбор аватара, отправка файлов, подтверждение действий
-
 ### Store (`store`)
 - [ ] Добавить `tauri-plugin-store` в Cargo.toml
 - [ ] Зарегистрировать плагин в main.rs
 - [ ] Мигрировать с localStorage: serverUrl, identity, avatar, recentRooms, appSettings, hotkeySettings
 - [ ] Создать единый store файл `settings.json`
-
-### Context Menu (`context-menu` — community)
-- [ ] Добавить `tauri-plugin-context-menu` в Cargo.toml
-- [ ] Зарегистрировать плагин в main.rs
-- [ ] Использовать для: чат (копировать/ответить/реакции), участники (мут/кик), сообщения
 
 ## Отложено
 

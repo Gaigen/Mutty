@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useState } from 'react';
 import { Track } from 'livekit-client';
+import { storeGet, storeSet } from '../lib/store';
 
 type ParticipantVolumes = Record<string, number>;
 
@@ -20,29 +21,25 @@ export function getParticipantVolume(
   return volumes[specificKey] ?? volumes[identity] ?? 1;
 }
 
-function loadVolumesFromStorage(): ParticipantVolumes {
+async function loadVolumes(): Promise<ParticipantVolumes> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = await storeGet<Record<string, number>>(STORAGE_KEY);
     if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') {
-      const result: ParticipantVolumes = {};
-      for (const [k, v] of Object.entries(parsed)) {
-        if (typeof k === 'string' && typeof v === 'number' && v >= 0 && v <= 1) {
-          result[k] = v;
-        }
+    const result: ParticipantVolumes = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (typeof k === 'string' && typeof v === 'number' && v >= 0 && v <= 1) {
+        result[k] = v;
       }
-      return result;
     }
+    return result;
   } catch {
-    // ignore
+    return {};
   }
-  return {};
 }
 
-function saveVolumesToStorage(volumes: ParticipantVolumes) {
+async function saveVolumes(volumes: ParticipantVolumes) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(volumes));
+    await storeSet(STORAGE_KEY, volumes);
   } catch {
     // ignore
   }
@@ -54,17 +51,22 @@ const ParticipantVolumesContext = createContext<{
 } | null>(null);
 
 export function ParticipantVolumesProvider({ children }: { children: React.ReactNode }) {
-  const [volumes, setVolumes] = useState<ParticipantVolumes>(loadVolumesFromStorage);
+  const [volumes, setVolumes] = useState<ParticipantVolumes>({});
 
   const setVolume = useCallback((identity: string, volume: number, source?: Track.Source) => {
     const clamped = Math.min(1, Math.max(0, volume));
     const key = participantVolumeKey(identity, source);
     setVolumes((prev) => {
       const next = { ...prev, [key]: clamped };
-      saveVolumesToStorage(next);
+      saveVolumes(next);
       return next;
     });
   }, []);
+
+  // Load volumes on mount
+  useState(() => {
+    loadVolumes().then((v) => setVolumes(v));
+  });
 
   return (
     <ParticipantVolumesContext.Provider value={{ volumes, setVolume }}>

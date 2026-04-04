@@ -18,6 +18,7 @@ import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlacehol
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
 import { appConfig, LS_KEYS } from '../../config';
+import { storeGet, storeSet } from '../../lib/store';
 
 const CONTROL_BAR_CONTROLS = {
   chat: appConfig.showChat,
@@ -77,9 +78,9 @@ const MemoizedChatPanel = React.memo(function ChatPanel({
   );
 });
 
-function loadChatWidth(): number {
+async function loadChatWidth(): Promise<number> {
   try {
-    const v = localStorage.getItem(LS_KEYS.chatWidth);
+    const v = await storeGet<string>(LS_KEYS.chatWidth);
     if (v) {
       const n = parseInt(v, 10);
       if (Number.isFinite(n) && n >= CHAT_WIDTH_MIN && n <= CHAT_WIDTH_MAX) return n;
@@ -90,9 +91,9 @@ function loadChatWidth(): number {
   return CHAT_WIDTH_DEFAULT;
 }
 
-function saveChatWidth(w: number) {
+async function saveChatWidth(w: number) {
   try {
-    localStorage.setItem(LS_KEYS.chatWidth, String(Math.round(w)));
+    await storeSet(LS_KEYS.chatWidth, String(Math.round(w)));
   } catch {
     /* ignore */
   }
@@ -113,11 +114,16 @@ export function VideoConferenceWithVolume({
     unreadMessages: 0,
     showSettings: false,
   });
-  const [chatWidth, setChatWidth] = React.useState(loadChatWidth);
+  const [chatWidth, setChatWidth] = React.useState(CHAT_WIDTH_DEFAULT);
   const [isResizing, setIsResizing] = React.useState(false);
   const chatWidthRef = React.useRef(chatWidth);
   chatWidthRef.current = chatWidth;
   const lastAutoFocusedScreenShareTrack = React.useRef<TrackReferenceOrPlaceholder | null>(null);
+
+  // Load chat width on mount
+  React.useEffect(() => {
+    loadChatWidth().then((w) => setChatWidth(w));
+  }, []);
 
   const handleResizeStart = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LS_KEYS } from '../config';
+import { storeGet, storeSet } from '../lib/store';
 
 export interface HotkeySettings {
   toggleMicrophone: string;
@@ -11,32 +12,36 @@ export const DEFAULT_HOTKEYS: HotkeySettings = {
   toggleFullMute: 'Ctrl+KeyF',
 };
 
-function loadSettings(): HotkeySettings {
+async function loadSettings(): Promise<HotkeySettings> {
   try {
-    const stored = localStorage.getItem(LS_KEYS.hotkeySettings);
-    if (stored) {
-      const parsed = JSON.parse(stored) as Partial<HotkeySettings>;
-      return { ...DEFAULT_HOTKEYS, ...parsed };
-    }
+    const stored = await storeGet<Partial<HotkeySettings>>(LS_KEYS.hotkeySettings);
+    if (stored) return { ...DEFAULT_HOTKEYS, ...stored };
   } catch (e) {
-    console.warn('Failed to load hotkey settings from localStorage:', e);
+    console.warn('Failed to load hotkey settings from store:', e);
   }
   return { ...DEFAULT_HOTKEYS };
 }
 
-function saveSettings(settings: HotkeySettings) {
+async function saveSettings(settings: HotkeySettings) {
   try {
-    localStorage.setItem(LS_KEYS.hotkeySettings, JSON.stringify(settings));
+    await storeSet(LS_KEYS.hotkeySettings, settings);
   } catch (e) {
-    console.warn('Failed to save hotkey settings to localStorage:', e);
+    console.warn('Failed to save hotkey settings to store:', e);
   }
 }
 
-let currentSettings: HotkeySettings = loadSettings();
+let currentSettings: HotkeySettings = { ...DEFAULT_HOTKEYS };
 const listeners = new Set<(settings: HotkeySettings) => void>();
 
 export function useHotkeySettings() {
   const [settings, setSettingsState] = useState<HotkeySettings>(currentSettings);
+
+  useEffect(() => {
+    loadSettings().then((s) => {
+      currentSettings = s;
+      setSettingsState(s);
+    });
+  }, []);
 
   useEffect(() => {
     const listener = (s: HotkeySettings) => setSettingsState(s);

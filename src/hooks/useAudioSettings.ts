@@ -1,24 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LS_KEYS } from '../config';
+import { storeGet, storeSet } from '../lib/store';
 
 export interface AudioSettings {
-  // Input (microphone)
   noiseSuppression: boolean;
   echoCancellation: boolean;
   autoGainControl: boolean;
   voiceIsolation: boolean;
-
-  // Noise Gate
   noiseGateEnabled: boolean;
-  noiseGateThreshold: number; // dB, -60 to 0, default: -40
-  noiseGateAttack: number;    // ms, 1-100, default: 10
-  noiseGateRelease: number;   // ms, 20-500, default: 100
-
-  // Output (speakers)
+  noiseGateThreshold: number;
+  noiseGateAttack: number;
+  noiseGateRelease: number;
   speakerDeviceId: string;
-  outputVolume: number; // 0 - 1, 1 = default
-
-  // UI
+  outputVolume: number;
   joinLeaveSounds: boolean;
 }
 
@@ -36,32 +30,36 @@ const DEFAULT_SETTINGS: AudioSettings = {
   joinLeaveSounds: true,
 };
 
-function loadSettings(): AudioSettings {
+async function loadSettings(): Promise<AudioSettings> {
   try {
-    const stored = localStorage.getItem(LS_KEYS.audioSettings);
-    if (stored) {
-      const parsed = JSON.parse(stored) as Partial<AudioSettings>;
-      return { ...DEFAULT_SETTINGS, ...parsed };
-    }
+    const stored = await storeGet<Partial<AudioSettings>>(LS_KEYS.audioSettings);
+    if (stored) return { ...DEFAULT_SETTINGS, ...stored };
   } catch (e) {
-    console.warn('Failed to load audio settings from localStorage:', e);
+    console.warn('Failed to load audio settings from store:', e);
   }
   return { ...DEFAULT_SETTINGS };
 }
 
-function saveSettings(settings: AudioSettings) {
+async function saveSettings(settings: AudioSettings) {
   try {
-    localStorage.setItem(LS_KEYS.audioSettings, JSON.stringify(settings));
+    await storeSet(LS_KEYS.audioSettings, settings);
   } catch (e) {
-    console.warn('Failed to save audio settings to localStorage:', e);
+    console.warn('Failed to save audio settings to store:', e);
   }
 }
 
-let currentSettings: AudioSettings = loadSettings();
+let currentSettings: AudioSettings = { ...DEFAULT_SETTINGS };
 const listeners = new Set<(settings: AudioSettings) => void>();
 
 export function useAudioSettings() {
   const [settings, setSettingsState] = useState<AudioSettings>(currentSettings);
+
+  useEffect(() => {
+    loadSettings().then((s) => {
+      currentSettings = s;
+      setSettingsState(s);
+    });
+  }, []);
 
   useEffect(() => {
     const listener = (s: AudioSettings) => setSettingsState(s);

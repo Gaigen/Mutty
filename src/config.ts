@@ -2,6 +2,8 @@
  * Application configuration.
  */
 
+import { storeGetSync, storeSetSync, storeDelete } from './lib/store';
+
 // ── LocalStorage keys ────────────────────────────────────────────────────────
 
 export const LS_KEYS = {
@@ -37,7 +39,7 @@ function normalizeBaseUrl(url: string): string {
 }
 
 export function getServerConfig(): ServerConfig | null {
-  const saved = localStorage.getItem(LS_KEYS.serverUrl);
+  const saved = storeGetSync<string>(LS_KEYS.serverUrl);
   if (!saved) return null;
 
   const baseUrl = normalizeBaseUrl(saved);
@@ -53,11 +55,11 @@ export function getServerConfig(): ServerConfig | null {
 }
 
 export function setServerUrl(url: string): void {
-  localStorage.setItem(LS_KEYS.serverUrl, url);
+  storeSetSync(LS_KEYS.serverUrl, url);
 }
 
 export function clearServerUrl(): void {
-  localStorage.removeItem(LS_KEYS.serverUrl);
+  storeDelete(LS_KEYS.serverUrl);
 }
 
 export function isValidServerUrl(url: string): boolean {

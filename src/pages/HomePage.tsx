@@ -3,20 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { LS_KEYS, appConfig, AVATAR_IDS, type AvatarId, getServerConfig, setServerUrl, clearServerUrl, isValidServerUrl } from '../config';
 import { generateRandomNickname } from '../utils/randomNickname';
 import { Settings, X } from 'lucide-react';
+import { storeGet, storeSet } from '../lib/store';
 
-function loadRecentRooms(): string[] {
+async function loadRecentRooms(): Promise<string[]> {
   try {
-    const stored = localStorage.getItem(LS_KEYS.recentRooms);
-    return stored ? (JSON.parse(stored) as string[]) : [];
+    const stored = await storeGet<string[]>(LS_KEYS.recentRooms);
+    return stored ?? [];
   } catch {
     return [];
   }
 }
 
-function saveRecentRoom(name: string) {
-  const rooms = loadRecentRooms().filter((r) => r !== name);
-  rooms.unshift(name);
-  localStorage.setItem(LS_KEYS.recentRooms, JSON.stringify(rooms.slice(0, appConfig.maxRecentRooms)));
+async function saveRecentRoom(name: string) {
+  const rooms = await loadRecentRooms();
+  const filtered = rooms.filter((r) => r !== name);
+  filtered.unshift(name);
+  await storeSet(LS_KEYS.recentRooms, filtered.slice(0, appConfig.maxRecentRooms));
 }
 
 function isValidAvatarId(id: string): id is AvatarId {
@@ -41,11 +43,15 @@ export default function HomePage() {
       setServerConfigured(true);
       setServerUrlInput(config.serverUrl);
     }
-    const savedIdentity = localStorage.getItem(LS_KEYS.identity);
-    if (savedIdentity) setDisplayName(savedIdentity);
-    const savedAvatar = localStorage.getItem(LS_KEYS.avatar);
-    if (savedAvatar && isValidAvatarId(savedAvatar)) setAvatar(savedAvatar);
-    setRecentRooms(loadRecentRooms());
+    Promise.all([
+      storeGet<string>(LS_KEYS.identity),
+      storeGet<string>(LS_KEYS.avatar),
+      loadRecentRooms(),
+    ]).then(([identity, savedAvatar, rooms]) => {
+      if (identity) setDisplayName(identity);
+      if (savedAvatar && isValidAvatarId(savedAvatar)) setAvatar(savedAvatar as AvatarId);
+      setRecentRooms(rooms);
+    });
   }, []);
 
   const handleServerSave = () => {
@@ -65,15 +71,15 @@ export default function HomePage() {
     setShowServerInput(true);
   };
 
-  const joinRoom = (e: React.FormEvent) => {
+  const joinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     const room = roomName.trim();
     if (!room) return;
 
     const identity = displayName.trim() || generateRandomNickname();
-    localStorage.setItem(LS_KEYS.identity, identity);
-    if (avatar) localStorage.setItem(LS_KEYS.avatar, avatar);
-    saveRecentRoom(room);
+    await storeSet(LS_KEYS.identity, identity);
+    if (avatar) await storeSet(LS_KEYS.avatar, avatar);
+    await saveRecentRoom(room);
 
     const params = new URLSearchParams({ identity });
     if (avatar) params.set('avatar', avatar);
