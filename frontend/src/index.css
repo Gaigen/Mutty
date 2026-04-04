@@ -966,3 +966,232 @@ body {
     transform: translateX(0) !important;
   }
 }
+
+/* ── Chat: message bubbles (messenger style) ──────────────────────────────── */
+
+.lk-chat .lk-chat-entry {
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0 12px;
+}
+
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.msg-row[data-origin='local'] {
+  flex-direction: row-reverse;
+}
+
+.msg-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+
+.msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msg-row[data-origin='local'] .msg-avatar {
+  background: #6366f1;
+}
+
+.msg-bubble {
+  max-width: 75%;
+  border-radius: 16px;
+  padding: 6px 12px 4px;
+  min-width: 0;
+}
+
+.msg-bubble[data-origin='local'] {
+  background: #6366f1;
+  border-bottom-right-radius: 4px;
+}
+
+.msg-bubble[data-origin='remote'] {
+  background: rgba(48, 49, 54, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom-left-radius: 4px;
+}
+
+.msg-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a5b4fc;
+  margin-bottom: 1px;
+}
+
+.msg-text {
+  line-height: 1.45;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.msg-time {
+  font-size: 10px;
+  margin-top: 2px;
+  line-height: 1;
+}
+
+.msg-bubble[data-origin='local'] .msg-time {
+  color: rgba(255, 255, 255, 0.4);
+  text-align: right;
+}
+
+.msg-bubble[data-origin='remote'] .msg-time {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.lk-chat .lk-message-body {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chat-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Link preview cards ───────────────────────────────────────────────────── */
+
+.link-preview-card {
+  margin-top: 6px;
+  margin-block-start: 0 !important;
+  margin-block-end: 0 !important;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 4px solid var(--lp-accent, #555);
+  overflow: hidden;
+  background: rgba(48, 49, 54, 0.6);
+  transition: background 0.15s;
+}
+
+.link-preview-card * {
+  margin-block-start: 0 !important;
+  margin-block-end: 0 !important;
+}
+
+.link-preview-card:hover {
+  background: rgba(48, 49, 54, 0.9);
+}
+
+.link-preview-generic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.link-preview-generic:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.lp-generic-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.lp-generic-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.lp-generic-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lp-generic-domain {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b9bbbe;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.lp-generic-url {
+  font-size: 13px;
+  color: #72767d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-preview-youtube {
+  transition: opacity 0.15s;
+}
+
+.link-preview-youtube:hover {
+  opacity: 0.9;
+}
+
+.link-preview-twitter-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.link-preview-twitter-card:hover {
+  background: rgba(29, 155, 240, 0.1) !important;
+}
+
+.link-preview-github a {
+  display: block;
+  padding: 11px 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.link-preview-github-fallback a {
+  display: block;
+  padding: 11px 14px;
+  color: #58a6ff;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+/* Mobile: bubbles go full width */
+@media (max-width: 767px) {
+  .msg-bubble {
+    max-width: 85%;
+  }
+
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+  }
+}
