@@ -1,6 +1,7 @@
 import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { COLLAPSE_CHARS, COLLAPSE_LINES } from './constants';
 
 function PreWithCopy({ children }: { children?: React.ReactNode }) {
@@ -41,7 +42,7 @@ export function MarkdownMessage({ content }: { content: string }) {
         }
       >
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[remarkGfm, remarkBreaks]}
           components={{
             pre: ({ children }) => <PreWithCopy>{children}</PreWithCopy>,
             a: ({ children, href }) => (
