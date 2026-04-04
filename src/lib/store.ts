@@ -63,23 +63,33 @@ export async function storeClear(): Promise<void> {
 export async function migrateFromLocalStorage(keys: string[]): Promise<void> {
   const store = await getStore();
   const migrated = await store.get<boolean>('migrated_from_localstorage');
-  if (migrated) return;
 
-  for (const key of keys) {
-    const raw = localStorage.getItem(key);
-    if (raw !== null) {
-      try {
-        const parsed = JSON.parse(raw);
-        await store.set(key, parsed);
-        syncCache[key] = parsed;
-      } catch {
-        await store.set(key, raw);
-        syncCache[key] = raw;
+  if (!migrated) {
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) {
+        try {
+          const parsed = JSON.parse(raw);
+          await store.set(key, parsed);
+          syncCache[key] = parsed;
+        } catch {
+          await store.set(key, raw);
+          syncCache[key] = raw;
+        }
+        localStorage.removeItem(key);
       }
-      localStorage.removeItem(key);
     }
+
+    await store.set('migrated_from_localstorage', true);
+    await store.save();
   }
 
-  await store.set('migrated_from_localstorage', true);
-  await store.save();
+  for (const key of keys) {
+    if (syncCache[key] === undefined) {
+      const value = await store.get(key);
+      if (value !== null && value !== undefined) {
+        syncCache[key] = value;
+      }
+    }
+  }
 }

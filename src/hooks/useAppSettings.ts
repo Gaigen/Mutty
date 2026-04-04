@@ -4,10 +4,12 @@ import { storeGet, storeSet } from '../lib/store';
 
 export interface AppSettings {
   minimizeToTray: boolean;
+  autostart: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   minimizeToTray: true,
+  autostart: false,
 };
 
 async function loadSettings(): Promise<AppSettings> {
@@ -25,6 +27,28 @@ async function saveSettings(settings: AppSettings) {
     await storeSet(LS_KEYS.appSettings, settings);
   } catch (e) {
     console.warn('Failed to save app settings to store:', e);
+  }
+}
+
+async function syncAutostart(enabled: boolean) {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    if (enabled) {
+      await invoke('plugin:autostart|enable');
+    } else {
+      await invoke('plugin:autostart|disable');
+    }
+  } catch {
+    // Tauri not available (dev mode in browser), ignore
+  }
+}
+
+async function loadAutostartFromTauri(): Promise<boolean | null> {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    return await invoke<boolean>('plugin:autostart|is_enabled');
+  } catch {
+    return null;
   }
 }
 
@@ -56,9 +80,20 @@ export function useAppSettings() {
     loadSettings().then((s) => {
       currentSettings = s;
       setSettingsState(s);
-      loadMinimizeToTrayFromTauri().then((val) => {
-        if (val !== null) {
-          currentSettings = { ...currentSettings, minimizeToTray: val };
+      Promise.all([
+        loadMinimizeToTrayFromTauri(),
+        loadAutostartFromTauri(),
+      ]).then(([trayVal, autoVal]) => {
+        let changed = false;
+        if (trayVal !== null) {
+          currentSettings = { ...currentSettings, minimizeToTray: trayVal };
+          changed = true;
+        }
+        if (autoVal !== null) {
+          currentSettings = { ...currentSettings, autostart: autoVal };
+          changed = true;
+        }
+        if (changed) {
           setSettingsState(currentSettings);
           saveSettings(currentSettings);
           listeners.forEach((listener) => listener(currentSettings));
@@ -82,6 +117,9 @@ export function useAppSettings() {
     listeners.forEach((listener) => listener(currentSettings));
     if (newSettings.minimizeToTray !== undefined) {
       await syncMinimizeToTray(newSettings.minimizeToTray);
+    }
+    if (newSettings.autostart !== undefined) {
+      await syncAutostart(newSettings.autostart);
     }
   }, []);
 

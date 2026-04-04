@@ -16,7 +16,7 @@ const trayMuteListeners: Set<() => void> = new Set();
   return () => { trayMuteListeners.delete(fn); };
 };
 
-// Migrate from localStorage to Tauri store on first run
+// Migrate from localStorage to Tauri store on first run, then render
 migrateFromLocalStorage([
   LS_KEYS.serverUrl,
   LS_KEYS.audioSettings,
@@ -29,12 +29,12 @@ migrateFromLocalStorage([
   LS_KEYS.webAppUrl,
   LS_KEYS.appSettings,
   LS_KEYS.hotkeySettings,
-]).catch(console.error);
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
-)
+]).then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </StrictMode>,
+  );
+}).catch(console.error);
