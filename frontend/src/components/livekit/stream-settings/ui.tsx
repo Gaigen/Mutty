@@ -58,33 +58,35 @@ export function MicLevelBar({
   );
 }
 
-function pingChartMaxMs(valid: number[]): number {
-  const peak = Math.max(1, ...valid);
-  const padded = peak * 1.35;
-  let cap = Math.ceil(padded / 5) * 5;
-  if (cap < 20) cap = 20;
-  if (cap > 300) cap = 300;
-  return cap;
+function pingColor(latest: number): { stroke: string; fill: string; dot: string } {
+  if (latest < 100) return { stroke: '#22c55e', fill: '#22c55e', dot: '#22c55e' };
+  if (latest < 250) return { stroke: '#f59e0b', fill: '#f59e0b', dot: '#f59e0b' };
+  return { stroke: '#ef4444', fill: '#ef4444', dot: '#ef4444' };
 }
 
-function pingChartTicks(maxMs: number): number[] {
-  if (maxMs <= 30) return [10, 20, 30].filter((t) => t <= maxMs);
-  if (maxMs <= 60) return [20, 40, 60].filter((t) => t <= maxMs);
-  if (maxMs <= 120) return [40, 80, 120].filter((t) => t <= maxMs);
-  const step = maxMs <= 200 ? 50 : 100;
-  const ticks: number[] = [];
-  for (let t = step; t < maxMs; t += step) ticks.push(t);
-  ticks.push(maxMs);
-  return [...new Set(ticks)].sort((a, b) => a - b);
+function smoothPath(points: [number, number][]): string {
+  if (points.length < 2) return '';
+  let d = `M ${points[0][0].toFixed(1)} ${points[0][1].toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const [x0, y0] = points[Math.max(0, i - 1)];
+    const [x1, y1] = points[i];
+    const [x2, y2] = points[i + 1];
+    const [x3, y3] = points[Math.min(points.length - 1, i + 2)];
+    const cp1x = x1 + (x2 - x0) / 6;
+    const cp1y = y1 + (y2 - y0) / 6;
+    const cp2x = x2 - (x3 - x1) / 6;
+    const cp2y = y2 - (y3 - y1) / 6;
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  }
+  return d;
 }
 
 export function PingChart({ history }: { history: (number | null)[] }) {
   const W = 400;
-  const H = 86;
-  const leftPad = 44;
-  const rightPad = 8;
-  const topPad = 8;
-  const bottomPad = 18;
+  const H = 80;
+  const padX = 0;
+  const padTop = 6;
+  const padBottom = 4;
 
   const valid = history.filter((v): v is number => v !== null);
   if (valid.length < 2) {
@@ -95,21 +97,26 @@ export function PingChart({ history }: { history: (number | null)[] }) {
     );
   }
 
-  const maxVal = pingChartMaxMs(valid);
-  const plotW = W - leftPad - rightPad;
-  const plotH = H - topPad - bottomPad;
+  const maxVal = Math.max(1, ...valid) * 1.2;
+  const plotH = H - padTop - padBottom;
 
-  const pts: string[] = [];
+  const points: [number, number][] = [];
   history.forEach((v, i) => {
     if (v === null) return;
-    const x = leftPad + (i / (PING_HISTORY_SIZE - 1)) * plotW;
-    const y = topPad + plotH - (v / maxVal) * plotH;
-    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    const x = padX + (i / (PING_HISTORY_SIZE - 1)) * W;
+    const y = padTop + plotH - (v / maxVal) * plotH;
+    points.push([x, y]);
   });
 
   const latest = valid[valid.length - 1];
-  const lineColor = latest < 100 ? '#22c55e' : latest < 250 ? '#f59e0b' : '#ef4444';
-  const gridMs = pingChartTicks(maxVal);
+  const colors = pingColor(latest);
+
+  const linePath = smoothPath(points);
+  const areaPath = linePath
+    ? `${linePath} L ${points[points.length - 1][0].toFixed(1)} ${(padTop + plotH).toFixed(1)} L ${points[0][0].toFixed(1)} ${(padTop + plotH).toFixed(1)} Z`
+    : '';
+
+  const lastPt = points[points.length - 1];
 
   return (
     <div className="w-full min-w-0">
@@ -119,61 +126,32 @@ export function PingChart({ history }: { history: (number | null)[] }) {
         role="img"
         aria-label="Round-trip time over the last minute"
       >
-        <rect
-          x={leftPad}
-          y={topPad}
-          width={plotW}
-          height={plotH}
-          rx={3}
-          fill="#141414"
-          stroke="#2a2a2a"
-          strokeWidth={1}
-        />
-        {gridMs.map((ms) => {
-          const y = topPad + plotH - (ms / maxVal) * plotH;
-          return (
-            <g key={ms}>
-              <line
-                x1={leftPad}
-                y1={y}
-                x2={leftPad + plotW}
-                y2={y}
-                stroke="#3f3f46"
-                strokeWidth={1}
-                strokeOpacity={0.85}
-              />
-              <text
-                x={leftPad - 6}
-                y={y}
-                textAnchor="end"
-                dominantBaseline="middle"
-                fill="#a1a1aa"
-                style={{ fontSize: 10, fontWeight: 500 }}
-              >
-                {ms}ms
-              </text>
-            </g>
-          );
-        })}
-        <polyline
-          points={pts.join(' ')}
-          fill="none"
-          stroke={lineColor}
-          strokeWidth={2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        {pts.length > 0 &&
-          (() => {
-            const last = pts[pts.length - 1].split(',');
-            return <circle cx={last[0]} cy={last[1]} r={3} fill={lineColor} stroke="#0a0a0a" strokeWidth={1} />;
-          })()}
-        <text x={leftPad} y={H - 4} fill="#71717a" style={{ fontSize: 10 }}>
-          60s ago
-        </text>
-        <text x={leftPad + plotW} y={H - 4} textAnchor="end" fill="#71717a" style={{ fontSize: 10 }}>
-          Now
-        </text>
+        <defs>
+          <linearGradient id="ping-area-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={colors.fill} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={colors.fill} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {areaPath && <path d={areaPath} fill="url(#ping-area-fill)" />}
+
+        {linePath && (
+          <path
+            d={linePath}
+            fill="none"
+            stroke={colors.stroke}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+
+        {lastPt && (
+          <>
+            <circle cx={lastPt[0]} cy={lastPt[1]} r={6} fill={colors.dot} opacity="0.15" />
+            <circle cx={lastPt[0]} cy={lastPt[1]} r={3} fill={colors.dot} stroke="#18181b" strokeWidth={1.5} />
+          </>
+        )}
       </svg>
     </div>
   );
