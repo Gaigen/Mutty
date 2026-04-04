@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react';
+import { playFullMuteSound, playFullUnmuteSound } from '../utils/sounds';
 
 const AudioMuteContext = createContext<{
   isAudioMuted: boolean;
@@ -14,7 +15,12 @@ export function AudioMuteProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleAudioMuted = useCallback(() => {
-    setAudioMutedState((prev) => !prev);
+    setAudioMutedState((prev) => {
+      const next = !prev;
+      if (next) playFullMuteSound();
+      else playFullUnmuteSound();
+      return next;
+    });
   }, []);
 
   return (
