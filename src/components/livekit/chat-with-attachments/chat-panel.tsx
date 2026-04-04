@@ -53,6 +53,7 @@ export function ChatWithAttachments({
 
   const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
   const [isSendingImages, setIsSendingImages] = React.useState(false);
+  const [sentCount, setSentCount] = React.useState(0);
   const dragCounterRef = React.useRef(0);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [textValue, setTextValue] = React.useState('');
@@ -240,22 +241,24 @@ export function ChatWithAttachments({
       if (!text && files.length === 0) return;
       if (text.length > MAX_TEXT_LEN) return;
 
-      setTextValue('');
-      setPendingFiles([]);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (textareaRef.current) textareaRef.current.style.height = 'auto';
-
       try {
         setIsSendingImages(files.length > 0);
+        setSentCount(0);
         if (text) await send(text);
-        for (const file of files) {
-          await send(await fileToDataUrl(file));
+        for (let i = 0; i < files.length; i++) {
+          await send(await fileToDataUrl(files[i]));
+          setSentCount(i + 1);
         }
+        setTextValue('');
+        setPendingFiles([]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (textareaRef.current) textareaRef.current.style.height = 'auto';
         textareaRef.current?.focus();
       } catch (err) {
         console.error('[Chat] Send failed:', err);
       } finally {
         setIsSendingImages(false);
+        setSentCount(0);
       }
     },
     [send, pendingFiles, textValue],
@@ -433,11 +436,41 @@ export function ChatWithAttachments({
             flexWrap: 'wrap',
             gap: 6,
             borderTop: '1px solid rgba(255,255,255,0.08)',
+            position: 'relative',
           }}
         >
-          {pendingFiles.map((f, i) => (
-            <FileThumbnail key={i} file={f} onRemove={() => removePending(i)} />
-          ))}
+          {pendingFiles.map((f, i) => {
+            const isSent = isSendingImages && i < sentCount;
+            return (
+              <div
+                key={i}
+                style={{
+                  opacity: isSent ? 0.3 : 1,
+                  transition: 'opacity 0.2s ease',
+                  pointerEvents: isSendingImages ? 'none' : 'auto',
+                }}
+              >
+                <FileThumbnail file={f} onRemove={() => removePending(i)} />
+              </div>
+            );
+          })}
+          {isSendingImages && sentCount < pendingFiles.length && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(0,0,0,0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 6,
+              backdropFilter: 'blur(2px)',
+              zIndex: 2,
+            }}>
+              <span style={{ color: '#fff', fontSize: 12, fontWeight: 500 }}>
+                Sending {sentCount + 1}/{pendingFiles.length}…
+              </span>
+            </div>
+          )}
         </div>
       )}
 
