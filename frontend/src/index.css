@@ -844,3 +844,9 @@ body {
   background: rgba(255, 255, 255, 0.10) !important;
   color: #e2e8f0 !important;
 }
+
+/* Agent dropdown — centered overlay like StreamSettings */
+.mutty-agent-dropdown {
+  max-height: calc(100vh - 100px) !important;
+  overflow-y: auto !important;
+}
