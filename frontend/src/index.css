@@ -93,9 +93,10 @@ body {
 }
 .chat-markdown-body {
   min-width: 0;
+  transition: max-height 0.3s ease;
 }
 .chat-markdown-collapsed {
-  max-height: 15rem;
+  max-height: 120px;
   overflow: hidden;
 }
 .chat-markdown-body > *:first-child { margin-top: 0; }
