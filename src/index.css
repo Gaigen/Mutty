@@ -1132,6 +1132,15 @@ body {
   display: none;
 }
 
+/* ── Chat panel wrapper: slide transition (desktop) ───────────────────────── */
+.chat-panel-wrapper {
+  transition: width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease, opacity 0.25s ease !important;
+}
+
+.chat-panel-wrapper[data-resizing="true"] {
+  transition: none !important;
+}
+
 /* ── Chat: mobile fullscreen overlay ─────────────────────────────── */
 @media (max-width: 767px) {
   .lk-chat.lk-chat-panel {
@@ -1144,7 +1153,6 @@ body {
     min-width: unset !important;
     max-width: unset !important;
     z-index: 100 !important;
-    animation: chat-slide-in 0.25s ease-out;
   }
 
   .chat-resizer {
@@ -1177,15 +1185,22 @@ body {
     width: 36px !important;
     height: 36px !important;
   }
-}
 
-@keyframes chat-slide-in {
-  from {
-    opacity: 0;
+  .chat-panel-wrapper {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: auto !important;
+    width: 100% !important;
+    min-width: unset !important;
+    max-width: unset !important;
+    z-index: 100 !important;
     transform: translateX(100%);
+    transition: transform 0.25s ease, opacity 0.25s ease !important;
   }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+
+  .chat-panel-wrapper[data-open="true"] {
+    transform: translateX(0) !important;
   }
 }

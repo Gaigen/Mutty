@@ -45,14 +45,12 @@ const CHAT_WIDTH_DEFAULT = 380;
 
 interface ChatPanelProps {
   chatWidth: number;
-  onResizeStart: (e: React.MouseEvent) => void;
   enableAttachments: boolean;
   onClose?: () => void;
 }
 
 const MemoizedChatPanel = React.memo(function ChatPanel({
   chatWidth,
-  onResizeStart,
   enableAttachments,
   onClose,
 }: ChatPanelProps) {
@@ -69,15 +67,6 @@ const MemoizedChatPanel = React.memo(function ChatPanel({
 
   return (
     <>
-      <div
-        className="chat-resizer"
-        onMouseDown={onResizeStart}
-        role="separator"
-        aria-orientation="vertical"
-        aria-valuenow={chatWidth}
-        aria-valuemin={CHAT_WIDTH_MIN}
-        aria-valuemax={CHAT_WIDTH_MAX}
-      />
       <ChatWithAttachments
         className="lk-chat lk-chat-panel"
         style={style}
@@ -125,6 +114,7 @@ export function VideoConferenceWithVolume({
     showSettings: false,
   });
   const [chatWidth, setChatWidth] = React.useState(loadChatWidth);
+  const [isResizing, setIsResizing] = React.useState(false);
   const chatWidthRef = React.useRef(chatWidth);
   chatWidthRef.current = chatWidth;
   const lastAutoFocusedScreenShareTrack = React.useRef<TrackReferenceOrPlaceholder | null>(null);
@@ -133,6 +123,7 @@ export function VideoConferenceWithVolume({
     e.preventDefault();
     const startX = e.clientX;
     const startW = chatWidthRef.current;
+    setIsResizing(true);
 
     const onMove = (ev: MouseEvent) => {
       const delta = startX - ev.clientX;
@@ -145,6 +136,7 @@ export function VideoConferenceWithVolume({
       document.removeEventListener('mouseup', onUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      setIsResizing(false);
     };
 
     document.addEventListener('mousemove', onMove);
@@ -242,10 +234,34 @@ export function VideoConferenceWithVolume({
             )}
             <MemoizedControlBar controls={CONTROL_BAR_CONTROLS} rightControls={rightControls} />
           </div>
-          <div style={{ display: widgetState.showChat ? 'contents' : 'none' }}>
+          <div
+            className="chat-resizer"
+            onMouseDown={handleResizeStart}
+            role="separator"
+            aria-orientation="vertical"
+            aria-valuenow={chatWidth}
+            aria-valuemin={CHAT_WIDTH_MIN}
+            aria-valuemax={CHAT_WIDTH_MAX}
+            style={{ display: widgetState.showChat ? 'block' : 'none' }}
+          />
+          <div
+            className="chat-panel-wrapper"
+            data-open={widgetState.showChat}
+            data-resizing={isResizing}
+            style={{
+              display: 'flex',
+              width: widgetState.showChat ? chatWidth : 0,
+              minWidth: widgetState.showChat ? chatWidth : 0,
+              maxWidth: widgetState.showChat ? chatWidth : 0,
+              opacity: widgetState.showChat ? 1 : 0,
+              overflow: 'hidden',
+              pointerEvents: widgetState.showChat ? 'auto' : 'none',
+              flexShrink: 0,
+              height: '100%',
+            }}
+          >
             <MemoizedChatPanel
               chatWidth={chatWidth}
-              onResizeStart={handleResizeStart}
               enableAttachments={appConfig.showChatAttachments}
               onClose={() => layoutContext.widget.dispatch?.({ msg: 'hide_chat' })}
             />
