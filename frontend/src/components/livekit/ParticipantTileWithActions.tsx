@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useCallback, useState } from 'react';
 import type { Participant } from 'livekit-client';
 import { RemoteTrackPublication, Track } from 'livekit-client';
 import type { ParticipantClickEvent, TrackReferenceOrPlaceholder } from '@livekit/components-core';
@@ -23,8 +24,10 @@ import {
   useMaybeTrackRefContext,
   useParticipantTile,
 } from '@livekit/components-react';
+import { participantVolumeKey, useParticipantVolumes } from '../../context/ParticipantVolumesContext';
 import { AVATAR_IDS, type AvatarId } from '../../config';
 import { hiddenTrackKey, toggleHiddenTrack, useHiddenTracks } from '../../store/hiddenTracks';
+import { ParticipantVolumeMenu } from './participant-volume-menu';
 
 function parseAvatarFromMetadata(metadata: string | undefined): AvatarId | null {
   if (!metadata?.trim()) return null;
@@ -174,6 +177,43 @@ const ParticipantTileWithActionsInner = React.forwardRef<
   const hiddenSet = useHiddenTracks();
   const isVideoHidden = hiddenSet.has(hiddenKey);
 
+  const { volumes, setVolume } = useParticipantVolumes();
+  const voiceVolumeKey = participantVolumeKey(identity, Track.Source.Microphone);
+  const screenVolumeKey = participantVolumeKey(identity, Track.Source.ScreenShareAudio);
+  const voiceVolume = volumes[voiceVolumeKey] ?? 1;
+  const screenVolume = volumes[screenVolumeKey] ?? 1;
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [hasScreenShare, setHasScreenShare] = useState(false);
+
+  const screenSharePub = trackReference.participant.getTrackPublication(Track.Source.ScreenShare);
+  React.useEffect(() => {
+    setHasScreenShare(!!screenSharePub);
+  }, [screenSharePub]);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (trackReference.participant.isLocal) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({ x: e.clientX, y: e.clientY });
+    },
+    [trackReference.participant.isLocal],
+  );
+
+  const handleVoiceVolumeChange = useCallback(
+    (vol: number) => {
+      setVolume(identity, vol, Track.Source.Microphone);
+    },
+    [identity, setVolume],
+  );
+
+  const handleScreenVolumeChange = useCallback(
+    (vol: number) => {
+      setVolume(identity, vol, Track.Source.ScreenShareAudio);
+    },
+    [identity, setVolume],
+  );
+
   // Sync track subscription with hidden state for remote tracks (saves bandwidth)
   React.useEffect(() => {
     const pub = trackReference.publication;
@@ -236,7 +276,7 @@ const ParticipantTileWithActionsInner = React.forwardRef<
   }, []);
 
   return (
-    <div ref={ref} style={{ position: 'relative' }} {...elementProps}>
+    <div ref={ref} style={{ position: 'relative' }} {...elementProps} onContextMenu={trackReference.participant.isLocal ? undefined : handleContextMenu}>
       <TrackRefContextIfNeeded trackRef={trackReference}>
         <ParticipantContextIfNeeded participant={trackReference.participant}>
           {children ?? (
@@ -335,6 +375,20 @@ const ParticipantTileWithActionsInner = React.forwardRef<
           </div>
         </ParticipantContextIfNeeded>
       </TrackRefContextIfNeeded>
+
+      {contextMenu && (
+        <ParticipantVolumeMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          voiceVolume={voiceVolume}
+          screenVolume={screenVolume}
+          hasScreenShare={hasScreenShare}
+          participantName={trackReference.participant.name || trackReference.participant.identity || 'Unknown'}
+          onVoiceVolumeChange={handleVoiceVolumeChange}
+          onScreenVolumeChange={handleScreenVolumeChange}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 });
