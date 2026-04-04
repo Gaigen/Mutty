@@ -2,33 +2,10 @@
  * Application configuration.
  */
 
-// ── Env (VITE_* available only in frontend) ───────────────────────────────────
-
-const tokenEndpoint = import.meta.env.VITE_TOKEN_ENDPOINT || 'https://token.meety.smetrix.ru/api/token';
-const tokenBase = tokenEndpoint.replace(/\/api\/token$/, '');
-
-// Пытаемся угадать URL веб-приложения из URL токен-сервера
-// (убираем поддомен token. если есть)
-const defaultWebAppUrl = tokenBase.replace('token.', '');
-const webAppUrl = import.meta.env.VITE_WEB_APP_URL || defaultWebAppUrl;
-
-export const config = {
-  /** LiveKit WebSocket URL */
-  livekitUrl: import.meta.env.VITE_LIVEKIT_URL || 'wss://livekit.smetrix.ru',
-
-  /** Endpoint for token retrieval (POST room, identity) */
-  tokenEndpoint,
-
-  /** Base URL for the web app (used in invite links) */
-  webAppUrl,
-
-  /** Endpoint for dispatch agent (POST room) — LiveKit Agent Server */
-  dispatchEndpoint: tokenBase ? `${tokenBase}/api/agent/dispatch` : '',
-} as const;
-
 // ── LocalStorage keys ────────────────────────────────────────────────────────
 
 export const LS_KEYS = {
+  serverUrl: 'voice-app:server-url',
   audioSettings: 'voice-app:audio-settings',
   cameraSettings: 'voice-app:camera-settings',
   screenShareSettings: 'voice-app:screen-share-settings',
@@ -40,6 +17,63 @@ export const LS_KEYS = {
   appSettings: 'voice-app:app-settings',
   hotkeySettings: 'voice-app:hotkey-settings',
 } as const;
+
+// ── Server config ────────────────────────────────────────────────────────────
+
+export interface ServerConfig {
+  serverUrl: string;
+  tokenEndpoint: string;
+  livekitUrl: string;
+  webAppUrl: string;
+  dispatchEndpoint: string;
+}
+
+function normalizeBaseUrl(url: string): string {
+  let base = url.replace(/\/+$/, '');
+  if (base.startsWith('http://') || base.startsWith('https://')) {
+    return base;
+  }
+  return `https://${base}`;
+}
+
+export function getServerConfig(): ServerConfig | null {
+  const saved = localStorage.getItem(LS_KEYS.serverUrl);
+  if (!saved) return null;
+
+  const baseUrl = normalizeBaseUrl(saved);
+  const tokenBase = baseUrl;
+
+  return {
+    serverUrl: baseUrl,
+    tokenEndpoint: `${tokenBase}/api/token`,
+    livekitUrl: import.meta.env.VITE_LIVEKIT_URL || baseUrl.replace(/^http/, 'ws'),
+    webAppUrl: import.meta.env.VITE_WEB_APP_URL || tokenBase,
+    dispatchEndpoint: `${tokenBase}/api/agent/dispatch`,
+  };
+}
+
+export function setServerUrl(url: string): void {
+  localStorage.setItem(LS_KEYS.serverUrl, url);
+}
+
+export function clearServerUrl(): void {
+  localStorage.removeItem(LS_KEYS.serverUrl);
+}
+
+export function isValidServerUrl(url: string): boolean {
+  if (!url.trim()) return false;
+  const normalized = normalizeBaseUrl(url);
+  try {
+    const parsed = new URL(normalized);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// ── Static config (toggles, limits) ─────────────────────────────────────────
+
+export const BOT_IDENTITY = 'youtube-bot';
 
 export const AVATAR_IDS = [
   'bear',
@@ -59,39 +93,16 @@ export const AVATAR_IDS = [
 
 export type AvatarId = (typeof AVATAR_IDS)[number];
 
-// ── Toggles and limits ────────────────────────────────────────────────────────
-
-export const BOT_IDENTITY = 'youtube-bot';
-
 export const appConfig = {
-  /** Max number of recent rooms on home page */
   maxRecentRooms: 5,
-
-  /** Simulcast in LiveKit (false = single layer, simpler) */
   simulcast: false,
-
-  /** Enable video on room entry (false = camera enabled only on click) */
   showVideo: false,
-
-  /** Enable audio on room entry */
   showAudio: true,
-
-  /** Show chat in control bar */
   showChat: true,
-
-  /** Allow sending images in chat */
   showChatAttachments: true,
-
-  /** Show Leave button */
   showLeave: true,
-
-  /** Show Settings button (gear icon) */
   showSettingsButton: true,
-
-  /** Agent default mode: 'audio' | 'video' */
   agentDefaultMode: 'video' as const,
-  /** Notification sound probability for new message */
   chatNotificationRareChance: 0.05,
-  /** Notification sound source for new message */
   chatNotificationRareSrc: '/sounds/rare-sound.m4a',
 } as const;

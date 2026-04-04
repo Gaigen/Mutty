@@ -3,7 +3,7 @@ import '@livekit/components-styles'
 import { type RoomOptions, DisconnectReason } from 'livekit-client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Settings } from 'lucide-react';
-import { config, appConfig } from '../../config';
+import { getServerConfig, appConfig } from '../../config';
 import { useAudioSettings, getAudioSettings } from '../../hooks/useAudioSettings';
 import { getCameraSettings } from '../../hooks/useCameraSettings';
 import { getScreenShareSettings } from '../../hooks/useScreenShareSettings';
@@ -154,8 +154,27 @@ function HotkeyListener() {
 }
 
 export default function LiveKitRoomComponent({ roomName, identity: providedIdentity, avatar, onLeave }: LiveKitRoomProps) {
-  const defaultServerUrl = config.livekitUrl;
-  const tokenEndpoint = config.tokenEndpoint;
+  const serverConfig = getServerConfig();
+  const defaultServerUrl = serverConfig?.livekitUrl ?? '';
+  const tokenEndpoint = serverConfig?.tokenEndpoint ?? '';
+
+  if (!serverConfig) {
+    return (
+      <div className="flex items-center justify-center h-full text-white">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl text-yellow-400">No server configured</h2>
+          <p className="text-gray-300 text-sm">Please set up your server URL on the home page.</p>
+          <button
+            type="button"
+            className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500 transition"
+            onClick={onLeave}
+          >
+            Back to home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Identity is set on mount. RoomPage passes identity from URL,
   // so providedIdentity is stable within a room session.

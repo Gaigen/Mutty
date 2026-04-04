@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
-import { config, appConfig, BOT_IDENTITY } from '../../config';
+import { getServerConfig, appConfig, BOT_IDENTITY } from '../../config';
 import {
   getParticipantVolume,
   useParticipantVolumes,
@@ -421,7 +421,9 @@ export default function AgentControls({ roomName }: Props) {
     setAgentState('loading-join');
     setError(null);
     try {
-      const res = await fetch(config.dispatchEndpoint, {
+      const serverConfig = getServerConfig();
+      const dispatchEndpoint = serverConfig?.dispatchEndpoint ?? '';
+      const res = await fetch(dispatchEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ room: roomName }),

@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react';
 import { Check, UserPlus } from 'lucide-react';
-import { AVATAR_IDS, LS_KEYS, config } from '../../config';
+import { AVATAR_IDS, LS_KEYS, getServerConfig } from '../../config';
 import { generateRandomNickname } from '../../utils/randomNickname';
 
 function getWebAppUrl(): string {
   const saved = localStorage.getItem(LS_KEYS.webAppUrl);
   if (saved) return saved;
-  return import.meta.env.VITE_WEB_APP_URL || config.webAppUrl;
+  const serverConfig = getServerConfig();
+  if (serverConfig) return serverConfig.webAppUrl;
+  return import.meta.env.VITE_WEB_APP_URL || '';
 }
 
 export function InviteRoomButton({ roomName }: { roomName: string }) {
