@@ -7,6 +7,7 @@ use tauri::{
     AppHandle, Manager,
 };
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 /// Shared state for tray icon management.
 pub struct TrayState {
@@ -292,6 +293,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .setup(|app| {
             #[cfg(target_os = "windows")]
             {
@@ -397,6 +399,7 @@ fn main() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
+                let _ = window.app_handle().save_window_state(StateFlags::all());
                 let _ = window.hide();
             }
         })

@@ -14,6 +14,7 @@
     "core:window:allow-set-focus",
     "core:window:allow-is-visible",
     "shell:allow-open",
-    "notification:default"
+    "notification:default",
+    "window-state:default"
   ]
 }

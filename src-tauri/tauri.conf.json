@@ -16,6 +16,7 @@
         "title": "LiveKit Screen Share",
         "width": 1280,
         "height": 800,
+        "visible": false,
         "resizable": true,
         "dragDropEnabled": false
       }
