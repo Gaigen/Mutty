@@ -690,3 +690,151 @@ body {
 .mutty-cb [data-lk-start-media-button][data-lk-media-unresolved] {
   display: flex;
 }
+
+/* ── Burger menu (overflow controls) ────────────────────────────────────── */
+
+.mutty-burger-trigger {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e2e8f0 !important;
+  border: none !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+
+.mutty-burger-trigger:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.mutty-burger-trigger[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.mutty-burger-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.mutty-burger-dropdown {
+  width: 180px;
+  background: var(--lk-bg2, #1e1e1e);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  z-index: 9999;
+  animation: mutty-burger-fade 0.15s ease-out;
+  padding: 4px;
+}
+
+@keyframes mutty-burger-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mutty-burger-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.5rem 0.5rem;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+  border-radius: 6px;
+}
+
+.mutty-burger-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mutty-burger-item:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mutty-burger-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  color: #94a3b8;
+}
+
+.mutty-burger-item-label {
+  font-size: 13px;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mutty-burger-item.mutty-burger-danger {
+  color: #ef4444;
+}
+
+.mutty-burger-item.mutty-burger-danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.mutty-burger-item.mutty-burger-danger .mutty-burger-item-icon {
+  color: #ef4444;
+}
+
+.mutty-burger-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}
+
+.mutty-burger-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+}
+
+.mutty-burger-right .mutty-cb-secondary {
+  background: none !important;
+  padding: 0 !important;
+  gap: 4px !important;
+}
+
+.mutty-burger-right > .lk-button,
+.mutty-burger-right > div > .lk-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #94a3b8 !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-burger-right > .lk-button:hover,
+.mutty-burger-right > div > .lk-button:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: #e2e8f0 !important;
+}
