@@ -4,10 +4,45 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>livekit-tauri</title>
+    <title>Mutty</title>
+    <style>
+      body { margin: 0; background: #030712; }
+      #splash {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+      #splash .logo {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(to right, #3b82f6, #9333ea);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1rem;
+      }
+      #splash .spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 2px solid #3b82f6;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="splash">
+        <div class="logo">Mutty</div>
+        <div class="spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
