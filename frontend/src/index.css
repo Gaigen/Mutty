@@ -16,6 +16,12 @@ body {
 .lk-focus-layout-wrapper,
 .lk-grid-layout-wrapper {
   min-height: 0;
+  min-width: 0;
+}
+
+.lk-video-conference {
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .lk-focus-layout-container,
