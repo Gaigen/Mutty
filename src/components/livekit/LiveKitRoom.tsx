@@ -18,6 +18,7 @@ import SoundHandler from './SoundHandler';
 import StreamSettings from './StreamSettings';
 import { VideoConferenceWithVolume } from './VideoConferenceWithVolume';
 import { useHotkeySettings } from '../../hooks/useHotkeySettings';
+import { playMicMuteSound, playMicUnmuteSound } from '../../utils/sounds';
 import { TrayStateSync } from './TrayStateSync';
 
 interface LiveKitRoomProps {
@@ -115,7 +116,10 @@ function HotkeyListener() {
         const { listen } = await import('@tauri-apps/api/event');
         unlistenMic = await listen('global-hotkey-mic', () => {
           if (cleanup) return;
-          localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled);
+          const wasEnabled = localParticipant.isMicrophoneEnabled;
+          localParticipant.setMicrophoneEnabled(!wasEnabled);
+          if (wasEnabled) playMicMuteSound();
+          else playMicUnmuteSound();
         });
         unlistenFullMute = await listen('global-hotkey-full-mute', () => {
           if (cleanup) return;
@@ -126,7 +130,10 @@ function HotkeyListener() {
         const handler = (e: KeyboardEvent) => {
           if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
           if (matchesHotkey(e, settings.toggleMicrophone)) {
-            localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled);
+            const wasEnabled = localParticipant.isMicrophoneEnabled;
+            localParticipant.setMicrophoneEnabled(!wasEnabled);
+            if (wasEnabled) playMicMuteSound();
+            else playMicUnmuteSound();
           } else if (matchesHotkey(e, settings.toggleFullMute)) {
             toggleAudioMuted();
           }

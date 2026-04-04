@@ -57,3 +57,49 @@ export function playLeaveSound() {
     // ignore
   }
 }
+
+/** Short low beep — mic muted */
+export function playMicMuteSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    playNote(ctx, 330, t, 0.10, 0.12, 'sine'); // E4
+  } catch {
+    // ignore
+  }
+}
+
+/** Short high beep — mic unmuted */
+export function playMicUnmuteSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    playNote(ctx, 660, t, 0.10, 0.12, 'sine'); // E5
+  } catch {
+    // ignore
+  }
+}
+
+/** Two low beeps — full mute (all incoming audio muted) */
+export function playFullMuteSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    playNote(ctx, 294, t,        0.08, 0.10, 'triangle'); // D4
+    playNote(ctx, 262, t + 0.09, 0.15, 0.10, 'triangle'); // C4
+  } catch {
+    // ignore
+  }
+}
+
+/** Two high beeps — full unmute */
+export function playFullUnmuteSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    playNote(ctx, 523, t,        0.08, 0.10, 'triangle'); // C5
+    playNote(ctx, 659, t + 0.09, 0.15, 0.10, 'triangle'); // E5
+  } catch {
+    // ignore
+  }
+}
