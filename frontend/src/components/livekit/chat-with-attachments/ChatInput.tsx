@@ -45,6 +45,11 @@ export function ChatInput({
     ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
   }, []);
 
+  // Reset textarea height when textValue is cleared (e.g. after submit)
+  React.useLayoutEffect(() => {
+    if (textValue === '') adjustHeight();
+  }, [textValue, adjustHeight]);
+
   // Restore focus when chat reopens
   React.useLayoutEffect(() => {
     const ta = textareaRef.current;
