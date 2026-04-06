@@ -116,3 +116,15 @@ export function playScreenShareSound() {
     // ignore
   }
 }
+
+/** Two-note descending soft chime — screen share ended */
+export function playScreenShareStopSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    playNote(ctx, 554, t,        0.08, 0.10, 'triangle'); // C#5
+    playNote(ctx, 440, t + 0.10, 0.15, 0.12, 'triangle'); // A4
+  } catch {
+    // ignore
+  }
+}

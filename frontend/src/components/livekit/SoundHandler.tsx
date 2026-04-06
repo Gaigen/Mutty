@@ -2,7 +2,7 @@ import { useRoomContext } from '@livekit/components-react';
 import { RoomEvent, Track, type LocalTrackPublication, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from 'livekit-client';
 import { useCallback, useEffect, useRef } from 'react';
 import { useAudioSettings } from '../../hooks/useAudioSettings';
-import { playJoinSound, playLeaveSound, playScreenShareSound } from '../../utils/sounds';
+import { playJoinSound, playLeaveSound, playScreenShareSound, playScreenShareStopSound } from '../../utils/sounds';
 
 /**
  * Невидимый компонент: воспроизводит звук при входе/выходе участников
@@ -22,8 +22,11 @@ export default function SoundHandler() {
   }, [settings.joinLeaveSounds]);
 
   const handleScreenShareStop = useCallback((identity: string) => {
+    if (screenShareActiveRef.current.has(identity)) {
+      if (settings.joinLeaveSounds) playScreenShareStopSound();
+    }
     screenShareActiveRef.current.delete(identity);
-  }, []);
+  }, [settings.joinLeaveSounds]);
 
   // Check existing participants for active screen shares on mount
   const scanExistingScreenShares = useCallback(() => {
