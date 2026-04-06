@@ -103,3 +103,16 @@ export function playMicUnmuteSound() {
     // ignore
   }
 }
+
+/** Three-note ascending chime — someone started screen sharing */
+export function playScreenShareSound() {
+  try {
+    const ctx = getAudioContext();
+    const t = ctx.currentTime;
+    playNote(ctx, 440, t,        0.08, 0.10, 'triangle'); // A4
+    playNote(ctx, 554, t + 0.08, 0.08, 0.12, 'triangle'); // C#5
+    playNote(ctx, 659, t + 0.16, 0.18, 0.16, 'triangle'); // E5
+  } catch {
+    // ignore
+  }
+}
