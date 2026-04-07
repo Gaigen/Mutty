@@ -61,15 +61,6 @@ async function syncMinimizeToTray(enabled: boolean) {
   }
 }
 
-async function loadMinimizeToTrayFromTauri(): Promise<boolean | null> {
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    return await invoke<boolean>('get_minimize_to_tray');
-  } catch {
-    return null;
-  }
-}
-
 let currentSettings: AppSettings = { ...DEFAULT_SETTINGS };
 const listeners = new Set<(settings: AppSettings) => void>();
 
@@ -80,15 +71,12 @@ export function useAppSettings() {
     loadSettings().then((s) => {
       currentSettings = s;
       setSettingsState(s);
+      // Sync loaded values to Tauri/Rust state
+      syncMinimizeToTray(s.minimizeToTray);
       Promise.all([
-        loadMinimizeToTrayFromTauri(),
         loadAutostartFromTauri(),
-      ]).then(([trayVal, autoVal]) => {
+      ]).then(([autoVal]) => {
         let changed = false;
-        if (trayVal !== null) {
-          currentSettings = { ...currentSettings, minimizeToTray: trayVal };
-          changed = true;
-        }
         if (autoVal !== null) {
           currentSettings = { ...currentSettings, autostart: autoVal };
           changed = true;
