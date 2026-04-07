@@ -39,7 +39,7 @@ Core components:
 
 -   **Frontend** -- UI and user interaction, React based
 -   **LiveKit Server** -- Real-time voice infrastructure
--   **Token server** -- LiveKit related module, responsible for retrieving tokens needed for rooms
+-   **Backend** (`backend/`) -- token server for LiveKit (room tokens, agent dispatch); run locally with `npm run dev` from `backend/`
 -   **Agent server** -- LiveKit feature, essentially it is a bot that can play videos, music
 
 ------------------------------------------------------------------------

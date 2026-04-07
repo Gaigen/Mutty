@@ -5,3 +5,17 @@ AGENTS.md
 /.superpowers
 /docs/superpowers
 /docs/notes
+/**/node_modules
+
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+*~
+*.log
+*.log.*
+*.log.*.*
+*.log.*.*.*
+*.log.*.*.*.*
+*.log.*.*.*.*.*

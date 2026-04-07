@@ -1,0 +1,19 @@
+{
+  "name": "voice-app-backend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "livekit-server-sdk": "^2.14.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.20.6",
+    "typescript": "~5.9.3"
+  }
+}
