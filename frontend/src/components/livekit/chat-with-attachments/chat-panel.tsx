@@ -1,28 +1,21 @@
+import * as React from 'react';
 import {
   useChat,
   useLocalParticipant,
-  useMaybeLayoutContext,
   useRemoteParticipants,
-  type MessageFormatter,
 } from '@livekit/components-react';
-import * as React from 'react';
-import { playChatNotificationSound } from '../../../lib/play-chat-notification';
-import { requestNotificationPermission, sendChatNotification } from '../../../lib/notify-chat';
-import {
-  ACCEPT_IMAGES,
-  IMG_PREFIX,
-  MAX_IMAGE_BYTES,
-  MAX_TEXT_LEN,
-} from './constants';
-import { FileThumbnail } from './file-thumbnail';
-import { FullscreenImageOverlay } from './fullscreen-overlay';
-import { fileToDataUrl } from './helpers';
-import { AttachIcon, CloseIcon } from './icons';
-import { MarkdownMessage } from './markdown-message';
-import { MessageEntry } from './message-entry';
-import { LinkPreview } from './link-preview';
-import { findFirstUrl, hasMultipleUrls } from './link-preview/helpers';
-import type { ChatMessageRow, ChatWithAttachmentsProps } from './types';
+import { MAX_IMAGE_BYTES } from './constants';
+import { useChatNotifications } from '../../../hooks/useChatNotifications';
+import { useChatScroll } from '../../../hooks/useChatScroll';
+import { useUnreadMessages } from '../../../hooks/useUnreadMessages';
+import { useImageAttachments } from '../../../hooks/useImageAttachments';
+import { ChatHeader } from './ChatHeader';
+import { ChatMessageList } from './ChatMessageList';
+import { ChatDragOverlay } from './ChatDragOverlay';
+import { ChatImagePreview } from './ChatImagePreview';
+import { ChatInput } from './ChatInput';
+import { ScrollToBottomButton } from './ScrollToBottomButton';
+import type { ChatWithAttachmentsProps } from './types';
 
 export function ChatWithAttachments({
   messageFormatter,
@@ -30,28 +23,9 @@ export function ChatWithAttachments({
   onClose,
   ...props
 }: ChatWithAttachmentsProps) {
-  const ulRef = React.useRef<HTMLUListElement>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const textareaHadFocusRef = React.useRef(false);
-
-  const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
-  const [isSendingImages, setIsSendingImages] = React.useState(false);
-  const [sentCount, setSentCount] = React.useState(0);
-  const [isDragOver, setIsDragOver] = React.useState(false);
-  const [textValue, setTextValue] = React.useState('');
-
-  const atBottomRef = React.useRef(true);
-  const [atBottom, setAtBottom] = React.useState(true);
-  const [newMsgCount, setNewMsgCount] = React.useState(0);
-
-  const layoutContext = useMaybeLayoutContext();
-  const lastReadMsgAt = React.useRef(0);
-
-  const { chatMessages, send, isSending } = useChat();
-  const prevChatLenForSoundRef = React.useRef<number | null>(null);
   const [fullscreenImage, setFullscreenImage] = React.useState<string | null>(null);
 
+  const { chatMessages } = useChat();
   const localParticipant = useLocalParticipant();
   const remoteParticipants = useRemoteParticipants();
 
@@ -70,479 +44,75 @@ export function ChatWithAttachments({
     return map;
   }, [localParticipant.localParticipant, remoteParticipants]);
 
-  React.useEffect(() => {
-    requestNotificationPermission();
-  }, []);
+  // ── Hooks ──────────────────────────────────────────────────────────────
+  useChatNotifications({ chatMessages, avatarMap });
 
-  React.useEffect(() => {
-    const len = chatMessages.length;
-    if (prevChatLenForSoundRef.current === null) {
-      prevChatLenForSoundRef.current = len;
-      return;
-    }
-    if (len > prevChatLenForSoundRef.current) {
-      const added = chatMessages.slice(prevChatLenForSoundRef.current);
-      const remoteMsgs = added.filter((m) => !m.from?.isLocal);
-      if (remoteMsgs.length > 0) {
-        playChatNotificationSound();
-        const msg = remoteMsgs[remoteMsgs.length - 1];
-        const sender = msg.from?.name || msg.from?.identity || 'Unknown';
-        const body = msg.message ?? '';
-        const avatar = avatarMap.get(msg.from?.identity ?? '') || undefined;
-        const icon = avatar ? `/avatars/${avatar}.svg` : undefined;
-        sendChatNotification(sender, body, icon);
-      }
-    }
-    prevChatLenForSoundRef.current = len;
-  }, [chatMessages, avatarMap]);
+  const { ulRef, atBottom, newMsgCount, scrollToBottom, handleScroll } =
+    useChatScroll(chatMessages);
+
+  useUnreadMessages(chatMessages);
+
+  const imageAtt = useImageAttachments(enableAttachments);
 
   const openFullscreen = React.useCallback((src: string) => setFullscreenImage(src), []);
   const closeFullscreen = React.useCallback(() => setFullscreenImage(null), []);
-
-  const effectiveFormatter: MessageFormatter = React.useCallback(
-    (message: string) => {
-      if (message.startsWith(IMG_PREFIX)) {
-        return (
-          <button
-            type="button"
-            className="chat-shared-image-trigger"
-            onClick={() => openFullscreen(message)}
-            aria-label="Open image fullscreen"
-          >
-            <img
-              src={message}
-              alt="Shared image"
-              className="chat-shared-image-thumb"
-            />
-          </button>
-        );
-      }
-      if (messageFormatter) return messageFormatter(message);
-      const url = findFirstUrl(message);
-      const multiple = hasMultipleUrls(message);
-      return (
-        <div className="chat-message-content">
-          <MarkdownMessage content={message} />
-          {url && !multiple && <LinkPreview url={url} />}
-        </div>
-      );
-    },
-    [messageFormatter, openFullscreen],
-  );
-
-  const addImageFiles = React.useCallback((files: File[]) => {
-    const valid: File[] = [];
-    for (const f of files) {
-      if (!f.type.startsWith('image/')) continue;
-      if (f.size > MAX_IMAGE_BYTES) {
-        alert(`File "${f.name}" is too large. Maximum ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.`);
-        continue;
-      }
-      valid.push(f);
-    }
-    if (valid.length > 0) setPendingFiles((prev) => [...prev, ...valid]);
-  }, []);
-
-  const onFileChange = React.useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      addImageFiles(Array.from(e.target.files ?? []));
-      e.target.value = '';
-    },
-    [addImageFiles],
-  );
-
-  const removePending = React.useCallback(
-    (idx: number) => setPendingFiles((prev) => prev.filter((_, i) => i !== idx)),
-    [],
-  );
-
-  const handleDragEnter = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true);
-  }, []);
-
-  const handleDragOver = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'copy';
-    if (e.dataTransfer.types.includes('Files')) setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-      setIsDragOver(false);
-    }
-  }, []);
-
-  const handleDrop = React.useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragOver(false);
-      addImageFiles(Array.from(e.dataTransfer.files));
-    },
-    [addImageFiles],
-  );
-
-  const handlePaste = React.useCallback(
-    (e: React.ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const imageFiles: File[] = [];
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (file) imageFiles.push(file);
-        }
-      }
-      if (imageFiles.length > 0) {
-        e.preventDefault();
-        addImageFiles(imageFiles);
-      }
-    },
-    [addImageFiles],
-  );
-
-  const handleSubmit = React.useCallback(
-    async (e?: React.FormEvent) => {
-      e?.preventDefault();
-      const text = textValue.trim();
-      const files = [...pendingFiles];
-      if (!text && files.length === 0) return;
-      if (text.length > MAX_TEXT_LEN) return;
-
-      try {
-        setIsSendingImages(files.length > 0);
-        setSentCount(0);
-        if (text) await send(text);
-        for (let i = 0; i < files.length; i++) {
-          await send(await fileToDataUrl(files[i]));
-          setSentCount(i + 1);
-        }
-        setTextValue('');
-        setPendingFiles([]);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        if (textareaRef.current) textareaRef.current.style.height = 'auto';
-        textareaRef.current?.focus();
-      } catch (err) {
-        console.error('[Chat] Send failed:', err);
-      } finally {
-        setIsSendingImages(false);
-        setSentCount(0);
-      }
-    },
-    [send, pendingFiles, textValue],
-  );
-
-  const adjustHeight = React.useCallback(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
-  }, []);
-
-  const scrollToBottom = React.useCallback(() => {
-    ulRef.current?.scrollTo({ top: ulRef.current.scrollHeight, behavior: 'smooth' });
-    setNewMsgCount(0);
-    atBottomRef.current = true;
-    setAtBottom(true);
-  }, []);
-
-  const handleScroll = React.useCallback(() => {
-    const ul = ulRef.current;
-    if (!ul) return;
-    const isAtBottom = ul.scrollHeight - ul.scrollTop - ul.clientHeight < 64;
-    atBottomRef.current = isAtBottom;
-    setAtBottom(isAtBottom);
-    if (isAtBottom) setNewMsgCount(0);
-  }, []);
-
-  React.useEffect(() => {
-    if (atBottomRef.current) {
-      ulRef.current?.scrollTo({ top: ulRef.current.scrollHeight });
-      setNewMsgCount(0);
-    } else {
-      setNewMsgCount((n) => n + 1);
-    }
-  }, [chatMessages]);
-
-  React.useEffect(() => {
-    if (!layoutContext || chatMessages.length === 0) return;
-    if (
-      layoutContext.widget.state?.showChat &&
-      chatMessages.length > 0 &&
-      lastReadMsgAt.current !== chatMessages[chatMessages.length - 1]?.timestamp
-    ) {
-      lastReadMsgAt.current = chatMessages[chatMessages.length - 1]?.timestamp ?? 0;
-      return;
-    }
-    const unread = chatMessages.filter(
-      (msg) => !lastReadMsgAt.current || (msg.timestamp ?? 0) > lastReadMsgAt.current
-    ).length;
-    if (unread > 0 && layoutContext.widget.state?.unreadMessages !== unread) {
-      layoutContext.widget.dispatch?.({ msg: 'unread_msg', count: unread });
-    }
-  }, [chatMessages, layoutContext?.widget]);
-
-  React.useLayoutEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta || !textareaHadFocusRef.current || ta.disabled) return;
-    if (
-      document.activeElement !== ta &&
-      (document.activeElement === document.body || document.activeElement === document.documentElement)
-    ) {
-      ta.focus();
-    }
-  });
-
-  const busy = isSending || isSendingImages;
-  const overLimit = textValue.length > MAX_TEXT_LEN;
-  const nearLimit = textValue.length > MAX_TEXT_LEN * 0.85;
 
   return (
     <div
       className="lk-chat"
       {...props}
       style={{ position: 'relative', ...(props.style ?? {}) }}
-      onDragEnter={enableAttachments ? handleDragEnter : undefined}
-      onDragOver={enableAttachments ? handleDragOver : undefined}
-      onDragLeave={enableAttachments ? handleDragLeave : undefined}
-      onDrop={enableAttachments ? handleDrop : undefined}
+      onDragEnter={imageAtt.handleDragEnter}
+      onDragOver={imageAtt.handleDragOver}
+      onDragLeave={imageAtt.handleDragLeave}
+      onDrop={imageAtt.handleDrop}
     >
-      {isDragOver && enableAttachments && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 50,
-            background: 'rgba(99,102,241,0.22)',
-            border: '2px dashed rgba(99,102,241,0.85)',
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-          }}
-        >
-          <span
-            style={{
-              color: 'white',
-              fontSize: 15,
-              fontWeight: 600,
-              textShadow: '0 1px 6px rgba(0,0,0,0.8)',
-            }}
-          >
-            Drop image to send
-          </span>
-        </div>
-      )}
+      <ChatDragOverlay isDragOver={imageAtt.isDragOver} />
 
-      <div className="lk-chat-header">
-        <span className="lk-chat-header-title">Messages</span>
-        {onClose && (
-          <div
-            className="lk-chat-close-button"
-            onClick={onClose}
-            role="button"
-            aria-label="Close chat"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
-          >
-            <CloseIcon />
-          </div>
-        )}
-      </div>
+      <ChatHeader onClose={onClose} />
 
-      <ul className="lk-list lk-chat-messages" ref={ulRef} onScroll={handleScroll}>
-        {chatMessages.map((msg, idx, allMsg) => {
-          const hideName = idx >= 1 && allMsg[idx - 1].from === msg.from;
-          const hideTimestamp =
-            idx >= 1 && (msg.timestamp ?? 0) - (allMsg[idx - 1].timestamp ?? 0) < 60_000;
-          const hideAvatar = idx < allMsg.length - 1 && allMsg[idx + 1].from === msg.from;
-          return (
-            <MessageEntry
-              key={msg.id ?? idx}
-              msg={msg as ChatMessageRow}
-              hideName={hideName}
-              hideTimestamp={hideTimestamp}
-              hideAvatar={hideAvatar}
-              formatter={effectiveFormatter}
-              avatarMap={avatarMap}
-            />
-          );
-        })}
-      </ul>
+      <ChatMessageList
+        messages={chatMessages}
+        avatarMap={avatarMap}
+        customFormatter={messageFormatter}
+        onOpenFullscreen={openFullscreen}
+        fullscreenImage={fullscreenImage}
+        onCloseFullscreen={closeFullscreen}
+        listRef={ulRef}
+        onScroll={handleScroll}
+      />
 
       {!atBottom && (
-        <button
-          type="button"
+        <ScrollToBottomButton
           onClick={scrollToBottom}
-          style={{
-            position: 'absolute',
-            bottom: pendingFiles.length > 0 ? 120 : 58,
-            right: 10,
-            zIndex: 10,
-            background: 'rgba(20,20,20,0.92)',
-            border: '1px solid rgba(255,255,255,0.18)',
-            borderRadius: 14,
-            color: 'rgba(255,255,255,0.9)',
-            fontSize: 12,
-            fontWeight: 500,
-            padding: '4px 11px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            backdropFilter: 'blur(6px)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-          }}
-          aria-label="Scroll to latest message"
-        >
-          ↓{newMsgCount > 0 && <span style={{ color: '#818cf8' }}>{newMsgCount} new</span>}
-        </button>
+          newMsgCount={newMsgCount}
+          pendingFileCount={imageAtt.pendingFiles.length}
+        />
       )}
 
-      {pendingFiles.length > 0 && (
-        <div
-          style={{
-            padding: '6px 8px',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 6,
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            position: 'relative',
-          }}
-        >
-          {pendingFiles.map((f, i) => {
-            const isSent = isSendingImages && i < sentCount;
-            return (
-              <div
-                key={i}
-                style={{
-                  opacity: isSent ? 0.3 : 1,
-                  transition: 'opacity 0.2s ease',
-                  pointerEvents: isSendingImages ? 'none' : 'auto',
-                }}
-              >
-                <FileThumbnail file={f} onRemove={() => removePending(i)} />
-              </div>
-            );
-          })}
-          {isSendingImages && sentCount < pendingFiles.length && (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'rgba(0,0,0,0.6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 6,
-              backdropFilter: 'blur(2px)',
-              zIndex: 2,
-            }}>
-              <span style={{ color: '#fff', fontSize: 12, fontWeight: 500 }}>
-                Sending {sentCount + 1}/{pendingFiles.length}…
-              </span>
-            </div>
-          )}
-        </div>
-      )}
+      <ChatImagePreview
+        files={imageAtt.pendingFiles}
+        isSendingImages={imageAtt.isSendingImages}
+        sentCount={imageAtt.sentCount}
+        onRemove={imageAtt.removePending}
+      />
 
-      <form
-        className="lk-chat-form"
-        onSubmit={handleSubmit}
-        style={{ position: 'relative', alignItems: 'flex-end' }}
-      >
-        {enableAttachments && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPT_IMAGES}
-              multiple
-              onChange={onFileChange}
-              style={{ display: 'none' }}
-              aria-hidden
-            />
-            <button
-              type="button"
-              className="lk-button chat-attach-button"
-              onClick={() => fileInputRef.current?.click()}
-              title={`Attach image (max ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB)`}
-              disabled={busy}
-              aria-label="Attach image"
-            >
-              <AttachIcon size={22} />
-            </button>
-          </>
-        )}
-
-        <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
-          <textarea
-            ref={textareaRef}
-            className="lk-form-control lk-chat-form-input"
-            placeholder="Message…"
-            disabled={busy}
-            value={textValue}
-            rows={1}
-            style={{
-              resize: 'none',
-              overflowY: 'auto',
-              lineHeight: '1.45',
-              boxSizing: 'border-box',
-              width: '100%',
-              paddingBottom: nearLimit ? '18px' : undefined,
-              borderColor: overLimit ? 'rgba(239,68,68,0.6)' : undefined,
-            }}
-            onChange={(e) => {
-              setTextValue(e.target.value);
-              adjustHeight();
-            }}
-            onFocus={() => { textareaHadFocusRef.current = true; }}
-            onBlur={() => { textareaHadFocusRef.current = false; }}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!overLimit) handleSubmit();
-              }
-            }}
-            onKeyUp={(e) => e.stopPropagation()}
-            onPaste={enableAttachments ? handlePaste : undefined}
-          />
-          {nearLimit && (
-            <span
-              style={{
-                position: 'absolute',
-                bottom: 3,
-                right: 6,
-                fontSize: 10,
-                color: overLimit ? '#ef4444' : 'rgba(255,255,255,0.35)',
-                pointerEvents: 'none',
-                lineHeight: 1,
-              }}
-            >
-              {textValue.length}/{MAX_TEXT_LEN}
-            </span>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          className="lk-button lk-chat-form-button"
-          disabled={busy || overLimit}
-          style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1 }}
-        >
-          {isSendingImages ? '…' : 'Send'}
-        </button>
-      </form>
-
-      {fullscreenImage && (
-        <FullscreenImageOverlay src={fullscreenImage} onClose={closeFullscreen} />
-      )}
+      <ChatInput
+        textValue={imageAtt.textValue}
+        onTextChange={imageAtt.setTextValue}
+        onSubmit={imageAtt.handleSubmit}
+        onPaste={imageAtt.handlePaste}
+        onAttachClick={() => imageAtt.fileInputRef.current?.click()}
+        onFileChange={imageAtt.onFileChange}
+        fileInputRef={imageAtt.fileInputRef}
+        busy={imageAtt.busy}
+        overLimit={imageAtt.overLimit}
+        nearLimit={imageAtt.nearLimit}
+        enableAttachments={imageAtt.enableAttachments}
+        acceptImages={imageAtt.ACCEPT_IMAGES}
+        maxImageMB={Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}
+        isSendingImages={imageAtt.isSendingImages}
+      />
     </div>
   );
 }

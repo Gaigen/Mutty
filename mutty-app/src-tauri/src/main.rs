@@ -220,6 +220,21 @@ struct TrayStateUpdate {
 }
 
 #[tauri::command]
+fn set_minimize_to_tray(app: AppHandle, enabled: bool) {
+    if let Ok(mut state) = app.state::<Arc<Mutex<bool>>>().lock() {
+        *state = enabled;
+    }
+}
+
+#[tauri::command]
+fn get_minimize_to_tray(app: AppHandle) -> bool {
+    app.state::<Arc<Mutex<bool>>>()
+        .lock()
+        .map(|s| *s)
+        .unwrap_or(true)
+}
+
+#[tauri::command]
 fn set_tray_state(app: AppHandle, state: TrayStateUpdate) {
     let tray_state = match app.try_state::<Arc<Mutex<TrayState>>>() {
         Some(s) => s,
@@ -299,10 +314,6 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
-        .plugin(tauri_plugin_autostart::init(
-            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            Some(vec![]),
-        ))
         .setup(|app| {
             #[cfg(target_os = "windows")]
             {
@@ -364,7 +375,7 @@ fn main() {
                         }
                     }
                     "quit" => {
-                        std::process::exit(0);
+                        app_handle.exit(0);
                     }
                     "mute" => {
                         if let Some(window) = app_handle.get_webview_window("main") {
@@ -395,6 +406,9 @@ fn main() {
                 is_muted: false,
             })));
 
+            // Minimize-to-tray toggle (default: true)
+            app.manage(Arc::new(Mutex::new(true)));
+
             // Store tray reference
             app.manage(Arc::new(Mutex::new(tray)));
 
@@ -404,12 +418,22 @@ fn main() {
             update_global_hotkeys,
             send_native_notification,
             set_tray_state,
+            set_minimize_to_tray,
+            get_minimize_to_tray,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.app_handle().save_window_state(StateFlags::all());
-                let _ = window.hide();
+                let minimize = window
+                    .app_handle()
+                    .try_state::<Arc<Mutex<bool>>>()
+                    .and_then(|s| s.lock().ok().map(|v| *v))
+                    .unwrap_or(true);
+
+                if minimize {
+                    api.prevent_close();
+                    let _ = window.app_handle().save_window_state(StateFlags::all());
+                    let _ = window.hide();
+                }
             }
         })
         .run(tauri::generate_context!())

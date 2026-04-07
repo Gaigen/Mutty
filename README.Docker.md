@@ -188,9 +188,12 @@ Voice-app/
 ├── docker-compose.yml          # Production конфигурация
 ├── docker-compose.dev.yml      # Development конфигурация
 ├── .env.example                # Пример переменных окружения
+├── backend/
+│   ├── Dockerfile              # Token server (расширяемый backend)
+│   ├── src/index.ts
+│   └── package.json
 ├── frontend/
 │   ├── Dockerfile              # Сборка frontend (nginx)
-│   ├── Dockerfile.token-server # Token server
 │   ├── nginx.conf              # Конфигурация nginx
 │   └── .dockerignore
 └── livekit/

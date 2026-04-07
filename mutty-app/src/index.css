@@ -9,6 +9,11 @@ body {
   @apply bg-gray-900 text-white;
 }
 
+/* Hide scrollbars on chat textarea */
+.lk-chat-form-input::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── LiveKit: исправление отображения видео при разных размерах окна и в фокусе ── */
 
 /* Flex-дети должны иметь min-height: 0 иначе overflow при ресайзе */
@@ -855,6 +860,12 @@ body {
 .mutty-cb-secondary > div > button.lk-button:hover {
   background: rgba(255, 255, 255, 0.10) !important;
   color: #94a3b8 !important;
+}
+
+/* Agent dropdown max-height */
+.mutty-agent-dropdown {
+  max-height: calc(100vh - 100px) !important;
+  overflow-y: auto !important;
 }
 
 /* Agent dropdown: only undo fixed box from .mutty-cb .lk-button (do not use unset — inline styles must win) */

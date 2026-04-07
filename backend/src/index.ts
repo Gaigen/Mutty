@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Загружаем .env: сначала корень проекта, потом frontend/ (для npm run dev:token)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -102,6 +101,11 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   const url = req.url ? new URL(req.url, `http://${req.headers.host}`) : null;
 
+  if (req.method === 'GET' && url?.pathname === '/health') {
+    sendJson(res, 200, { ok: true }, reqOrigin);
+    return;
+  }
+
   if (req.method === 'POST' && url?.pathname === '/api/agent/dispatch') {
     let data = '';
     req.on('data', (chunk) => {
@@ -171,7 +175,6 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 });
 
 server.listen(port, host, () => {
-  console.log(`LiveKit dev token server on http://${host}:${port}`);
+  console.log(`Backend (token server) on http://${host}:${port}`);
   console.log(`Using LiveKit URL ${LIVEKIT_WS_URL}`);
 });
-

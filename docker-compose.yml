@@ -2,12 +2,13 @@ services:
   # LiveKit сервер
   livekit:
     # v1.8.2+ требуется для byte streams (картинки в чате)
-    image: livekit/livekit-server:v1.9.12
+    image: livekit/livekit-server:latest
     container_name: voice-app-livekit
     ports:
       - "7880:7880"
       - "7881:7881"
-      - "50100-50200:50100-50200/udp"
+      - "7882:7882"
+      # - "50100-50200:50100-50200/udp"
     volumes:
       - ./livekit/livekit.prod.yaml:/etc/livekit.yaml:ro
     command: --config /etc/livekit.yaml
@@ -22,8 +23,8 @@ services:
   # LIVEKIT_WS_URL — URL, который отдаётся БРАУЗЕРУ в ответе (должен быть localhost или твой домен)
   token-server:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.token-server
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: voice-app-token-server
     ports:
       - "4000:4000"
@@ -33,16 +34,21 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
       - LIVEKIT_WS_URL=${LIVEKIT_WS_URL:-ws://localhost:7880}
-      - LIVEKIT_API_URL=http://livekit:7880
-      - TOKEN_CORS_ORIGINS=${TOKEN_CORS_ORIGINS:-}
     depends_on:
       - livekit
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/api/token"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 15s
 
   # YouTube Bot — LiveKit Agent Server (dispatch-based)
   agent-server:
@@ -79,9 +85,15 @@ services:
     ports:
       - "1420:80"
     depends_on:
-      - token-server
-      - livekit
-      - agent-server
+      token-server:
+        condition: service_healthy
+        required: true
+      livekit:
+        condition: service_healthy
+        required: true
+      agent-server:
+        condition: service_started
+        required: false
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]

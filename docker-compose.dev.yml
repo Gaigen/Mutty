@@ -20,14 +20,13 @@ services:
   # Token server для разработки (с hot reload через nodemon/tsx watch)
   token-server:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.token-server
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: voice-app-token-server-dev
     ports:
       - "4000:4000"
     volumes:
-      # Монтируем исходники для hot reload
-      - ./frontend/scripts:/app/scripts:ro
+      - ./backend/src:/app/src:ro
     environment:
       - TOKEN_SERVER_PORT=4000
       - TOKEN_SERVER_HOST=0.0.0.0
@@ -40,7 +39,7 @@ services:
     networks:
       - voice-app-network
     # Для dev можно использовать nodemon или tsx watch
-    command: npx tsx watch scripts/dev-token-server.ts
+    command: npx tsx watch src/index.ts
 
   # Frontend для разработки (опционально, обычно запускается локально)
   # frontend:
