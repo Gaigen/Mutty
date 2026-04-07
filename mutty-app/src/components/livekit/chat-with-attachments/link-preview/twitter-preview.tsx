@@ -1,4 +1,5 @@
 import * as React from 'react';
+import DOMPurify from 'dompurify';
 import { extractTwitterInfo } from './helpers';
 
 interface OEmbedData {
@@ -6,6 +7,17 @@ interface OEmbedData {
   url: string;
   author_name: string;
   author_url: string;
+}
+
+let twitterScriptAdded = false;
+
+function ensureTwitterScript() {
+  if (twitterScriptAdded) return;
+  twitterScriptAdded = true;
+  const script = document.createElement('script');
+  script.src = 'https://platform.twitter.com/widgets.js';
+  script.async = true;
+  document.body.appendChild(script);
 }
 
 export function TwitterPreview({ url }: { url: string }) {
@@ -22,10 +34,7 @@ export function TwitterPreview({ url }: { url: string }) {
       })
       .then(d => {
         setData(d);
-        const script = document.createElement('script');
-        script.src = 'https://platform.twitter.com/widgets.js';
-        script.async = true;
-        document.body.appendChild(script);
+        ensureTwitterScript();
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -43,7 +52,7 @@ export function TwitterPreview({ url }: { url: string }) {
     <div
       className="link-preview-twitter"
       style={{ padding: 8 }}
-      dangerouslySetInnerHTML={{ __html: data.html }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.html) }}
     />
   );
 }
