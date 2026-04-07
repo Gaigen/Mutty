@@ -40,6 +40,17 @@ export function useHotkeySettings() {
     loadSettings().then((s) => {
       currentSettings = s;
       setSettingsState(s);
+      // Sync loaded hotkeys to Rust poller
+      try {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('update_global_hotkeys', {
+            micHotkey: s.toggleMicrophone,
+            fullMuteHotkey: s.toggleFullMute,
+          });
+        });
+      } catch {
+        // Tauri not available, ignore
+      }
     });
   }, []);
 
