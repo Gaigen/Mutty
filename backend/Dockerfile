@@ -15,5 +15,6 @@ ENV TOKEN_SERVER_HOST=0.0.0.0
 ENV LIVEKIT_API_KEY=devkey
 ENV LIVEKIT_API_SECRET=secret
 ENV LIVEKIT_WS_URL=ws://livekit:7880
+ENV LIVEKIT_PUBLIC_WS_URL=ws://localhost:7880
 
 CMD ["npx", "tsx", "src/index.ts"]

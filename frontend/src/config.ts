@@ -8,10 +8,7 @@ const tokenEndpoint = import.meta.env.VITE_TOKEN_ENDPOINT || 'http://127.0.0.1:4
 const tokenBase = tokenEndpoint.replace(/\/api\/token$/, '');
 
 export const config = {
-  /** LiveKit WebSocket URL */
-  livekitUrl: import.meta.env.VITE_LIVEKIT_URL || 'ws://127.0.0.1:7880',
-
-  /** Endpoint для получения токена (POST room, identity) */
+  /** Endpoint для получения токена (POST room, identity); ответ содержит wsUrl для LiveKit */
   tokenEndpoint,
 
   /** Endpoint для dispatch агента (POST room) — LiveKit Agent Server */

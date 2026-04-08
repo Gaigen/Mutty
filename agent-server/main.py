@@ -6,6 +6,9 @@ Run: python main.py dev   (development) or  python main.py start  (production)
 """
 
 import asyncio
+import os
+
+
 
 from livekit.agents import AgentServer, JobContext, JobRequest, cli
 from livekit.agents import AutoSubscribe
@@ -13,7 +16,7 @@ from livekit.agents import AutoSubscribe
 from agent import BOT_IDENTITY, BOT_NAME, YouTubeAgent
 
 AGENT_NAME = "youtube-bot"
-
+os.environ["LIVEKIT_URL"] = os.getenv("LIVEKIT_WS_URL", "ws://livekit:7880")
 server = AgentServer(num_idle_processes=1)
 
 

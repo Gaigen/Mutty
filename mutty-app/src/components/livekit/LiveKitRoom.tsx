@@ -155,7 +155,6 @@ function HotkeyListener() {
 
 export default function LiveKitRoomComponent({ roomName, identity: providedIdentity, avatar, onLeave }: LiveKitRoomProps) {
   const serverConfig = getServerConfig();
-  const defaultServerUrl = serverConfig?.livekitUrl ?? '';
   const tokenEndpoint = serverConfig?.tokenEndpoint ?? '';
 
   if (!serverConfig) {
@@ -215,14 +214,16 @@ export default function LiveKitRoomComponent({ roomName, identity: providedIdent
       if (!response.ok) throw new Error(`Token request failed with status ${response.status}`);
       const data = await response.json();
       if (!data.token) throw new Error('Token payload is empty');
-      setConnection({ token: data.token, serverUrl: data.wsUrl || defaultServerUrl });
+      const wsUrl = typeof data.wsUrl === 'string' ? data.wsUrl.trim() : '';
+      if (!wsUrl) throw new Error('Token response missing wsUrl');
+      setConnection({ token: data.token, serverUrl: wsUrl });
       setStatus('idle');
     } catch (err) {
       console.error('Failed to get LiveKit token', err);
       setError('Failed to get LiveKit token. Check that the token server is running.');
       setStatus('error');
     }
-  }, [tokenEndpoint, roomName, identity, avatar, defaultServerUrl]);
+  }, [tokenEndpoint, roomName, identity, avatar]);
 
   const handleDisconnected = useCallback((reason?: DisconnectReason) => {
     setConnection(null);

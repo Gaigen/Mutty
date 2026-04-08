@@ -25,7 +25,6 @@ export const LS_KEYS = {
 export interface ServerConfig {
   serverUrl: string;
   tokenEndpoint: string;
-  livekitUrl: string;
   webAppUrl: string;
   dispatchEndpoint: string;
 }
@@ -48,7 +47,6 @@ export function getServerConfig(): ServerConfig | null {
   return {
     serverUrl: baseUrl,
     tokenEndpoint: `${tokenBase}/api/token`,
-    livekitUrl: import.meta.env.VITE_LIVEKIT_URL || baseUrl.replace(/^http/, 'ws'),
     webAppUrl: import.meta.env.VITE_WEB_APP_URL || tokenBase,
     dispatchEndpoint: `${tokenBase}/api/agent/dispatch`,
   };

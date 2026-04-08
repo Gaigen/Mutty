@@ -11,10 +11,8 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 
 # Переменные окружения для сборки (ARG передаются только на этап сборки)
-ARG VITE_LIVEKIT_URL=ws://localhost:7880
 ARG VITE_TOKEN_ENDPOINT=http://localhost:4000/api/token
 
-ENV VITE_LIVEKIT_URL=${VITE_LIVEKIT_URL}
 ENV VITE_TOKEN_ENDPOINT=${VITE_TOKEN_ENDPOINT}
 
 # Собираем приложение

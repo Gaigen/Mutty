@@ -13,9 +13,8 @@ const {
   LIVEKIT_API_KEY = 'devkey',
   LIVEKIT_API_SECRET = 'secret',
   LIVEKIT_WS_URL = 'ws://127.0.0.1:7880',
+  LIVEKIT_PUBLIC_WS_URL = 'ws://localhost:7880',
   LIVEKIT_API_URL: _apiUrl,
-  TOKEN_SERVER_PORT = '4000',
-  TOKEN_SERVER_HOST = '127.0.0.1',
   TOKEN_CORS_ORIGINS = '',
   TOKEN_ROOM_MAX_LENGTH = '100',
   TOKEN_IDENTITY_MAX_LENGTH = '100',
@@ -25,8 +24,8 @@ const {
 const LIVEKIT_API_URL =
   _apiUrl || (process.env.LIVEKIT_WS_URL || 'ws://127.0.0.1:7880').replace(/^ws/, 'http').replace(/^wss/, 'https');
 
-const port = Number(TOKEN_SERVER_PORT);
-const host = TOKEN_SERVER_HOST;
+const port = Number(4000);
+const host = '0.0.0.0';
 
 const CORS_ORIGINS = TOKEN_CORS_ORIGINS
   ? TOKEN_CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
@@ -162,7 +161,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
         const token = await at.toJwt();
 
-        sendJson(res, 200, { token, wsUrl: LIVEKIT_WS_URL }, reqOrigin);
+        sendJson(res, 200, { token, wsUrl: LIVEKIT_PUBLIC_WS_URL }, reqOrigin);
       } catch (error) {
         console.error('token error', error);
         sendJson(res, 500, { error: 'failed to create token' }, reqOrigin);
@@ -177,4 +176,5 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 server.listen(port, host, () => {
   console.log(`Backend (token server) on http://${host}:${port}`);
   console.log(`Using LiveKit URL ${LIVEKIT_WS_URL}`);
+  console.log(`Using LiveKit Public URL ${LIVEKIT_PUBLIC_WS_URL}`);
 });
