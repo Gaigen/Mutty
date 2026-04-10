@@ -5,10 +5,12 @@ import PreviewTestPage from './pages/PreviewTestPage';
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/room/:roomName" element={<RoomPage />} />
-      <Route path="/preview-test" element={<PreviewTestPage />} />
-    </Routes>
+    <div className="min-h-screen w-full">
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/room/:roomName" element={<RoomPage />} />
+        <Route path="/preview-test" element={<PreviewTestPage />} />
+      </Routes>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  publicDir: path.resolve(__dirname, '../shared/public'),
   resolve: {
     alias: {
       '@shared': path.resolve(__dirname, '../shared/src'),
@@ -12,7 +13,7 @@ export default defineConfig({
   },
   clearScreen: false,
   server: {
-    port: 1420,
+    port: 1421,
     strictPort: true,
     host: true,
     watch: {
