@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mutty/shared": "*"
+    "@mutty/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
