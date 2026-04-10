@@ -50,7 +50,7 @@ function Switch({
         rootSizes.default,
         rootSizes.sm,
         rootStates,
-        checked ? 'bg-primary' : 'bg-input dark:bg-input/80',
+        checked ? 'bg-primary' : 'bg-gray-600 dark:bg-gray-600',
         className
       )}
       {...props}
