@@ -12,6 +12,7 @@
   "dependencies": {
     "@mutty/shared": "workspace:*",
     "@fontsource-variable/geist": "^5.2.8",
+    "@livekit/components-core": "^0.12.13",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-shell": "^2.3.5",
