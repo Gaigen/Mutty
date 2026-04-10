@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Track } from 'livekit-client';
-import { usePlatform } from '@/platform';
+import { usePlatform } from '../platform';
 
 type ParticipantVolumes = Record<string, number>;
 

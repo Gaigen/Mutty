@@ -1,5 +1,5 @@
 import type { AudioSettings } from '../../../hooks/useAudioSettings';
-import { Switch } from '@/components/ui/switch';
+import { Switch } from '../../ui/switch';
 import { SectionHeader, MicLevelBar } from './ui';
 
 interface AudioTabProps {

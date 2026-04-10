@@ -1,5 +1,5 @@
 import { Switch as SwitchPrimitive } from '@base-ui/react/switch';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 const rootBase =
   'peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2';
