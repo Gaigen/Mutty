@@ -6,6 +6,7 @@ AGENTS.md
 /docs/superpowers
 /docs/notes
 /**/node_modules
+/packages/desktop/src-tauri/target
 
 .DS_Store
 .vscode
