@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { LS_KEYS } from '../config';
-import { usePlatform } from '@/platform';
+import { usePlatform } from '../platform';
 
 export type VideoCodec = 'av1' | 'vp9' | 'h264' | 'vp8';
 export type ContentHint = 'motion' | 'detail' | 'text';

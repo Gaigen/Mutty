@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LS_KEYS } from '../config';
-import { usePlatform } from '@/platform';
+import { usePlatform } from '../platform';
 
 export interface AudioSettings {
   // Input (microphone)

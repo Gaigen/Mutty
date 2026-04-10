@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { ReceivedChatMessage } from '@livekit/components-react';
 import { playChatNotificationSound } from '../lib/play-chat-notification';
-import { usePlatform } from '@/platform';
+import { usePlatform } from '../platform';
 import { IMG_PREFIX } from '../components/livekit/chat-with-attachments/constants';
 
 interface Props {

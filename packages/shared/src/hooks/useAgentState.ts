@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { usePlatform } from '@/platform';
+import { usePlatform } from '../platform';
 import { sendControlCommand, type AgentState, type AgentStatus, type Mode, type Quality, DEFAULT_STATUS } from '../lib/agent-control';
 import { RoomEvent } from 'livekit-client';
 import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';

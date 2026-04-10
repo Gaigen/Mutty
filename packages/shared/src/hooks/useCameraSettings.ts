@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { LS_KEYS } from '../config';
-import { usePlatform } from '@/platform';
+import { usePlatform } from '../platform';
 import type { VideoCodec } from './useScreenShareSettings';
 
 export interface CameraSettings {

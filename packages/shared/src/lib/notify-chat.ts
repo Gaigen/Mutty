@@ -1,4 +1,4 @@
-import { usePlatform } from '@/platform';
+import { usePlatform } from '../platform';
 
 let _notifications: ReturnType<typeof usePlatform>['notifications'] | null = null;
 
