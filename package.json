@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "name": "mutty",
+  "workspaces": ["packages/*", "backend"]
+}
