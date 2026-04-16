@@ -1,5 +1,5 @@
 import type { NotificationAdapter } from '@shared/platform/notifications';
-import { invoke } from '@tauri-apps/api/core';
+import { sendNotification, requestPermission, isPermissionGranted } from '@tauri-apps/plugin-notification';
 
 export class TauriNotifications implements NotificationAdapter {
   isAvailable(): boolean {
@@ -7,10 +7,13 @@ export class TauriNotifications implements NotificationAdapter {
   }
 
   async requestPermission(): Promise<boolean> {
-    return true; // No permission needed on desktop
+    const granted = await isPermissionGranted();
+    if (granted) return true;
+    const result = await requestPermission();
+    return result === 'granted';
   }
 
   send(title: string, body: string): void {
-    invoke('plugin:notification|notify', { title, body }).catch(() => {});
+    sendNotification({ title, body });
   }
 }
