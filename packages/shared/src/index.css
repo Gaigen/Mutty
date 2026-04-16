@@ -26,7 +26,7 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
-  background: #1a1a1a;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -54,7 +54,7 @@ input[type="range"]::-webkit-slider-thumb:active {
 input[type="range"]::-moz-range-track {
   height: 4px;
   border-radius: 2px;
-  background: #1a1a1a;
+  background: rgba(255, 255, 255, 0.15);
   border: none;
 }
 
