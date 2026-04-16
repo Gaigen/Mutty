@@ -13,6 +13,10 @@ body {
 .lk-chat-form-input::-webkit-scrollbar {
   display: none;
 }
+.lk-chat-form-input {
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE/Edge */
+}
 
 /* ── Range input (slider) — unified thumb across all browsers/webviews ────── */
 input[type="range"] {
