@@ -1,9 +1,16 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import LiveKitRoomComponent from '../components/livekit/LiveKitRoom';
 
-export default function RoomPage() {
+export interface RoomPageProps {
+  /** Extra components rendered inside LiveKitRoom (e.g. TrayStateSync, HotkeyListener on desktop) */
+  extraComponents?: React.ReactNode;
+  /** Extra tabs for StreamSettings (e.g. hotkeys, app settings on desktop) */
+  extraSettingsTabs?: Array<{ id: string; label: string; content: React.ReactNode }>;
+}
+
+export default function RoomPage({ extraComponents, extraSettingsTabs }: RoomPageProps = {}) {
   const { roomName } = useParams<{ roomName: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -37,6 +44,8 @@ export default function RoomPage() {
           identity={identity}
           avatar={avatar}
           onLeave={() => navigate('/')}
+          extraComponents={extraComponents}
+          extraSettingsTabs={extraSettingsTabs}
         />
       </ErrorBoundary>
     </div>

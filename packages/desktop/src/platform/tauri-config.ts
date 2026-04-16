@@ -1,22 +1,22 @@
 import type { ConfigAdapter } from '@shared/platform/config';
 import type { StorageAdapter } from '@shared/platform/storage';
-
-const LS_KEYS = {
-  serverUrl: 'mutty-server-url',
-  webAppUrl: 'mutty-webapp-url',
-};
+import { LS_KEYS } from '@shared/config';
 
 export class TauriConfig implements ConfigAdapter {
   constructor(private storage: StorageAdapter) {}
 
   getTokenEndpoint(): string | null {
     const url = this.storage.get<string>(LS_KEYS.serverUrl);
-    return url ? `${url}/api/token` : null;
+    if (!url) return null;
+    const base = this.normalizeBaseUrl(url);
+    return `${base}/api/token`;
   }
 
   getDispatchEndpoint(): string | null {
     const url = this.storage.get<string>(LS_KEYS.serverUrl);
-    return url ? `${url}/api/agent/dispatch` : null;
+    if (!url) return null;
+    const base = this.normalizeBaseUrl(url);
+    return `${base}/api/agent/dispatch`;
   }
 
   getWebAppUrl(): string {
@@ -32,11 +32,21 @@ export class TauriConfig implements ConfigAdapter {
   }
 
   isValidServerUrl(url: string): boolean {
+    if (!url.trim()) return false;
+    const normalized = this.normalizeBaseUrl(url);
     try {
-      const u = new URL(url);
-      return u.protocol === 'http:' || u.protocol === 'https:';
+      const parsed = new URL(normalized);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
     } catch {
       return false;
     }
+  }
+
+  private normalizeBaseUrl(url: string): string {
+    let base = url.replace(/\/+$/, '');
+    if (base.startsWith('http://') || base.startsWith('https://')) {
+      return base;
+    }
+    return `https://${base}`;
   }
 }

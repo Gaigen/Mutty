@@ -67,12 +67,14 @@ const MemoizedChatPanel = React.memo(function ChatPanel({
   );
 
   return (
-    <ChatWithAttachments
-      className="lk-chat lk-chat-panel"
-      style={style}
-      enableAttachments={enableAttachments}
-      onClose={onClose}
-    />
+    <>
+      <ChatWithAttachments
+        className="lk-chat lk-chat-panel"
+        style={style}
+        enableAttachments={enableAttachments}
+        onClose={onClose}
+      />
+    </>
   );
 });
 
@@ -240,6 +242,16 @@ export function VideoConferenceWithVolume({
             <MemoizedControlBar controls={CONTROL_BAR_CONTROLS} rightControls={rightControls} />
           </div>
           <div
+            className="chat-resizer"
+            onMouseDown={handleResizeStart}
+            role="separator"
+            aria-orientation="vertical"
+            aria-valuenow={chatWidth}
+            aria-valuemin={CHAT_WIDTH_MIN}
+            aria-valuemax={CHAT_WIDTH_MAX}
+            style={{ display: widgetState.showChat ? 'block' : 'none' }}
+          />
+          <div
             className="chat-panel-wrapper"
             data-open={widgetState.showChat}
             data-resizing={isResizing}
@@ -255,15 +267,6 @@ export function VideoConferenceWithVolume({
               height: '100%',
             }}
           >
-            <div
-              className="chat-resizer"
-              onMouseDown={handleResizeStart}
-              role="separator"
-              aria-orientation="vertical"
-              aria-valuenow={chatWidth}
-              aria-valuemin={CHAT_WIDTH_MIN}
-              aria-valuemax={CHAT_WIDTH_MAX}
-            />
             <MemoizedChatPanel
               chatWidth={chatWidth}
               enableAttachments={appConfig.showChatAttachments}

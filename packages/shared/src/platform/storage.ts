@@ -1,5 +1,3 @@
-import { createContext, useContext } from 'react';
-
 export interface StorageAdapter {
   /** Synchronous read from cache. Returns null if not cached. */
   get<T = unknown>(key: string): T | null;

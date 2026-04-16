@@ -1,3 +1,4 @@
+import React from 'react';
 import { Track } from 'livekit-client';
 import { BOT_IDENTITY } from '../../../../config';
 import { VolumeIcon } from '../../../ui/icons/agent-icons';
@@ -31,7 +32,7 @@ export function VolumeSection({ volumes, setParticipantVolume }: Props) {
             onChange={(e) =>
               setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value), Track.Source.Microphone)
             }
-            style={{ flex: 1, height: 4, accentColor: 'var(--lk-accent, #0ea5e9)' }}
+            style={{ flex: 1, height: 4, '--thumb-color': 'var(--lk-accent, #0ea5e9)' } as React.CSSProperties}
           />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
             {Math.round(botVoiceVolume * 100)}%
@@ -48,7 +49,7 @@ export function VolumeSection({ volumes, setParticipantVolume }: Props) {
             onChange={(e) =>
               setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value), Track.Source.ScreenShareAudio)
             }
-            style={{ flex: 1, height: 4, accentColor: 'var(--lk-accent, #0ea5e9)' }}
+            style={{ flex: 1, height: 4, '--thumb-color': 'var(--lk-accent, #0ea5e9)' } as React.CSSProperties}
           />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
             {Math.round(botScreenVolume * 100)}%

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LS_KEYS } from '../config';
-import { storeGet, storeSet } from '../lib/store';
+import { LS_KEYS } from '@shared/config';
+import { usePlatform } from '@shared/platform';
 
 export interface AppSettings {
   minimizeToTray: boolean;
@@ -11,24 +11,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   minimizeToTray: true,
   autostart: false,
 };
-
-async function loadSettings(): Promise<AppSettings> {
-  try {
-    const stored = await storeGet<Partial<AppSettings>>(LS_KEYS.appSettings);
-    if (stored) return { ...DEFAULT_SETTINGS, ...stored };
-  } catch (e) {
-    console.warn('Failed to load app settings from store:', e);
-  }
-  return { ...DEFAULT_SETTINGS };
-}
-
-async function saveSettings(settings: AppSettings) {
-  try {
-    await storeSet(LS_KEYS.appSettings, settings);
-  } catch (e) {
-    console.warn('Failed to save app settings to store:', e);
-  }
-}
 
 async function syncAutostart(enabled: boolean) {
   try {
@@ -65,30 +47,31 @@ let currentSettings: AppSettings = { ...DEFAULT_SETTINGS };
 const listeners = new Set<(settings: AppSettings) => void>();
 
 export function useAppSettings() {
+  const { storage } = usePlatform();
   const [settings, setSettingsState] = useState<AppSettings>(currentSettings);
 
   useEffect(() => {
-    loadSettings().then((s) => {
-      currentSettings = s;
-      setSettingsState(s);
+    (async () => {
+      try {
+        const stored = await storage.getAsync<Partial<AppSettings>>(LS_KEYS.appSettings);
+        if (stored) {
+          currentSettings = { ...DEFAULT_SETTINGS, ...stored };
+        }
+      } catch (e) {
+        console.warn('Failed to load app settings from store:', e);
+      }
+      setSettingsState(currentSettings);
       // Sync loaded values to Tauri/Rust state
-      syncMinimizeToTray(s.minimizeToTray);
-      Promise.all([
-        loadAutostartFromTauri(),
-      ]).then(([autoVal]) => {
-        let changed = false;
-        if (autoVal !== null) {
-          currentSettings = { ...currentSettings, autostart: autoVal };
-          changed = true;
-        }
-        if (changed) {
-          setSettingsState(currentSettings);
-          saveSettings(currentSettings);
-          listeners.forEach((listener) => listener(currentSettings));
-        }
-      });
-    });
-  }, []);
+      syncMinimizeToTray(currentSettings.minimizeToTray);
+      const autoVal = await loadAutostartFromTauri();
+      if (autoVal !== null) {
+        currentSettings = { ...currentSettings, autostart: autoVal };
+        setSettingsState(currentSettings);
+        storage.set(LS_KEYS.appSettings, currentSettings);
+        listeners.forEach((listener) => listener(currentSettings));
+      }
+    })();
+  }, [storage]);
 
   useEffect(() => {
     const listener = (s: AppSettings) => setSettingsState(s);
@@ -101,7 +84,7 @@ export function useAppSettings() {
   const setSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
     currentSettings = { ...currentSettings, ...newSettings };
     setSettingsState(currentSettings);
-    saveSettings(currentSettings);
+    storage.set(LS_KEYS.appSettings, currentSettings);
     listeners.forEach((listener) => listener(currentSettings));
     if (newSettings.minimizeToTray !== undefined) {
       await syncMinimizeToTray(newSettings.minimizeToTray);
@@ -109,7 +92,7 @@ export function useAppSettings() {
     if (newSettings.autostart !== undefined) {
       await syncAutostart(newSettings.autostart);
     }
-  }, []);
+  }, [storage]);
 
   return { settings, setSettings };
 }

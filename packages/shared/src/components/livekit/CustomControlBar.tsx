@@ -79,7 +79,12 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
     }
   }, [room, isAudioMuted]);
 
-  // Removed redundant no-deps effect that re-fired on every render (see effect above, lines 69-80)
+  React.useEffect(() => {
+    if (!room || !isAudioMuted) return;
+    if (room.localParticipant.isMicrophoneEnabled) {
+      room.localParticipant.setMicrophoneEnabled(false);
+    }
+  });
 
   if (!localPermissions) {
     visibleControls.camera = false;

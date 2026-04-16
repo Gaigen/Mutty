@@ -94,56 +94,52 @@ export function PeopleTab({
                   <input
                     type="range"
                     min="0"
-                    max="1"
-                    step="0.01"
-                    value={voiceVolume}
+                    max="100"
+                    step="1"
+                    value={Math.round(voiceVolume * 100)}
                     onChange={(e) =>
-                      setParticipantVolume(participant.identity, parseFloat(e.target.value), Track.Source.Microphone)
+                      setParticipantVolume(participant.identity, Number(e.target.value) / 100, Track.Source.Microphone)
                     }
                     className="flex-1 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
-                    style={{ accentColor: color }}
+                    style={{ '--thumb-color': color } as React.CSSProperties}
                   />
                   <span className="text-[10px] text-gray-400 w-8 text-right">{Math.round(voiceVolume * 100)}%</span>
-                  {!voiceAtDefault && (
                     <button
                       type="button"
                       title="Reset to 100%"
                       onClick={() => setParticipantVolume(participant.identity, 1, Track.Source.Microphone)}
-                      className="text-[10px] text-gray-500 hover:text-white px-1.5 py-0.5 rounded bg-[#333] hover:bg-[#3a3a3a] transition-colors"
+                      className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${voiceAtDefault ? 'invisible' : 'text-gray-500 hover:text-white bg-[#333] hover:bg-[#3a3a3a]'}`}
                     >
                       ↺
                     </button>
-                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-gray-400 w-20 shrink-0">Screen</span>
                   <input
                     type="range"
                     min="0"
-                    max="1"
-                    step="0.01"
-                    value={screenVolume}
+                    max="100"
+                    step="1"
+                    value={Math.round(screenVolume * 100)}
                     onChange={(e) =>
                       setParticipantVolume(
                         participant.identity,
-                        parseFloat(e.target.value),
+                        Number(e.target.value) / 100,
                         Track.Source.ScreenShareAudio,
                       )
                     }
                     className="flex-1 h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
-                    style={{ accentColor: color }}
+                    style={{ '--thumb-color': color } as React.CSSProperties}
                   />
                   <span className="text-[10px] text-gray-400 w-8 text-right">{Math.round(screenVolume * 100)}%</span>
-                  {!screenAtDefault && (
                     <button
                       type="button"
                       title="Reset to 100%"
                       onClick={() => setParticipantVolume(participant.identity, 1, Track.Source.ScreenShareAudio)}
-                      className="text-[10px] text-gray-500 hover:text-white px-1.5 py-0.5 rounded bg-[#333] hover:bg-[#3a3a3a] transition-colors"
+                      className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${screenAtDefault ? 'invisible' : 'text-gray-500 hover:text-white bg-[#333] hover:bg-[#3a3a3a]'}`}
                     >
                       ↺
                     </button>
-                  )}
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Volume2, Volume1, VolumeX, Monitor } from 'lucide-react';
 
 interface ParticipantVolumeMenuProps {
@@ -63,7 +63,7 @@ function VolumeSlider({
         max="100"
         value={displayVolume}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
-        style={{ flex: 1, height: 4, cursor: 'pointer', accentColor: '#6366f1', minWidth: 0 }}
+        style={{ flex: 1, height: 4, cursor: 'pointer', '--thumb-color': '#6366f1', minWidth: 0 } as React.CSSProperties}
       />
       <span style={{ fontSize: 11, color: '#6b7280', width: 30, textAlign: 'right', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{displayVolume}%</span>
     </div>

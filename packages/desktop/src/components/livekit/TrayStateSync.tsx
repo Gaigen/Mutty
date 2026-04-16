@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLocalParticipant, useRoomContext } from '@livekit/components-react';
-import { useAudioMute } from '../../context/AudioMuteContext';
+import { useAudioMute } from '@shared/context/AudioMuteContext';
 
 export function TrayStateSync() {
   const { isAudioMuted, toggleAudioMuted } = useAudioMute();

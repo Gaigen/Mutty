@@ -192,12 +192,11 @@ const ParticipantTileWithActionsInner = React.forwardRef<
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
-      if (trackReference.participant.isLocal) return;
       e.preventDefault();
       e.stopPropagation();
       setContextMenu({ x: e.clientX, y: e.clientY });
     },
-    [trackReference.participant.isLocal],
+    [],
   );
 
   const handleVoiceVolumeChange = useCallback(
@@ -373,22 +372,22 @@ const ParticipantTileWithActionsInner = React.forwardRef<
             {isVideoSource && <HideTrackButton trackRef={trackReference} />}
             <FocusToggle trackRef={trackReference} />
           </div>
+
+          {contextMenu && (
+            <ParticipantVolumeMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              voiceVolume={voiceVolume}
+              screenVolume={screenVolume}
+              hasScreenShare={hasScreenShare}
+              participantName={trackReference.participant.name || trackReference.participant.identity}
+              onVoiceVolumeChange={handleVoiceVolumeChange}
+              onScreenVolumeChange={handleScreenVolumeChange}
+              onClose={() => setContextMenu(null)}
+            />
+          )}
         </ParticipantContextIfNeeded>
       </TrackRefContextIfNeeded>
-
-      {contextMenu && (
-        <ParticipantVolumeMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          voiceVolume={voiceVolume}
-          screenVolume={screenVolume}
-          hasScreenShare={hasScreenShare}
-          participantName={trackReference.participant.name || trackReference.participant.identity || 'Unknown'}
-          onVoiceVolumeChange={handleVoiceVolumeChange}
-          onScreenVolumeChange={handleScreenVolumeChange}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
     </div>
   );
 });
