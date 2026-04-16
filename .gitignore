@@ -20,3 +20,7 @@ AGENTS.md
 *.log.*.*.*
 *.log.*.*.*.*
 *.log.*.*.*.*.*
+# Old monolith frontend (migrated to packages/)
+frontend/
+**/tsconfig.tsbuildinfo
+**/dist/

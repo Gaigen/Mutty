@@ -1,4 +1,15 @@
 {
   "private": true,
-  "name": "mutty"
+  "name": "mutty",
+  "scripts": {
+    "dev:web": "pnpm --filter @mutty/web dev",
+    "dev:desktop": "pnpm --filter @mutty/desktop dev",
+    "build:web": "pnpm --filter @mutty/web build",
+    "build:desktop": "pnpm --filter @mutty/desktop build",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "msw"]
+  }
 }

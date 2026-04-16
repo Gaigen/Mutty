@@ -75,8 +75,8 @@ services:
   # Важно: VITE_* — это URL для БРАУЗЕРА (твой ПК). Всегда localhost или твой домен, НЕ livekit/agent-server!
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: packages/web/Dockerfile
       args:
         VITE_TOKEN_ENDPOINT: ${VITE_TOKEN_ENDPOINT:-http://localhost:4000/api/token}
     container_name: voice-app-frontend
