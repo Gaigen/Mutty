@@ -187,9 +187,21 @@ importers:
       '@livekit/components-core':
         specifier: ^0.12.13
         version: 0.12.13(livekit-client@2.18.3(@types/dom-mediacapture-record@1.0.22))(tslib@2.8.1)
+      '@livekit/components-react':
+        specifier: ^2.9.20
+        version: 2.9.20(@livekit/krisp-noise-filter@0.3.4(livekit-client@2.18.3(@types/dom-mediacapture-record@1.0.22)))(livekit-client@2.18.3(@types/dom-mediacapture-record@1.0.22))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(tslib@2.8.1)
+      '@livekit/components-styles':
+        specifier: ^1.2.0
+        version: 1.2.0
+      '@livekit/krisp-noise-filter':
+        specifier: ^0.3.4
+        version: 0.3.4(livekit-client@2.18.3(@types/dom-mediacapture-record@1.0.22))
       '@mutty/shared':
         specifier: workspace:*
         version: link:../shared
+      livekit-client:
+        specifier: ^2.18.1
+        version: 2.18.3(@types/dom-mediacapture-record@1.0.22)
       react:
         specifier: ^19.2.4
         version: 19.2.5
