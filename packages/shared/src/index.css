@@ -18,6 +18,11 @@ body {
   -ms-overflow-style: none;    /* IE/Edge */
 }
 
+/* Match chat form height to control bar */
+.lk-chat-form {
+  height: var(--lk-control-bar-height);
+}
+
 /* ── Range input (slider) — unified thumb across all browsers/webviews ────── */
 input[type="range"] {
   --thumb-color: #3b82f6;
