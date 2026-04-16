@@ -13,11 +13,13 @@
     "@mutty/shared": "workspace:*",
     "@fontsource-variable/geist": "^5.2.8",
     "@livekit/components-core": "^0.12.13",
+    "@livekit/components-react": "^2.9.20",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@tauri-apps/plugin-store": "^2.4.2",
     "link-preview-js": "^4.0.0",
+    "lucide-react": "^1.7.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0"
