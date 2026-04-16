@@ -19,7 +19,8 @@ body {
 }
 
 /* Match chat form height to control bar */
-.lk-chat-form {
+.lk-chat-form,
+.lk-control-bar {
   height: var(--lk-control-bar-height);
 }
 
