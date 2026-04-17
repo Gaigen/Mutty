@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocalParticipant } from '@livekit/components-react';
 import { useAudioMute } from '@shared/context/AudioMuteContext';
 import { useHotkeySettings } from '../../hooks/useHotkeySettings';
@@ -10,8 +10,8 @@ function matchesHotkey(e: KeyboardEvent, raw: string): boolean {
   const mainCode = parts[parts.length - 1];
   const mods = parts.slice(0, -1);
 
-  // Mouse hotkeys handled separately
-  if (mainCode === 'MouseBack' || mainCode === 'MouseForward') return false;
+  // Mouse hotkeys handled by matchesMouseHotkey
+  if (mainCode.startsWith('Mouse')) return false;
 
   if (e.code !== mainCode) return false;
 
@@ -39,6 +39,8 @@ function matchesMouseHotkey(e: MouseEvent, raw: string): boolean {
   const mainCode = parts[parts.length - 1];
   const mods = parts.slice(0, -1);
 
+  if (!mainCode.startsWith('Mouse')) return false;
+
   // Map mouse button number to name
   const buttonName = e.button === 3 ? 'MouseBack'
     : e.button === 4 ? 'MouseForward'
@@ -65,14 +67,23 @@ function matchesMouseHotkey(e: MouseEvent, raw: string): boolean {
 }
 
 /**
- * Listens for global hotkeys via Tauri events (works even when app is not focused)
- * with a fallback to browser keydown events for dev mode.
+ * Listens for global hotkeys via Tauri events (keyboard, works when unfocused)
+ * plus browser mousedown events (mouse buttons, works when focused).
  */
 export function HotkeyListener() {
   const { localParticipant } = useLocalParticipant();
   const { toggleAudioMuted } = useAudioMute();
   const { settings } = useHotkeySettings();
 
+  // Keep refs to latest values for stable event handlers
+  const localParticipantRef = useRef(localParticipant);
+  const toggleAudioMutedRef = useRef(toggleAudioMuted);
+  const settingsRef = useRef(settings);
+  localParticipantRef.current = localParticipant;
+  toggleAudioMutedRef.current = toggleAudioMuted;
+  settingsRef.current = settings;
+
+  // Effect 1: Tauri global keyboard hotkeys (works when app not focused)
   useEffect(() => {
     let unlistenMic: (() => void) | undefined;
     let unlistenFullMute: (() => void) | undefined;
@@ -83,59 +94,20 @@ export function HotkeyListener() {
         const { listen } = await import('@tauri-apps/api/event');
         unlistenMic = await listen('global-hotkey-mic', () => {
           if (cleanup) return;
-          const wasEnabled = localParticipant.isMicrophoneEnabled;
-          localParticipant.setMicrophoneEnabled(!wasEnabled);
+          const lp = localParticipantRef.current;
+          const wasEnabled = lp.isMicrophoneEnabled;
+          lp.setMicrophoneEnabled(!wasEnabled);
           if (wasEnabled) playMicMuteSound();
           else playMicUnmuteSound();
         });
         unlistenFullMute = await listen('global-hotkey-full-mute', () => {
           if (cleanup) return;
-          toggleAudioMuted();
+          toggleAudioMutedRef.current();
         });
-        console.log('[HotkeyListener] Tauri event listeners registered');
+        console.log('[HotkeyListener] Tauri global hotkeys registered');
       } catch {
-        // Tauri not available — fallback to browser keydown + mousedown
-        const handleKey = (e: KeyboardEvent) => {
-          if (
-            e.target instanceof HTMLInputElement ||
-            e.target instanceof HTMLTextAreaElement ||
-            e.target instanceof HTMLSelectElement
-          ) return;
-
-          if (matchesHotkey(e, settings.toggleMicrophone)) {
-            const wasEnabled = localParticipant.isMicrophoneEnabled;
-            localParticipant.setMicrophoneEnabled(!wasEnabled);
-            if (wasEnabled) playMicMuteSound();
-            else playMicUnmuteSound();
-          } else if (matchesHotkey(e, settings.toggleFullMute)) {
-            toggleAudioMuted();
-          }
-        };
-
-        const handleMouse = (e: MouseEvent) => {
-          if (e.button < 3) return; // only Back/Forward buttons
-          if (
-            e.target instanceof HTMLInputElement ||
-            e.target instanceof HTMLTextAreaElement ||
-            e.target instanceof HTMLSelectElement
-          ) return;
-
-          if (matchesMouseHotkey(e, settings.toggleMicrophone)) {
-            const wasEnabled = localParticipant.isMicrophoneEnabled;
-            localParticipant.setMicrophoneEnabled(!wasEnabled);
-            if (wasEnabled) playMicMuteSound();
-            else playMicUnmuteSound();
-          } else if (matchesMouseHotkey(e, settings.toggleFullMute)) {
-            toggleAudioMuted();
-          }
-        };
-
-        window.addEventListener('keydown', handleKey);
-        window.addEventListener('mousedown', handleMouse);
-        unlistenMic = () => {
-          window.removeEventListener('keydown', handleKey);
-          window.removeEventListener('mousedown', handleMouse);
-        };
+        // Tauri not available — browser fallback keyboard
+        console.log('[HotkeyListener] Browser fallback mode');
       }
     })();
 
@@ -144,7 +116,69 @@ export function HotkeyListener() {
       unlistenMic?.();
       unlistenFullMute?.();
     };
-  }, [localParticipant, toggleAudioMuted, settings]);
+  }, []);
+
+  // Effect 2: Mouse button hotkeys (always, via browser mousedown)
+  useEffect(() => {
+    const handleMouse = (e: MouseEvent) => {
+      if (e.button < 3) return; // ignore left/right/middle
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) return;
+
+      const s = settingsRef.current;
+      if (matchesMouseHotkey(e, s.toggleMicrophone)) {
+        const lp = localParticipantRef.current;
+        const wasEnabled = lp.isMicrophoneEnabled;
+        lp.setMicrophoneEnabled(!wasEnabled);
+        if (wasEnabled) playMicMuteSound();
+        else playMicUnmuteSound();
+      } else if (matchesMouseHotkey(e, s.toggleFullMute)) {
+        toggleAudioMutedRef.current();
+      }
+    };
+
+    window.addEventListener('mousedown', handleMouse);
+    return () => window.removeEventListener('mousedown', handleMouse);
+  }, []);
+
+  // Effect 3: Browser fallback keyboard hotkeys (when Tauri not available)
+  useEffect(() => {
+    // Check if Tauri is available
+    let tauriAvailable = false;
+    import('@tauri-apps/api/event').then(() => { tauriAvailable = true; }).catch(() => {});
+
+    // Small delay to let Tauri check complete
+    const timer = setTimeout(() => {
+      if (tauriAvailable) return; // Tauri handles keyboard
+
+      const handleKey = (e: KeyboardEvent) => {
+        if (
+          e.target instanceof HTMLInputElement ||
+          e.target instanceof HTMLTextAreaElement ||
+          e.target instanceof HTMLSelectElement
+        ) return;
+
+        const s = settingsRef.current;
+        if (matchesHotkey(e, s.toggleMicrophone)) {
+          const lp = localParticipantRef.current;
+          const wasEnabled = lp.isMicrophoneEnabled;
+          lp.setMicrophoneEnabled(!wasEnabled);
+          if (wasEnabled) playMicMuteSound();
+          else playMicUnmuteSound();
+        } else if (matchesHotkey(e, s.toggleFullMute)) {
+          toggleAudioMutedRef.current();
+        }
+      };
+
+      window.addEventListener('keydown', handleKey);
+      return () => window.removeEventListener('keydown', handleKey);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return null;
 }
