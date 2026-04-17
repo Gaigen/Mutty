@@ -26,6 +26,8 @@ function displayKey(code: string): string {
     ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
     Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn',
     MouseBack: '🖱 Back', MouseForward: '🖱 Forward',
+    Mouse4: '🖱 Btn4', Mouse5: '🖱 Btn5', Mouse6: '🖱 Btn6',
+    Mouse7: '🖱 Btn7', Mouse8: '🖱 Btn8',
   };
   return map[code] || code;
 }
@@ -83,12 +85,15 @@ function HotkeyRecorder({
 
   const handleMouseDown = useCallback(
     (e: MouseEvent) => {
-      // Only capture extra mouse buttons (Back=3, Forward=4, Middle=1)
+      // Only capture extra mouse buttons (button >= 3)
       if (e.button < 3) return;
       e.preventDefault();
       e.stopPropagation();
 
-      const buttonName = e.button === 3 ? 'MouseBack' : 'MouseForward';
+      // button 3=Back, 4=Forward, 5+=Mouse5, Mouse6, etc.
+      const buttonName = e.button === 3 ? 'MouseBack'
+        : e.button === 4 ? 'MouseForward'
+        : `Mouse${e.button}`;
 
       const modifiers: string[] = [];
       if (e.ctrlKey) modifiers.push('Ctrl');

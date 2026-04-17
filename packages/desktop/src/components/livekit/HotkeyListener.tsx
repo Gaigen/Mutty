@@ -39,11 +39,11 @@ function matchesMouseHotkey(e: MouseEvent, raw: string): boolean {
   const mainCode = parts[parts.length - 1];
   const mods = parts.slice(0, -1);
 
-  const buttonMap: Record<number, string> = {
-    3: 'MouseBack',
-    4: 'MouseForward',
-  };
-  const buttonName = buttonMap[e.button];
+  // Map mouse button number to name
+  const buttonName = e.button === 3 ? 'MouseBack'
+    : e.button === 4 ? 'MouseForward'
+    : `Mouse${e.button}`;
+
   if (buttonName !== mainCode) return false;
 
   const hasCtrl = mods.includes('Ctrl');
