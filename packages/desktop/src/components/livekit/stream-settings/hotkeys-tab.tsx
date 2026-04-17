@@ -19,12 +19,13 @@ function displayKey(code: string): string {
   if (code.startsWith('Numpad')) return code.slice(6);
   const map: Record<string, string> = {
     Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']',
-    Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',',
+    Backslash: '\\\\', Semicolon: ';', Quote: "'", Comma: ',',
     Period: '.', Slash: '/', Backquote: '`', Space: 'Space',
     Tab: 'Tab', Enter: 'Enter', Backspace: 'Backspace',
     Delete: 'Del', Insert: 'Ins', Escape: 'Esc',
     ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
     Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn',
+    MouseBack: '🖱 Back', MouseForward: '🖱 Forward',
   };
   return map[code] || code;
 }
@@ -80,12 +81,41 @@ function HotkeyRecorder({
     [onChange],
   );
 
+  const handleMouseDown = useCallback(
+    (e: MouseEvent) => {
+      // Only capture extra mouse buttons (Back=3, Forward=4, Middle=1)
+      if (e.button < 3) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const buttonName = e.button === 3 ? 'MouseBack' : 'MouseForward';
+
+      const modifiers: string[] = [];
+      if (e.ctrlKey) modifiers.push('Ctrl');
+      if (e.altKey) modifiers.push('Alt');
+      if (e.shiftKey) modifiers.push('Shift');
+      if (e.metaKey) modifiers.push('Meta');
+
+      const hotkey = modifiers.length > 0
+        ? modifiers.join('+') + '+' + buttonName
+        : buttonName;
+
+      onChange(hotkey);
+      setRecording(false);
+    },
+    [onChange],
+  );
+
   useEffect(() => {
     if (recording) {
       window.addEventListener('keydown', handleKeyDown, true);
-      return () => window.removeEventListener('keydown', handleKeyDown, true);
+      window.addEventListener('mousedown', handleMouseDown, true);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown, true);
+        window.removeEventListener('mousedown', handleMouseDown, true);
+      };
     }
-  }, [recording, handleKeyDown]);
+  }, [recording, handleKeyDown, handleMouseDown]);
 
   return (
     <div className="flex flex-col items-end gap-1">
