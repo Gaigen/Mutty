@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src *; connect-src *; img-src *; style-src 'self' 'unsafe-inline'; worker-src blob:; frame-src https://www.youtube-nocookie.com https://www.youtube.com https://platform.twitter.com https://syndication.twitter.com;"
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src *; connect-src *; img-src * data: blob:; style-src 'self' 'unsafe-inline'; worker-src blob:; frame-src https://www.youtube-nocookie.com https://www.youtube.com https://platform.twitter.com https://syndication.twitter.com;"
     }
   },
   "bundle": {
