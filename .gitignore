@@ -33,3 +33,5 @@ livekit/livekit-server.exe
 
 # Build tool
 Makefile
+.env
+.env.local

@@ -10,16 +10,21 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const {
-  LIVEKIT_API_KEY = 'devkey',
-  LIVEKIT_API_SECRET = 'secret',
+  LIVEKIT_API_KEY,
+  LIVEKIT_API_SECRET,
   LIVEKIT_WS_URL = 'ws://127.0.0.1:7880',
   LIVEKIT_PUBLIC_WS_URL = 'ws://localhost:7880',
   LIVEKIT_API_URL: _apiUrl,
-  TOKEN_CORS_ORIGINS = '',
+  TOKEN_CORS_ORIGINS = 'http://localhost:1420',
   TOKEN_ROOM_MAX_LENGTH = '100',
-  TOKEN_IDENTITY_MAX_LENGTH = '100',
-  TOKEN_TTL = '10m',
+  TOKEN_IDENTITY_MAX_LENGTH = '64',
+  TOKEN_TTL = '3600',
 } = process.env;
+
+if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
+  console.error('FATAL: LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be set');
+  process.exit(1);
+}
 
 const LIVEKIT_API_URL =
   _apiUrl || (process.env.LIVEKIT_WS_URL || 'ws://127.0.0.1:7880').replace(/^ws/, 'http').replace(/^wss/, 'https');

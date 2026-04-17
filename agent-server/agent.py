@@ -37,9 +37,11 @@ AGENT_CONTROL_TOPIC = "agent-control"
 
 # ── Config ────────────────────────────────────────────────────────────────────
 # LIVEKIT_WS_URL = os.getenv("LIVEKIT_WS_URL", "ws://localhost:7880")
-LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
-LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
+LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY")
+LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET")
 
+if not LIVEKIT_API_KEY or not LIVEKIT_API_SECRET:
+    raise ValueError("LIVEKIT_API_KEY and LIVEKIT_API_SECRET environment variables must be set")
 # Proxy for yt-dlp/ffmpeg only. Format: http://host:port or socks5://host:port
 MEDIA_PROXY = os.getenv("AGENT_MEDIA_PROXY", "").strip() or None
 
