@@ -54,6 +54,7 @@ mod global_hotkey {
 
     fn vk_from_code(code: &str) -> i32 {
         match code {
+            // Letters
             "KeyA" => 0x41,
             "KeyB" => 0x42,
             "KeyC" => 0x43,
@@ -80,6 +81,7 @@ mod global_hotkey {
             "KeyX" => 0x58,
             "KeyY" => 0x59,
             "KeyZ" => 0x5A,
+            // Digits
             "Digit0" => 0x30,
             "Digit1" => 0x31,
             "Digit2" => 0x32,
@@ -90,6 +92,18 @@ mod global_hotkey {
             "Digit7" => 0x37,
             "Digit8" => 0x38,
             "Digit9" => 0x39,
+            // Numpad
+            "Numpad0" => 0x60,
+            "Numpad1" => 0x61,
+            "Numpad2" => 0x62,
+            "Numpad3" => 0x63,
+            "Numpad4" => 0x64,
+            "Numpad5" => 0x65,
+            "Numpad6" => 0x66,
+            "Numpad7" => 0x67,
+            "Numpad8" => 0x68,
+            "Numpad9" => 0x69,
+            // Function keys
             "F1" => 0x70,
             "F2" => 0x71,
             "F3" => 0x72,
@@ -102,6 +116,7 @@ mod global_hotkey {
             "F10" => 0x79,
             "F11" => 0x7A,
             "F12" => 0x7B,
+            // Special keys
             "Space" => 0x20,
             "Tab" => 0x09,
             "Enter" => 0x0D,
@@ -128,6 +143,13 @@ mod global_hotkey {
             "Period" => 0xBE,
             "Slash" => 0xBF,
             "Backquote" => 0xC0,
+            // Mouse buttons (VK codes)
+            "MouseBack" => 0x05,    // XBUTTON1
+            "MouseForward" => 0x06, // XBUTTON2
+            "Mouse5" => 0x06,       // same as Forward for standard mice
+            "Mouse6" => 0x07,       // non-standard, may not work on all mice
+            "Mouse7" => 0x08,
+            "Mouse8" => 0x09,
             _ => 0,
         }
     }
