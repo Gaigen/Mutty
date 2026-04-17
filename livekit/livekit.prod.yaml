@@ -6,9 +6,10 @@ rtc:
   # В Docker используем 0.0.0.0 для прослушивания всех интерфейсов
   node_ip: 0.0.0.0
 
-# Keys from environment variables — set LIVEKIT_API_KEY and LIVEKIT_API_SECRET in .env
+# For local dev — same keys must be in .env (LIVEKIT_API_KEY / LIVEKIT_API_SECRET)
+# For production — generate new keys: https://docs.livekit.io/realtime/self-hosting/keys/
 keys:
-  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+  devkey: this-is-a-secret-key-for-local-dev-only
 
 room:
   empty_timeout: 60
