@@ -1,20 +1,29 @@
-FROM node:20-alpine
+# Stage 1: Build
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
+
+RUN npm run build
+
+# Stage 2: Production
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 4000
 
-ENV TOKEN_SERVER_PORT=4000
-ENV TOKEN_SERVER_HOST=0.0.0.0
-ENV LIVEKIT_API_KEY=devkey
-ENV LIVEKIT_API_SECRET=secret
 ENV LIVEKIT_WS_URL=ws://livekit:7880
 ENV LIVEKIT_PUBLIC_WS_URL=ws://localhost:7880
 
-CMD ["npx", "tsx", "src/index.ts"]
+CMD ["node", "dist/index.js"]
