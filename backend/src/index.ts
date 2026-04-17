@@ -156,7 +156,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
           name: identity,
           metadata: avatar ? JSON.stringify({ avatar }) : undefined,
         });
-        at.ttl = TOKEN_TTL;
+        at.ttl = Number(TOKEN_TTL);
         at.addGrant({
           room,
           roomJoin: true,
