@@ -25,6 +25,7 @@ import {
   useParticipantTile,
 } from '@livekit/components-react';
 import { participantVolumeKey, useParticipantVolumes } from '../../context/ParticipantVolumesContext';
+import { useMaybeExpandedTrack } from '../../context/ExpandedTrackContext';
 import { AVATAR_IDS, type AvatarId } from '../../config';
 import { hiddenTrackKey, toggleHiddenTrack, useHiddenTracks } from '../../store/hiddenTracks';
 import { ParticipantVolumeMenu } from './participant-volume-menu';
@@ -145,6 +146,50 @@ function FullscreenExitIcon() {
   );
 }
 
+function ExpandTabIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+  );
+}
+
+function ShrinkTabIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+    </svg>
+  );
+}
+
+interface ExpandTabButtonProps {
+  trackRef: TrackReferenceOrPlaceholder;
+}
+
+function ExpandTabButton({ trackRef }: ExpandTabButtonProps) {
+  const expandedCtx = useMaybeExpandedTrack();
+  if (!expandedCtx) return null;
+
+  const { isExpanded, toggleExpanded } = expandedCtx;
+  const expanded = isExpanded(trackRef);
+
+  return (
+    <button
+      type="button"
+      className="lk-button lk-hide-track-button lk-tile-expand-tab-btn"
+      title={expanded ? 'Shrink to normal' : 'Expand to tab'}
+      aria-label={expanded ? 'Shrink to normal' : 'Expand to tab'}
+      aria-pressed={expanded}
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleExpanded(trackRef);
+      }}
+    >
+      {expanded ? <ShrinkTabIcon /> : <ExpandTabIcon />}
+    </button>
+  );
+}
+
 export interface ParticipantTileWithActionsProps extends React.HTMLAttributes<HTMLDivElement> {
   trackRef?: TrackReferenceOrPlaceholder;
   disableSpeakingIndicator?: boolean;
@@ -246,6 +291,9 @@ const ParticipantTileWithActionsInner = React.forwardRef<
   const streamShellRef = React.useRef<HTMLDivElement>(null);
   const [streamShellFullscreen, setStreamShellFullscreen] = React.useState(false);
 
+  const expandedCtx = useMaybeExpandedTrack();
+  const isExpandedTrack = expandedCtx?.isExpanded(trackReference) ?? false;
+
   const isPinned =
     !!layoutContext?.pin.state &&
     isTrackReferencePinned(trackReference, layoutContext.pin.state);
@@ -275,7 +323,7 @@ const ParticipantTileWithActionsInner = React.forwardRef<
   }, []);
 
   return (
-    <div ref={ref} style={{ position: 'relative' }} {...elementProps} onContextMenu={trackReference.participant.isLocal ? undefined : handleContextMenu}>
+    <div ref={ref} style={{ position: 'relative' }} data-expanded={isExpandedTrack || undefined} {...elementProps} onContextMenu={trackReference.participant.isLocal ? undefined : handleContextMenu}>
       <TrackRefContextIfNeeded trackRef={trackReference}>
         <ParticipantContextIfNeeded participant={trackReference.participant}>
           {children ?? (
@@ -371,6 +419,9 @@ const ParticipantTileWithActionsInner = React.forwardRef<
             )}
             {isVideoSource && <HideTrackButton trackRef={trackReference} />}
             <FocusToggle trackRef={trackReference} />
+            {isVideoSource && isPinned && (
+              <ExpandTabButton trackRef={trackReference} />
+            )}
           </div>
 
           {contextMenu && (
