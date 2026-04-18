@@ -1455,22 +1455,12 @@ input[type="range"]::-moz-range-thumb:active {
   display: none !important;
 }
 
-/* Expanded participant tile styling — accent border */
-[data-expanded="true"] {
-  box-shadow: 0 0 0 2px var(--lk-accent, #0ea5e9) !important;
-}
-
-/* Expand tab button in tile controls */
+/* Expand tab button in tile controls — subtle styling */
 .lk-tile-expand-tab-btn {
-  opacity: 0.8;
+  opacity: 0.7;
   transition: opacity 0.15s;
 }
 
 .lk-tile-expand-tab-btn:hover {
   opacity: 1;
-}
-
-.lk-tile-expand-tab-btn[aria-pressed="true"] {
-  background: var(--lk-accent, #0ea5e9) !important;
-  color: white !important;
 }
