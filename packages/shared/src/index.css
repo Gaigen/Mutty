@@ -1426,30 +1426,36 @@ input[type="range"]::-moz-range-thumb:active {
 }
 
 /* ── Expand to tab (theater mode per-stream) ──────────────────────────── */
-/* When a stream is expanded, it takes full width in focus layout */
-.lk-focus-layout-wrapper:has([data-expanded="true"]) .lk-focus-layout-container {
-  flex-direction: column !important;
+/* Expanded participant tile takes full available space */
+.lk-focus-layout [data-expanded="true"] {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 10 !important;
+  flex: 1 1 100% !important;
 }
 
-.lk-focus-layout-wrapper:has([data-expanded="true"]) .lk-carousel-layout {
-  max-height: 120px !important;
-  min-height: 80px !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-}
-
-.lk-focus-layout-wrapper:has([data-expanded="true"]) .lk-carousel-layout .lk-participant-tile {
-  min-width: 160px !important;
-  max-width: 200px !important;
+.lk-focus-layout [data-expanded="true"] .lk-participant-stream-shell {
+  width: 100% !important;
   height: 100% !important;
 }
 
-.lk-focus-layout-wrapper:has([data-expanded="true"]) .lk-focused-participant {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
+.lk-focus-layout [data-expanded="true"] video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
 }
 
-/* Expanded participant tile styling */
+/* Hide carousel when stream is expanded */
+.lk-focus-layout-wrapper:has([data-expanded="true"]) .lk-carousel-layout {
+  display: none !important;
+}
+
+/* Expanded participant tile styling — accent border */
 [data-expanded="true"] {
   box-shadow: 0 0 0 2px var(--lk-accent, #0ea5e9) !important;
 }
