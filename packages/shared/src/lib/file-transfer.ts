@@ -16,10 +16,11 @@ export const FILE_TRANSFER_TOPIC = 'file-transfer';
 
 /**
  * Chunk payload size in bytes.
- * LiveKit reliable data channel limit is ~60KB per message.
- * We use 55KB to leave room for JSON envelope overhead.
+ * LiveKit reliable data channel limit is ~65KB per message.
+ * Base64 adds ~33% overhead, JSON envelope adds more.
+ * 30KB raw → ~40KB base64 → ~41KB JSON = safe margin.
  */
-export const CHUNK_SIZE = 55_000;
+export const CHUNK_SIZE = 30_000;
 
 /** Maximum file size for transfer (100 MB) */
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;

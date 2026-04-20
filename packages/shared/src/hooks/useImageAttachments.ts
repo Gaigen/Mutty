@@ -9,6 +9,7 @@ import {
   isImage,
   formatFileSize,
   FILE_TRANSFER_TOPIC,
+  CHUNK_SIZE,
   FileMsgType,
   generateTransferId,
   encodeWireMessage,
@@ -182,7 +183,6 @@ export function useFileAttachments(enableAttachments: boolean) {
       if (!room) throw new Error('Room not connected');
 
       const fileId = generateTransferId();
-      const CHUNK_SIZE = 55_000;
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
       // Send metadata
@@ -417,6 +417,21 @@ export function useFileAttachments(enableAttachments: boolean) {
           } else {
             // All files → chunked via data channel + chat marker for UI
             const fileId = await sendFileViaDataChannel(file);
+
+            // For sender: add to receivedFiles so they see Download button too
+            // (data channel doesn't loop back to sender)
+            const senderFile: ReceivedFile = {
+              id: fileId,
+              name: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              size: file.size,
+              blob: file,
+              hash: '',
+              from: 'you',
+              timestamp: Date.now(),
+            };
+            setReceivedFiles((prev) => [...prev, senderFile]);
+
             // Send a marker message so receiver sees a file card in chat
             const marker = JSON.stringify({
               fileId,
