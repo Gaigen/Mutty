@@ -47,12 +47,14 @@ export function ChatFilePreview({
         );
       })}
 
-      {/* Active transfers (sending/receiving) */}
-      {activeTransfers
-        .filter((t) => t.status === 'active')
-        .map((t) => (
-          <TransferProgressBar key={t.fileId} transfer={t} />
-        ))}
+      {/* Active transfers — render ALL (even completed) to prevent layout shift */}
+      {activeTransfers.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {activeTransfers.map((t) => (
+            <TransferProgressBar key={t.fileId} transfer={t} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -109,17 +111,17 @@ function TransferProgressBar({ transfer }: { transfer: TransferStatus }) {
   return (
     <div
       style={{
-        padding: '6px 8px',
+        // Fixed height container — layout never shifts
+        height: 40,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        padding: '4px 8px',
         background: 'rgba(255,255,255,0.04)',
         borderRadius: 6,
         border: '1px solid rgba(255,255,255,0.08)',
         opacity: isDone ? 0 : 1,
-        maxHeight: isDone ? 0 : 60,
-        overflow: 'hidden',
-        paddingBlock: isDone ? 0 : 6,
-        marginBottom: isDone ? 0 : undefined,
-        transition: 'opacity 0.4s ease, max-height 0.3s ease, padding 0.3s ease',
-        pointerEvents: 'none',
+        transition: 'opacity 0.4s ease',
       }}
     >
       <div style={{

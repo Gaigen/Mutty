@@ -75,10 +75,15 @@ export function useFileAttachments(enableAttachments: boolean) {
     progressTimerRef.current = setInterval(() => {
       const arr = Array.from(activeTransfersRef.current.values());
       setActiveTransfers(arr);
-      // Stop timer when all transfers done
+      // When all transfers done — wait for fade-out, then cleanup
       if (arr.every((t) => t.status !== 'active')) {
         clearInterval(progressTimerRef.current!);
         progressTimerRef.current = null;
+        // Keep completed transfers visible for fade-out, then remove
+        setTimeout(() => {
+          activeTransfersRef.current.clear();
+          setActiveTransfers([]);
+        }, 800);
       }
     }, PROGRESS_THROTTLE_MS);
   }, []);
