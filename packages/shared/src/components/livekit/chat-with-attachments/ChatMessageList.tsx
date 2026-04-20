@@ -3,7 +3,6 @@ import type { ReceivedChatMessage, MessageFormatter } from '@livekit/components-
 import type { ChatMessageRow } from './types';
 import { MessageEntry } from './message-entry';
 import { FullscreenImageOverlay } from './fullscreen-overlay';
-import { IMG_PREFIX } from './constants';
 import { findFirstUrl, hasMultipleUrls } from './link-preview/helpers';
 import { MarkdownMessage } from './markdown-message';
 import { LinkPreview } from './link-preview';
@@ -11,6 +10,77 @@ import { getFileIcon, formatFileSize, isImage, isVideo, isAudio } from '../../..
 import type { ReceivedFile } from '../../../hooks/useImageAttachments';
 
 const FT_MARKER = '__FT__';
+
+/** Parse a data URL into mime and binary data */
+function parseDataUrl(dataUrl: string): { mime: string; data: Uint8Array } | null {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/s);
+  if (!match) return null;
+  const mime = match[1];
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { mime, data: bytes };
+}
+
+/** File card for data URL messages (non-image files sent via chat) */
+function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
+  const parsed = React.useMemo(() => parseDataUrl(dataUrl), [dataUrl]);
+  if (!parsed) return <span style={{ color: '#f88' }}>Invalid file data</span>;
+
+  const { mime, data } = parsed;
+  const size = data.length;
+  const ext = mime.split('/')[1] || 'bin';
+  const fileName = `file.${ext}`;
+
+  const handleDownload = () => {
+    const blob = new Blob([data.buffer as ArrayBuffer], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div style={{
+      borderRadius: 8,
+      border: '1px solid rgba(255,255,255,0.12)',
+      background: 'rgba(255,255,255,0.05)',
+      minWidth: 180,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px' }}>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>{getFileIcon(mime)}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 12, fontWeight: 500,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {fileName}
+          </div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+            {formatFileSize(size)} · {mime}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleDownload}
+          style={{
+            padding: '5px 14px', borderRadius: 4,
+            border: '1px solid rgba(255,255,255,0.25)',
+            background: 'rgba(255,255,255,0.1)',
+            color: 'rgba(255,255,255,0.95)', fontSize: 12,
+            fontWeight: 500, cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          ⬇ Download
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface ChatMessageListProps {
   messages: ReceivedChatMessage[];
@@ -156,8 +226,8 @@ export function ChatMessageList({
 
   const effectiveFormatter: MessageFormatter = React.useCallback(
     (message: string) => {
-      // Image data URL (backward compatible)
-      if (message.startsWith(IMG_PREFIX)) {
+      // Image data URL — show inline image (backward compatible)
+      if (message.startsWith('data:image/')) {
         return (
           <button
             type="button"
@@ -168,6 +238,11 @@ export function ChatMessageList({
             <img src={message} alt="Shared image" className="chat-shared-image-thumb" />
           </button>
         );
+      }
+
+      // Non-image data URL — show file card with download
+      if (message.startsWith('data:')) {
+        return <DataUrlFileCard dataUrl={message} />;
       }
 
       // File transfer marker: __FT__{"fileId":"...","name":"...","size":123,"mime":"..."}
@@ -183,7 +258,7 @@ export function ChatMessageList({
             />
           );
         } catch {
-          // Malformed marker — fall through to text
+          // Malformed marker
         }
       }
 

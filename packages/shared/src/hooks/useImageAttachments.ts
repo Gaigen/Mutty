@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { useChat, useRoomContext } from '@livekit/components-react';
 import { RoomEvent } from 'livekit-client';
-import { ACCEPT_IMAGES, MAX_IMAGE_BYTES, MAX_TEXT_LEN } from '../lib/chat-constants';
+import { ACCEPT_IMAGES, MAX_TEXT_LEN } from '../lib/chat-constants';
 import { fileToDataUrl } from '../components/livekit/chat-with-attachments/helpers';
 import {
   MAX_FILE_BYTES,
   ACCEPT_ALL_FILES,
-  isImage,
   formatFileSize,
   FILE_TRANSFER_TOPIC,
   CHUNK_SIZE,
@@ -87,12 +86,11 @@ export function useFileAttachments(enableAttachments: boolean) {
   // ── File classification ─────────────────────────────────────────────────
 
   const classifyFile = React.useCallback((file: File): PendingFile['kind'] => {
-    // Images under the image limit go through chat (backward compatible)
-    if (isImage(file.type) && file.size <= MAX_IMAGE_BYTES) {
-      return 'image';
-    }
-    // Everything else (including large images) goes through data channel
-    return 'file';
+    // Everything goes through chat as base64 — fast, reliable, works for loopback
+    // Files up to 5MB are fine as base64 chat messages
+    const MAX_CHAT_FILE = 5 * 1024 * 1024;
+    if (file.size > MAX_CHAT_FILE) return 'file'; // too big for chat, needs data channel
+    return 'image'; // reuse image path (base64 via chat)
   }, []);
 
   // ── Add files ───────────────────────────────────────────────────────────
@@ -412,34 +410,23 @@ export function useFileAttachments(enableAttachments: boolean) {
         for (let i = 0; i < files.length; i++) {
           const { file, kind } = files[i];
           if (kind === 'image') {
-            // Small image → base64 via chat (backward compatible)
+            // File ≤ 5MB → base64 via chat (fast, works everywhere)
             await send(await fileToDataUrl(file));
           } else {
-            // All files → chunked via data channel + chat marker for UI
+            // Large file > 5MB → chunked via data channel
             const fileId = await sendFileViaDataChannel(file);
-
-            // For sender: add to receivedFiles so they see Download button too
-            // (data channel doesn't loop back to sender)
-            const senderFile: ReceivedFile = {
-              id: fileId,
-              name: file.name,
+            // For sender: add to receivedFiles
+            setReceivedFiles((prev) => [...prev, {
+              id: fileId, name: file.name,
               mimeType: file.type || 'application/octet-stream',
-              size: file.size,
-              blob: file,
-              hash: '',
-              from: 'you',
-              timestamp: Date.now(),
-            };
-            setReceivedFiles((prev) => [...prev, senderFile]);
-
-            // Send a marker message so receiver sees a file card in chat
-            const marker = JSON.stringify({
-              fileId,
-              name: file.name,
-              size: file.size,
+              size: file.size, blob: file, hash: '',
+              from: 'you', timestamp: Date.now(),
+            }]);
+            // Marker for receiver
+            await send(`${FT_MARKER}${JSON.stringify({
+              fileId, name: file.name, size: file.size,
               mime: file.type || 'application/octet-stream',
-            });
-            await send(`${FT_MARKER}${marker}`);
+            })}`);
           }
           setSentCount(i + 1);
         }
