@@ -16,4 +16,3 @@ export { useScreenShareSettings, getScreenShareSettings } from './useScreenShare
 export type { ScreenShareSettings, VideoCodec, ContentHint } from './useScreenShareSettings';
 export { useStatsPolling } from './useStatsPolling';
 export { useUnreadMessages } from './useUnreadMessages';
-export { useFileTransfer } from './useFileTransfer';

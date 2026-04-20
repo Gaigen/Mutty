@@ -4,7 +4,7 @@
  * Binary files are split into chunks and sent as a sequence of messages:
  *   1. FILE_META  — metadata (name, size, mime, chunk count)
  *   2. FILE_CHUNK — binary payload chunks (indexed 0..N-1)
- *   3. FILE_DONE  — completion marker with integrity hash
+ *   3. FILE_DONE  — completion marker (no hash by default)
  *
  * All messages share the topic 'file-transfer' on LiveKit data channel.
  */
@@ -16,11 +16,11 @@ export const FILE_TRANSFER_TOPIC = 'file-transfer';
 
 /**
  * Chunk payload size in bytes.
- * LiveKit reliable data channel limit is ~65KB per message.
+ * LiveKit data channel limit is ~65KB per message.
  * Base64 adds ~33% overhead, JSON envelope adds more.
- * 30KB raw → ~40KB base64 → ~41KB JSON = safe margin.
+ * 40KB raw → ~53KB base64 → ~54KB JSON = safe margin.
  */
-export const CHUNK_SIZE = 30_000;
+export const CHUNK_SIZE = 40_000;
 
 /** Maximum file size for transfer (100 MB) */
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -34,7 +34,10 @@ export const ACCEPT_ALL_FILES =
   'application/json,text/plain,text/csv,' +
   '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.rar,.7z,.tar,.gz';
 
-// ── Wire Types (what goes over the wire) ───────────────────────────────────────
+/** Transfer TTL — auto-cleanup after 5 minutes */
+export const TRANSFER_TTL_MS = 5 * 60 * 1000;
+
+// ── Wire Types ─────────────────────────────────────────────────────────────────
 
 export const enum FileMsgType {
   META = 'fm',
@@ -45,80 +48,53 @@ export const enum FileMsgType {
 
 export interface FileMeta {
   t: FileMsgType.META;
-  /** Unique transfer id */
   id: string;
-  /** Original filename */
   n: string;
-  /** File size in bytes */
   s: number;
-  /** MIME type */
   m: string;
-  /** Total number of chunks */
   c: number;
 }
 
 export interface FileChunk {
   t: FileMsgType.CHUNK;
-  /** Transfer id */
   id: string;
-  /** Chunk index (0-based) */
   i: number;
-  /** Base64-encoded chunk payload */
   d: string;
 }
 
 export interface FileDone {
   t: FileMsgType.DONE;
-  /** Transfer id */
   id: string;
-  /** SHA-256 hex digest of the complete file */
-  h: string;
 }
 
 export interface FileCancel {
   t: FileMsgType.CANCEL;
-  /** Transfer id */
   id: string;
 }
 
-/** Union of all wire messages */
 export type FileWireMessage = FileMeta | FileChunk | FileDone | FileCancel;
 
 // ── Internal State Types ──────────────────────────────────────────────────────
 
 export interface TransferProgress {
-  /** Transfer id */
   fileId: string;
-  /** Original filename */
   fileName: string;
-  /** File size in bytes */
   fileSize: number;
-  /** MIME type */
   mimeType: string;
-  /** Number of chunks received/sent so far */
   chunksReceived: number;
-  /** Total chunks */
   totalChunks: number;
-  /** Progress 0..1 */
   progress: number;
-  /** 'sending' | 'receiving' | 'complete' | 'cancelled' */
   status: 'sending' | 'receiving' | 'complete' | 'cancelled';
-  /** Assembled blob (only when complete) */
   blob?: Blob;
-  /** SHA-256 hash (only when complete) */
-  hash?: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-let _counter = 0;
-
-/** Generate a short unique transfer id */
+/** Generate a unique transfer id using crypto.getRandomValues */
 export function generateTransferId(): string {
-  _counter = (_counter + 1) % 10_000;
-  const ts = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 6);
-  return `${ts}-${rand}-${_counter}`;
+  const arr = new Uint8Array(8);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 12);
 }
 
 /** Encode a wire message to Uint8Array for publishData */
@@ -126,57 +102,39 @@ export function encodeWireMessage(msg: FileWireMessage): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(msg));
 }
 
-/** Try to decode incoming data to a wire message, returns null on failure */
+/** Try to decode incoming data to a wire message */
 export function decodeWireMessage(data: Uint8Array): FileWireMessage | null {
   try {
-    const text = new TextDecoder().decode(data);
-    const obj = JSON.parse(text);
-    if (obj && typeof obj.t === 'string') {
-      switch (obj.t) {
-        case FileMsgType.META:
-        case FileMsgType.CHUNK:
-        case FileMsgType.DONE:
-        case FileMsgType.CANCEL:
-          return obj as FileWireMessage;
-      }
+    const obj = JSON.parse(new TextDecoder().decode(data));
+    if (obj?.t && [FileMsgType.META, FileMsgType.CHUNK, FileMsgType.DONE, FileMsgType.CANCEL].includes(obj.t)) {
+      return obj;
     }
-  } catch {
-    // not our message
-  }
+  } catch { /* not our message */ }
   return null;
 }
 
-/** Compute SHA-256 hex digest of a Blob */
-export async function sha256Blob(blob: Blob): Promise<string> {
-  const buf = await blob.arrayBuffer();
-  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-  const hashArr = Array.from(new Uint8Array(hashBuf));
-  return hashArr.map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** Split a File into base64-encoded chunks */
+/**
+ * Split a File into base64-encoded chunks (async generator).
+ * Uses Array.from for efficient conversion — no O(n²) string concat.
+ */
 export async function* splitFileIntoChunks(
   file: File,
   fileId: string,
 ): AsyncGenerator<FileChunk, void, unknown> {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
   for (let i = 0; i < totalChunks; i++) {
-    const start = i * CHUNK_SIZE;
-    const end = Math.min(start + CHUNK_SIZE, file.size);
-    const slice = file.slice(start, end);
-    const buf = await slice.arrayBuffer();
+    const buf = await file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE).arrayBuffer();
     const bytes = new Uint8Array(buf);
-    // Base64 encode
-    let binary = '';
-    for (let j = 0; j < bytes.length; j++) {
-      binary += String.fromCharCode(bytes[j]);
-    }
-    const b64 = btoa(binary);
-    yield { t: FileMsgType.CHUNK, id: fileId, i, d: b64 };
+    // Efficient base64 — no O(n²) string concat
+    const binary = Array.from(bytes, (b) => String.fromCharCode(b)).join('');
+    yield { t: FileMsgType.CHUNK, id: fileId, i, d: btoa(binary) };
   }
 }
 
-/** Reassemble chunks into a Blob */
+/**
+ * Reassemble chunks into a Blob.
+ * Uses Array.from for efficient conversion.
+ */
 export function assembleChunks(chunks: Map<number, string>, mimeType: string): Blob {
   const parts: Blob[] = [];
   const total = chunks.size;
@@ -184,16 +142,13 @@ export function assembleChunks(chunks: Map<number, string>, mimeType: string): B
     const b64 = chunks.get(i);
     if (!b64) throw new Error(`Missing chunk ${i}`);
     const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let j = 0; j < binary.length; j++) {
-      bytes[j] = binary.charCodeAt(j);
-    }
+    const bytes = new Uint8Array(Array.from(binary, (c) => c.charCodeAt(0)));
     parts.push(new Blob([bytes]));
   }
   return new Blob(parts, { type: mimeType });
 }
 
-/** Get a display-friendly file size string */
+/** Format file size for display */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -201,7 +156,7 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-/** Get an icon/emoji for a MIME type */
+/** Get icon for MIME type */
 export function getFileIcon(mimeType: string): string {
   if (mimeType.startsWith('image/')) return '🖼️';
   if (mimeType.startsWith('video/')) return '🎬';
@@ -216,17 +171,14 @@ export function getFileIcon(mimeType: string): string {
   return '📎';
 }
 
-/** Check if MIME type is an image */
 export function isImage(mimeType: string): boolean {
   return mimeType.startsWith('image/');
 }
 
-/** Check if MIME type is a video */
 export function isVideo(mimeType: string): boolean {
   return mimeType.startsWith('video/');
 }
 
-/** Check if MIME type is audio */
 export function isAudio(mimeType: string): boolean {
   return mimeType.startsWith('audio/');
 }

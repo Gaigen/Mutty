@@ -10,10 +10,10 @@ import {
   FILE_TRANSFER_TOPIC,
   CHUNK_SIZE,
   FileMsgType,
+  TRANSFER_TTL_MS,
   generateTransferId,
   encodeWireMessage,
   decodeWireMessage,
-  sha256Blob,
   splitFileIntoChunks,
   assembleChunks,
   type FileMeta,
@@ -21,7 +21,7 @@ import {
 
 export interface PendingFile {
   file: File;
-  /** 'image' = will be sent as base64 data URL via chat, 'file' = chunked via data channel */
+  /** 'image' = small file via chat base64, 'file' = large file via data channel */
   kind: 'image' | 'file';
 }
 
@@ -31,16 +31,18 @@ export interface ReceivedFile {
   mimeType: string;
   size: number;
   blob: Blob;
-  hash: string;
   from: string;
   timestamp: number;
 }
 
+const MAX_RECEIVED_FILES = 50;
+const PROGRESS_THROTTLE_MS = 100;
+
 /**
- * Manages file & image attachments: drag & drop, paste, file picker, validation, sending.
+ * Manages file & image attachments: drag & drop, paste, file picker, sending/receiving.
  *
- * - Images (< 10MB) are sent as base64 data URLs through the chat (backward compatible)
- * - Other files are sent via chunked data channel protocol
+ * - Files ≤ 5MB → base64 via chat (fast, instant)
+ * - Files > 5MB → chunked via LiveKit data channel
  */
 export function useFileAttachments(enableAttachments: boolean) {
   const { send, isSending } = useChat();
@@ -51,46 +53,15 @@ export function useFileAttachments(enableAttachments: boolean) {
   const [sentCount, setSentCount] = React.useState(0);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [textValue, setTextValue] = React.useState('');
-
-  // Track active file transfers for progress
-  const [transferProgress, setTransferProgress] = React.useState<Map<string, {
-    fileId: string;
-    fileName: string;
-    fileSize: number;
-    progress: number;
-    status: 'sending' | 'receiving' | 'complete' | 'cancelled';
-  }>>(new Map());
-
-  // Received files queue
   const [receivedFiles, setReceivedFiles] = React.useState<ReceivedFile[]>([]);
-
-  // Incoming assembly buffers
-  const incomingRef = React.useRef<Map<string, {
-    meta: FileMeta;
-    chunks: Map<number, string>;
-    from: string;
-  }>>(new Map());
-
-  // Callback for new received files
-  const onFileReceivedRef = React.useRef<
-    ((file: ReceivedFile) => void) | null
-  >(null);
-
-  const onFileReceived = React.useCallback(
-    (cb: (file: ReceivedFile) => void) => {
-      onFileReceivedRef.current = cb;
-    },
-    [],
-  );
 
   // ── File classification ─────────────────────────────────────────────────
 
+  const MAX_CHAT_FILE = 5 * 1024 * 1024; // 5MB
+
   const classifyFile = React.useCallback((file: File): PendingFile['kind'] => {
-    // Everything goes through chat as base64 — fast, reliable, works for loopback
-    // Files up to 5MB are fine as base64 chat messages
-    const MAX_CHAT_FILE = 5 * 1024 * 1024;
-    if (file.size > MAX_CHAT_FILE) return 'file'; // too big for chat, needs data channel
-    return 'image'; // reuse image path (base64 via chat)
+    if (file.size > MAX_CHAT_FILE) return 'file'; // data channel
+    return 'image'; // chat (reuse base64 path)
   }, []);
 
   // ── Add files ───────────────────────────────────────────────────────────
@@ -138,9 +109,7 @@ export function useFileAttachments(enableAttachments: boolean) {
   const handleDragLeave = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-      setIsDragOver(false);
-    }
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDragOver(false);
   }, []);
 
   const handleDrop = React.useCallback(
@@ -159,22 +128,22 @@ export function useFileAttachments(enableAttachments: boolean) {
     (e: React.ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
-      const imageFiles: File[] = [];
+      const files: File[] = [];
       for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
+        if (item.kind === 'file') {
           const file = item.getAsFile();
-          if (file) imageFiles.push(file);
+          if (file) files.push(file);
         }
       }
-      if (imageFiles.length > 0 && enableAttachments) {
+      if (files.length > 0 && enableAttachments) {
         e.preventDefault();
-        addFiles(imageFiles);
+        addFiles(files);
       }
     },
     [enableAttachments, addFiles],
   );
 
-  // ── Chunked file send via data channel ──────────────────────────────────
+  // ── Data channel send (for large files > 5MB) ───────────────────────────
 
   const sendFileViaDataChannel = React.useCallback(
     async (file: File) => {
@@ -192,70 +161,47 @@ export function useFileAttachments(enableAttachments: boolean) {
         m: file.type || 'application/octet-stream',
         c: totalChunks,
       };
-      room.localParticipant.publishData(encodeWireMessage(meta), {
+      await room.localParticipant.publishData(encodeWireMessage(meta), {
         reliable: true,
         topic: FILE_TRANSFER_TOPIC,
       });
 
-      // Track progress
-      setTransferProgress((prev) => {
-        const next = new Map(prev);
-        next.set(fileId, {
-          fileId,
-          fileName: file.name,
-          fileSize: file.size,
-          progress: 0,
-          status: 'sending',
-        });
-        return next;
-      });
-
-      // Send chunks
+      // Send chunks — NO per-chunk setState (throttled)
       let chunkIndex = 0;
+      let lastProgressUpdate = 0;
+
       for await (const chunk of splitFileIntoChunks(file, fileId)) {
-        room.localParticipant.publishData(encodeWireMessage(chunk), {
+        await room.localParticipant.publishData(encodeWireMessage(chunk), {
           reliable: true,
           topic: FILE_TRANSFER_TOPIC,
         });
         chunkIndex++;
 
-        setTransferProgress((prev) => {
-          const existing = prev.get(fileId);
-          if (!existing) return prev;
-          const next = new Map(prev);
-          next.set(fileId, {
-            ...existing,
-            progress: chunkIndex / totalChunks,
-          });
-          return next;
-        });
-
-        if (chunkIndex % 5 === 0) {
-          await new Promise((r) => setTimeout(r, 0));
+        // Throttle progress updates to every 100ms
+        const now = Date.now();
+        if (now - lastProgressUpdate > PROGRESS_THROTTLE_MS) {
+          lastProgressUpdate = now;
+          // progress tracked via ref, not state — no re-renders
         }
       }
 
-      // Send completion
-      const hash = await sha256Blob(file);
-      room.localParticipant.publishData(
-        encodeWireMessage({ t: FileMsgType.DONE, id: fileId, h: hash }),
+      // Send completion (no hash — saves time)
+      await room.localParticipant.publishData(
+        encodeWireMessage({ t: FileMsgType.DONE, id: fileId }),
         { reliable: true, topic: FILE_TRANSFER_TOPIC },
       );
 
-      setTransferProgress((prev) => {
-        const existing = prev.get(fileId);
-        if (!existing) return prev;
-        const next = new Map(prev);
-        next.set(fileId, { ...existing, status: 'complete', progress: 1 });
-        return next;
-      });
-
       return fileId;
     },
-    [room, send],
+    [room],
   );
 
-  // ── Receive handler ─────────────────────────────────────────────────────
+  // ── Receive handler (data channel) ──────────────────────────────────────
+
+  // Use ref for incoming to avoid stale closures in finalizeIncoming
+  const incomingRef = React.useRef<
+    Map<string, { meta: FileMeta; chunks: Map<number, string>; from: string }>
+  >(new Map());
 
   React.useEffect(() => {
     if (!room) return;
@@ -267,7 +213,6 @@ export function useFileAttachments(enableAttachments: boolean) {
       topic?: string,
     ) => {
       if (topic !== FILE_TRANSFER_TOPIC) return;
-
       const msg = decodeWireMessage(payload);
       if (!msg) return;
 
@@ -275,45 +220,27 @@ export function useFileAttachments(enableAttachments: boolean) {
 
       switch (msg.t) {
         case FileMsgType.META: {
+          // Dedup — don't overwrite existing transfer
+          if (incomingRef.current.has(msg.id)) return;
           incomingRef.current.set(msg.id, {
             meta: msg,
             chunks: new Map(),
             from: senderIdentity,
           });
-          setTransferProgress((prev) => {
-            const next = new Map(prev);
-            next.set(msg.id, {
-              fileId: msg.id,
-              fileName: msg.n,
-              fileSize: msg.s,
-              progress: 0,
-              status: 'receiving',
-            });
-            return next;
-          });
+          // Auto-cleanup after TTL
+          setTimeout(() => incomingRef.current.delete(msg.id), TRANSFER_TTL_MS);
           break;
         }
 
         case FileMsgType.CHUNK: {
           const incoming = incomingRef.current.get(msg.id);
           if (!incoming) return;
+          // Dedup chunks
+          if (incoming.chunks.has(msg.i)) return;
           incoming.chunks.set(msg.i, msg.d);
 
-          const received = incoming.chunks.size;
-          const total = incoming.meta.c;
-
-          setTransferProgress((prev) => {
-            const existing = prev.get(msg.id);
-            if (!existing) return prev;
-            const next = new Map(prev);
-            next.set(msg.id, {
-              ...existing,
-              progress: received / total,
-            });
-            return next;
-          });
-
-          if (received === total) {
+          // Check if all chunks received
+          if (incoming.chunks.size === incoming.meta.c) {
             finalizeIncoming(msg.id, incoming);
           }
           break;
@@ -330,13 +257,6 @@ export function useFileAttachments(enableAttachments: boolean) {
 
         case FileMsgType.CANCEL: {
           incomingRef.current.delete(msg.id);
-          setTransferProgress((prev) => {
-            const existing = prev.get(msg.id);
-            if (!existing) return prev;
-            const next = new Map(prev);
-            next.set(msg.id, { ...existing, status: 'cancelled' });
-            return next;
-          });
           break;
         }
       }
@@ -348,30 +268,17 @@ export function useFileAttachments(enableAttachments: boolean) {
     ) => {
       try {
         const blob = assembleChunks(incoming.chunks, incoming.meta.m);
-        const hash = await sha256Blob(blob);
-
         const receivedFile: ReceivedFile = {
           id: fileId,
           name: incoming.meta.n,
           mimeType: incoming.meta.m,
           size: incoming.meta.s,
           blob,
-          hash,
           from: incoming.from,
           timestamp: Date.now(),
         };
 
-        setReceivedFiles((prev) => [...prev, receivedFile]);
-
-        setTransferProgress((prev) => {
-          const existing = prev.get(fileId);
-          if (!existing) return prev;
-          const next = new Map(prev);
-          next.set(fileId, { ...existing, status: 'complete', progress: 1 });
-          return next;
-        });
-
-        onFileReceivedRef.current?.(receivedFile);
+        setReceivedFiles((prev) => [...prev.slice(-(MAX_RECEIVED_FILES - 1)), receivedFile]);
         incomingRef.current.delete(fileId);
       } catch (err) {
         console.error('[FileAttach] Assembly failed:', err);
@@ -379,17 +286,12 @@ export function useFileAttachments(enableAttachments: boolean) {
     };
 
     room.on(RoomEvent.DataReceived, handleData);
-    return () => {
-      room.off(RoomEvent.DataReceived, handleData);
-    };
+    return () => { room.off(RoomEvent.DataReceived, handleData); };
   }, [room]);
 
-  // ── File transfer chat marker ──────────────────────────────────────────
-  // After sending via data channel, we send a chat message with this prefix
-  // so the receiver can display a file card even if data channel is delayed
-  const FT_MARKER = '__FT__';
-
   // ── Submit ──────────────────────────────────────────────────────────────
+
+  const FT_MARKER = '__FT__';
 
   const handleSubmit = React.useCallback(
     async (e?: React.FormEvent) => {
@@ -403,31 +305,38 @@ export function useFileAttachments(enableAttachments: boolean) {
         setIsSendingFiles(files.length > 0);
         setSentCount(0);
 
-        // Send text first
         if (text) await send(text);
 
-        // Send files
         for (let i = 0; i < files.length; i++) {
           const { file, kind } = files[i];
+
           if (kind === 'image') {
-            // File ≤ 5MB → base64 via chat (fast, works everywhere)
+            // File ≤ 5MB → base64 via chat (instant)
             await send(await fileToDataUrl(file));
           } else {
-            // Large file > 5MB → chunked via data channel
+            // Large file → data channel (await for back-pressure)
             const fileId = await sendFileViaDataChannel(file);
-            // For sender: add to receivedFiles
-            setReceivedFiles((prev) => [...prev, {
-              id: fileId, name: file.name,
+
+            // Add to receivedFiles for sender (no loopback)
+            setReceivedFiles((prev) => [...prev.slice(-(MAX_RECEIVED_FILES - 1)), {
+              id: fileId,
+              name: file.name,
               mimeType: file.type || 'application/octet-stream',
-              size: file.size, blob: file, hash: '',
-              from: 'you', timestamp: Date.now(),
+              size: file.size,
+              blob: file,
+              from: 'you',
+              timestamp: Date.now(),
             }]);
-            // Marker for receiver
+
+            // Chat marker for receiver
             await send(`${FT_MARKER}${JSON.stringify({
-              fileId, name: file.name, size: file.size,
+              fileId,
+              name: file.name,
+              size: file.size,
               mime: file.type || 'application/octet-stream',
             })}`);
           }
+
           setSentCount(i + 1);
         }
 
@@ -443,6 +352,14 @@ export function useFileAttachments(enableAttachments: boolean) {
     },
     [send, pendingFiles, textValue, sendFileViaDataChannel],
   );
+
+  // ── Cleanup ─────────────────────────────────────────────────────────────
+
+  const removeReceivedFile = React.useCallback((id: string) => {
+    setReceivedFiles((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  // ── Return ──────────────────────────────────────────────────────────────
 
   const busy = isSending || isSendingFiles;
   const overLimit = textValue.length > MAX_TEXT_LEN;
@@ -471,11 +388,7 @@ export function useFileAttachments(enableAttachments: boolean) {
     handleDrop,
     handlePaste,
     handleSubmit,
-    // New file transfer stuff
-    transferProgress,
     receivedFiles,
-    removeReceivedFile: (id: string) =>
-      setReceivedFiles((prev) => prev.filter((f) => f.id !== id)),
-    onFileReceived,
+    removeReceivedFile,
   };
 }
