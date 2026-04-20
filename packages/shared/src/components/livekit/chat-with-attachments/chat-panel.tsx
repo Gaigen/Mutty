@@ -12,7 +12,6 @@ import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatDragOverlay } from './ChatDragOverlay';
 import { ChatFilePreview } from './ChatFilePreview';
-import { ReceivedFilesBar } from './ReceivedFilesBar';
 import { ChatInput } from './ChatInput';
 import { ScrollToBottomButton } from './ScrollToBottomButton';
 import type { ChatWithAttachmentsProps } from './types';
@@ -92,6 +91,8 @@ export function ChatWithAttachments({
         onCloseFullscreen={closeFullscreen}
         listRef={ulRef}
         onScroll={handleScroll}
+        receivedFiles={fileAtt.receivedFiles}
+        onDownloadFile={handleDownloadFile}
       />
 
       {!atBottom && (
@@ -101,13 +102,6 @@ export function ChatWithAttachments({
           pendingFileCount={fileAtt.pendingFiles.length}
         />
       )}
-
-      <ReceivedFilesBar
-        files={fileAtt.receivedFiles}
-        onDownload={handleDownloadFile}
-        onRemove={fileAtt.removeReceivedFile}
-        onOpenFullscreen={openFullscreen}
-      />
 
       <ChatFilePreview
         files={fileAtt.pendingFiles}

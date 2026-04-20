@@ -16,7 +16,6 @@ import {
   sha256Blob,
   splitFileIntoChunks,
   assembleChunks,
-  getFileIcon,
   type FileMeta,
 } from '../lib/file-transfer';
 
@@ -253,10 +252,6 @@ export function useFileAttachments(enableAttachments: boolean) {
         return next;
       });
 
-      // Also send a chat message with file reference
-      const icon = getFileIcon(file.type);
-      await send(`${icon} ${file.name} (${formatFileSize(file.size)})`);
-
       return fileId;
     },
     [room, send],
@@ -391,6 +386,11 @@ export function useFileAttachments(enableAttachments: boolean) {
     };
   }, [room]);
 
+  // ── File transfer chat marker ──────────────────────────────────────────
+  // After sending via data channel, we send a chat message with this prefix
+  // so the receiver can display a file card even if data channel is delayed
+  const FT_MARKER = '__FT__';
+
   // ── Submit ──────────────────────────────────────────────────────────────
 
   const handleSubmit = React.useCallback(
@@ -415,8 +415,16 @@ export function useFileAttachments(enableAttachments: boolean) {
             // Small image → base64 via chat (backward compatible)
             await send(await fileToDataUrl(file));
           } else {
-            // File → chunked via data channel
-            await sendFileViaDataChannel(file);
+            // All files → chunked via data channel + chat marker for UI
+            const fileId = await sendFileViaDataChannel(file);
+            // Send a marker message so receiver sees a file card in chat
+            const marker = JSON.stringify({
+              fileId,
+              name: file.name,
+              size: file.size,
+              mime: file.type || 'application/octet-stream',
+            });
+            await send(`${FT_MARKER}${marker}`);
           }
           setSentCount(i + 1);
         }
