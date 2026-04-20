@@ -107,6 +107,7 @@ export function ChatWithAttachments({
         files={fileAtt.pendingFiles}
         isSendingFiles={fileAtt.isSendingFiles}
         sentCount={fileAtt.sentCount}
+        activeTransfers={fileAtt.activeTransfers}
         onRemove={fileAtt.removePending}
       />
 

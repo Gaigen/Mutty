@@ -38,6 +38,15 @@ export interface ReceivedFile {
 const MAX_RECEIVED_FILES = 50;
 const PROGRESS_THROTTLE_MS = 100;
 
+export interface TransferStatus {
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  direction: 'sending' | 'receiving';
+  progress: number; // 0..1
+  status: 'active' | 'complete' | 'error';
+}
+
 /**
  * Manages file & image attachments: drag & drop, paste, file picker, sending/receiving.
  *
@@ -54,6 +63,32 @@ export function useFileAttachments(enableAttachments: boolean) {
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [textValue, setTextValue] = React.useState('');
   const [receivedFiles, setReceivedFiles] = React.useState<ReceivedFile[]>([]);
+
+  // Active transfers for progress UI — ref for fast updates, state for re-renders
+  const activeTransfersRef = React.useRef<Map<string, TransferStatus>>(new Map());
+  const [activeTransfers, setActiveTransfers] = React.useState<TransferStatus[]>([]);
+  const progressTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sync ref → state periodically (throttled re-renders)
+  const startProgressSync = React.useCallback(() => {
+    if (progressTimerRef.current) return;
+    progressTimerRef.current = setInterval(() => {
+      const arr = Array.from(activeTransfersRef.current.values());
+      setActiveTransfers(arr);
+      // Stop timer when all transfers done
+      if (arr.every((t) => t.status !== 'active')) {
+        clearInterval(progressTimerRef.current!);
+        progressTimerRef.current = null;
+      }
+    }, PROGRESS_THROTTLE_MS);
+  }, []);
+
+  // Cleanup timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    };
+  }, []);
 
   // ── File classification ─────────────────────────────────────────────────
 
@@ -152,48 +187,62 @@ export function useFileAttachments(enableAttachments: boolean) {
       const fileId = generateTransferId();
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-      // Send metadata
-      const meta: FileMeta = {
-        t: FileMsgType.META,
-        id: fileId,
-        n: file.name,
-        s: file.size,
-        m: file.type || 'application/octet-stream',
-        c: totalChunks,
-      };
-      await room.localParticipant.publishData(encodeWireMessage(meta), {
-        reliable: true,
-        topic: FILE_TRANSFER_TOPIC,
+      // Register transfer
+      activeTransfersRef.current.set(fileId, {
+        fileId,
+        fileName: file.name,
+        fileSize: file.size,
+        direction: 'sending',
+        progress: 0,
+        status: 'active',
       });
+      startProgressSync();
 
-      // Send chunks — NO per-chunk setState (throttled)
-      let chunkIndex = 0;
-      let lastProgressUpdate = 0;
+      try {
+        // Send metadata
+        await room.localParticipant.publishData(
+          encodeWireMessage({
+            t: FileMsgType.META,
+            id: fileId,
+            n: file.name,
+            s: file.size,
+            m: file.type || 'application/octet-stream',
+            c: totalChunks,
+          }),
+          { reliable: true, topic: FILE_TRANSFER_TOPIC },
+        );
 
-      for await (const chunk of splitFileIntoChunks(file, fileId)) {
-        await room.localParticipant.publishData(encodeWireMessage(chunk), {
-          reliable: true,
-          topic: FILE_TRANSFER_TOPIC,
-        });
-        chunkIndex++;
+        // Send chunks — update ref (no re-render per chunk)
+        for await (const chunk of splitFileIntoChunks(file, fileId)) {
+          await room.localParticipant.publishData(encodeWireMessage(chunk), {
+            reliable: true,
+            topic: FILE_TRANSFER_TOPIC,
+          });
 
-        // Throttle progress updates to every 100ms
-        const now = Date.now();
-        if (now - lastProgressUpdate > PROGRESS_THROTTLE_MS) {
-          lastProgressUpdate = now;
-          // progress tracked via ref, not state — no re-renders
+          const t = activeTransfersRef.current.get(fileId);
+          if (t) {
+            t.progress = (chunk.i + 1) / totalChunks;
+          }
         }
+
+        // Send completion
+        await room.localParticipant.publishData(
+          encodeWireMessage({ t: FileMsgType.DONE, id: fileId }),
+          { reliable: true, topic: FILE_TRANSFER_TOPIC },
+        );
+
+        // Mark complete
+        const t = activeTransfersRef.current.get(fileId);
+        if (t) { t.progress = 1; t.status = 'complete'; }
+
+        return fileId;
+      } catch (err) {
+        const t = activeTransfersRef.current.get(fileId);
+        if (t) t.status = 'error';
+        throw err;
       }
-
-      // Send completion (no hash — saves time)
-      await room.localParticipant.publishData(
-        encodeWireMessage({ t: FileMsgType.DONE, id: fileId }),
-        { reliable: true, topic: FILE_TRANSFER_TOPIC },
-      );
-
-      return fileId;
     },
-    [room],
+    [room, startProgressSync],
   );
 
   // ── Receive handler (data channel) ──────────────────────────────────────
@@ -227,6 +276,16 @@ export function useFileAttachments(enableAttachments: boolean) {
             chunks: new Map(),
             from: senderIdentity,
           });
+          // Track receiving progress
+          activeTransfersRef.current.set(msg.id, {
+            fileId: msg.id,
+            fileName: msg.n,
+            fileSize: msg.s,
+            direction: 'receiving',
+            progress: 0,
+            status: 'active',
+          });
+          startProgressSync();
           // Auto-cleanup after TTL
           setTimeout(() => incomingRef.current.delete(msg.id), TRANSFER_TTL_MS);
           break;
@@ -238,6 +297,12 @@ export function useFileAttachments(enableAttachments: boolean) {
           // Dedup chunks
           if (incoming.chunks.has(msg.i)) return;
           incoming.chunks.set(msg.i, msg.d);
+
+          // Update progress in ref (no re-render per chunk)
+          const t = activeTransfersRef.current.get(msg.id);
+          if (t) {
+            t.progress = incoming.chunks.size / incoming.meta.c;
+          }
 
           // Check if all chunks received
           if (incoming.chunks.size === incoming.meta.c) {
@@ -280,8 +345,14 @@ export function useFileAttachments(enableAttachments: boolean) {
 
         setReceivedFiles((prev) => [...prev.slice(-(MAX_RECEIVED_FILES - 1)), receivedFile]);
         incomingRef.current.delete(fileId);
+
+        // Mark transfer complete
+        const t = activeTransfersRef.current.get(fileId);
+        if (t) { t.progress = 1; t.status = 'complete'; }
       } catch (err) {
         console.error('[FileAttach] Assembly failed:', err);
+        const t = activeTransfersRef.current.get(fileId);
+        if (t) t.status = 'error';
       }
     };
 
@@ -390,5 +461,6 @@ export function useFileAttachments(enableAttachments: boolean) {
     handleSubmit,
     receivedFiles,
     removeReceivedFile,
+    activeTransfers,
   };
 }
