@@ -2,28 +2,57 @@ import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-const COLLAPSE_HEIGHT = 120; // px — roughly 6 lines of text
+const COLLAPSE_HEIGHT = 120; // px
 
-function PreWithCopy({ children }: { children?: React.ReactNode }) {
-  const preRef = React.useRef<HTMLPreElement>(null);
+function CodeBlock({ className, children }: { className?: string; children: React.ReactNode }) {
   const [copied, setCopied] = React.useState(false);
+  const match = /language-(\w+)/.exec(className || '');
+  const code = String(children).replace(/\n$/, '');
 
   const copy = () => {
-    const text = preRef.current?.textContent ?? '';
-    navigator.clipboard.writeText(text).then(() => {
+    navigator.clipboard.writeText(code).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     }).catch(() => {});
   };
 
+  if (match) {
+    // Fenced code block with language — syntax highlighted
+    return (
+      <div className="chat-code-block-wrapper" style={{ position: 'relative' }}>
+        <SyntaxHighlighter
+          style={oneDark}
+          language={match[1]}
+          PreTag="div"
+          customStyle={{
+            margin: 0,
+            borderRadius: 6,
+            fontSize: 13,
+            lineHeight: 1.5,
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
+        <button type="button" className="chat-code-copy" onClick={copy}>
+          {copied ? '✓' : 'copy'}
+        </button>
+      </div>
+    );
+  }
+
+  // Inline code or code without language
   return (
-    <div className="chat-code-block-wrapper">
-      <pre ref={preRef}>{children}</pre>
-      <button type="button" className="chat-code-copy" onClick={copy}>
-        {copied ? '✓' : 'copy'}
-      </button>
-    </div>
+    <code className={className} style={{
+      background: 'rgba(255,255,255,0.08)',
+      padding: '1px 5px',
+      borderRadius: 3,
+      fontSize: '0.9em',
+    }}>
+      {children}
+    </code>
   );
 }
 
@@ -32,20 +61,13 @@ export function MarkdownMessage({ content }: { content: string }) {
   const [isLong, setIsLong] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
 
-  // Measure actual rendered height via ResizeObserver
   React.useLayoutEffect(() => {
     const el = contentRef.current;
     if (!el) return;
-
-    // Check immediately after render
     const check = () => {
-      if (el.scrollHeight > COLLAPSE_HEIGHT) {
-        setIsLong(true);
-      }
+      if (el.scrollHeight > COLLAPSE_HEIGHT) setIsLong(true);
     };
     check();
-
-    // Also observe for dynamic content changes
     const ro = new ResizeObserver(check);
     ro.observe(el);
     return () => ro.disconnect();
@@ -64,7 +86,9 @@ export function MarkdownMessage({ content }: { content: string }) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkBreaks]}
           components={{
-            pre: ({ children }) => <PreWithCopy>{children}</PreWithCopy>,
+            code: ({ className, children }) => (
+              <CodeBlock className={className}>{children}</CodeBlock>
+            ),
             a: ({ children, href }) => (
               <a href={href} target="_blank" rel="noopener noreferrer">
                 {children}

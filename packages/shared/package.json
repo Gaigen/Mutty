@@ -19,6 +19,7 @@
     "livekit-client": "^2.18.1",
     "lucide-react": "^1.7.0",
     "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.1",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "shadcn": "^4.1.2",
@@ -29,6 +30,7 @@
     "@types/dompurify": "^3.0.5",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "typescript": "~5.9.3"
   },
   "peerDependencies": {
