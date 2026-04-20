@@ -1,52 +1,14 @@
 import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const COLLAPSE_HEIGHT = 120; // px
 
-function CodeBlock({ className, children }: { className?: string; children: React.ReactNode }) {
-  const [copied, setCopied] = React.useState(false);
-  const match = /language-(\w+)/.exec(className || '');
-  const code = String(children).replace(/\n$/, '');
-  const isBlock = code.includes('\n');
-
-  const copy = () => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
-  };
-
-  // Block code (fenced with or without language) — styled with SyntaxHighlighter
-  if (isBlock) {
-    return (
-      <div className="chat-code-block-wrapper" style={{ position: 'relative' }}>
-        <SyntaxHighlighter
-          style={oneDark}
-          language={match?.[1] || 'text'}
-          PreTag="div"
-          customStyle={{
-            margin: 0,
-            borderRadius: 6,
-            fontSize: 13,
-            lineHeight: 1.5,
-          }}
-        >
-          {code}
-        </SyntaxHighlighter>
-        <button type="button" className="chat-code-copy" onClick={copy}>
-          {copied ? '✓' : 'copy'}
-        </button>
-      </div>
-    );
-  }
-
-  // Inline code
+function InlineCode({ children }: { children: React.ReactNode }) {
   return (
-    <code className={className} style={{
+    <code style={{
       background: 'rgba(255,255,255,0.08)',
       padding: '1px 5px',
       borderRadius: 3,
@@ -54,6 +16,42 @@ function CodeBlock({ className, children }: { className?: string; children: Reac
     }}>
       {children}
     </code>
+  );
+}
+
+function CodeBlock({ className, children }: { className?: string; children: React.ReactNode }) {
+  const [copied, setCopied] = React.useState(false);
+  const match = /language-(\w+)/.exec(className || '');
+  const code = String(children).replace(/\n$/, '');
+
+  const copy = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }).catch(() => {});
+    }
+  };
+
+  return (
+    <div className="chat-code-block-wrapper" style={{ position: 'relative' }}>
+      <SyntaxHighlighter
+        style={oneDark}
+        language={match?.[1] || 'text'}
+        PreTag="div"
+        customStyle={{
+          margin: 0,
+          borderRadius: 6,
+          fontSize: 13,
+          lineHeight: 1.5,
+        }}
+      >
+        {code}
+      </SyntaxHighlighter>
+      <button type="button" className="chat-code-copy" onClick={copy}>
+        {copied ? '✓' : 'copy'}
+      </button>
+    </div>
   );
 }
 
@@ -85,11 +83,18 @@ export function MarkdownMessage({ content }: { content: string }) {
         }
       >
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkBreaks]}
+          remarkPlugins={[remarkGfm]}
           components={{
-            code: ({ className, children }) => (
-              <CodeBlock className={className}>{children}</CodeBlock>
-            ),
+            code: ({ className, children }) => {
+              // react-markdown v10: inline prop removed
+              // className="language-xxx" → block code (inside <pre>)
+              // no className → inline code (backtick)
+              const isBlock = !!className;
+              if (isBlock) {
+                return <CodeBlock className={className}>{children}</CodeBlock>;
+              }
+              return <InlineCode>{children}</InlineCode>;
+            },
             a: ({ children, href }) => (
               <a href={href} target="_blank" rel="noopener noreferrer">
                 {children}
