@@ -104,14 +104,24 @@ function PendingFileRow({ file, onRemove }: { file: PendingFile; onRemove: () =>
 function TransferProgressBar({ transfer }: { transfer: TransferStatus }) {
   const pct = Math.round(transfer.progress * 100);
   const dir = transfer.direction === 'sending' ? '↑' : '↓';
+  const isDone = transfer.status !== 'active';
 
   return (
-    <div style={{
-      padding: '6px 8px',
-      background: 'rgba(255,255,255,0.04)',
-      borderRadius: 6,
-      border: '1px solid rgba(255,255,255,0.08)',
-    }}>
+    <div
+      style={{
+        padding: '6px 8px',
+        background: 'rgba(255,255,255,0.04)',
+        borderRadius: 6,
+        border: '1px solid rgba(255,255,255,0.08)',
+        opacity: isDone ? 0 : 1,
+        maxHeight: isDone ? 0 : 60,
+        overflow: 'hidden',
+        paddingBlock: isDone ? 0 : 6,
+        marginBottom: isDone ? 0 : undefined,
+        transition: 'opacity 0.4s ease, max-height 0.3s ease, padding 0.3s ease',
+        pointerEvents: 'none',
+      }}
+    >
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
         fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 4,
@@ -123,10 +133,9 @@ function TransferProgressBar({ transfer }: { transfer: TransferStatus }) {
           {transfer.fileName}
         </span>
         <span style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-          {pct}%
+          {isDone ? '✓' : `${pct}%`}
         </span>
       </div>
-      {/* Progress bar */}
       <div style={{
         height: 3, borderRadius: 2,
         background: 'rgba(255,255,255,0.1)',
@@ -137,8 +146,8 @@ function TransferProgressBar({ transfer }: { transfer: TransferStatus }) {
           width: `${pct}%`,
           borderRadius: 2,
           background: transfer.direction === 'sending'
-            ? 'rgba(59,130,246,0.8)'  // blue for sending
-            : 'rgba(34,197,94,0.8)',   // green for receiving
+            ? 'rgba(59,130,246,0.8)'
+            : 'rgba(34,197,94,0.8)',
           transition: 'width 0.15s ease',
         }} />
       </div>
