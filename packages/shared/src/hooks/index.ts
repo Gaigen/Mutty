@@ -8,7 +8,7 @@ export { useCameraSettings, getCameraSettings } from './useCameraSettings';
 export type { CameraSettings } from './useCameraSettings';
 export { useChatNotifications } from './useChatNotifications';
 export { useChatScroll } from './useChatScroll';
-export { useImageAttachments } from './useImageAttachments';
+export { useFileAttachments } from './useImageAttachments';
 export { useMicLevel } from './useMicLevel';
 export { useOverflowControls } from './useOverflowControls';
 export type { ControlDef } from './useOverflowControls';
@@ -16,3 +16,4 @@ export { useScreenShareSettings, getScreenShareSettings } from './useScreenShare
 export type { ScreenShareSettings, VideoCodec, ContentHint } from './useScreenShareSettings';
 export { useStatsPolling } from './useStatsPolling';
 export { useUnreadMessages } from './useUnreadMessages';
+export { useFileTransfer } from './useFileTransfer';

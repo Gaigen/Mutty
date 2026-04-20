@@ -4,15 +4,14 @@ import {
   useLocalParticipant,
   useRemoteParticipants,
 } from '@livekit/components-react';
-import { MAX_IMAGE_BYTES } from './constants';
 import { useChatNotifications } from '../../../hooks/useChatNotifications';
 import { useChatScroll } from '../../../hooks/useChatScroll';
 import { useUnreadMessages } from '../../../hooks/useUnreadMessages';
-import { useImageAttachments } from '../../../hooks/useImageAttachments';
+import { useFileAttachments } from '../../../hooks/useImageAttachments';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatDragOverlay } from './ChatDragOverlay';
-import { ChatImagePreview } from './ChatImagePreview';
+import { ChatFilePreview } from './ChatFilePreview';
 import { ChatInput } from './ChatInput';
 import { ScrollToBottomButton } from './ScrollToBottomButton';
 import type { ChatWithAttachmentsProps } from './types';
@@ -52,22 +51,34 @@ export function ChatWithAttachments({
 
   useUnreadMessages(chatMessages);
 
-  const imageAtt = useImageAttachments(enableAttachments);
+  const fileAtt = useFileAttachments(enableAttachments);
 
   const openFullscreen = React.useCallback((src: string) => setFullscreenImage(src), []);
   const closeFullscreen = React.useCallback(() => setFullscreenImage(null), []);
+
+  // Download received files
+  const handleDownloadFile = React.useCallback((blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
 
   return (
     <div
       className="lk-chat"
       {...props}
       style={{ position: 'relative', ...(props.style ?? {}) }}
-      onDragEnter={imageAtt.handleDragEnter}
-      onDragOver={imageAtt.handleDragOver}
-      onDragLeave={imageAtt.handleDragLeave}
-      onDrop={imageAtt.handleDrop}
+      onDragEnter={fileAtt.handleDragEnter}
+      onDragOver={fileAtt.handleDragOver}
+      onDragLeave={fileAtt.handleDragLeave}
+      onDrop={fileAtt.handleDrop}
     >
-      <ChatDragOverlay isDragOver={imageAtt.isDragOver} />
+      <ChatDragOverlay isDragOver={fileAtt.isDragOver} />
 
       <ChatHeader onClose={onClose} />
 
@@ -80,38 +91,41 @@ export function ChatWithAttachments({
         onCloseFullscreen={closeFullscreen}
         listRef={ulRef}
         onScroll={handleScroll}
+        receivedFiles={fileAtt.receivedFiles}
+        onDownloadFile={handleDownloadFile}
+        onRemoveReceivedFile={fileAtt.removeReceivedFile}
       />
 
       {!atBottom && (
         <ScrollToBottomButton
           onClick={scrollToBottom}
           newMsgCount={newMsgCount}
-          pendingFileCount={imageAtt.pendingFiles.length}
+          pendingFileCount={fileAtt.pendingFiles.length}
         />
       )}
 
-      <ChatImagePreview
-        files={imageAtt.pendingFiles}
-        isSendingImages={imageAtt.isSendingImages}
-        sentCount={imageAtt.sentCount}
-        onRemove={imageAtt.removePending}
+      <ChatFilePreview
+        files={fileAtt.pendingFiles}
+        isSendingFiles={fileAtt.isSendingFiles}
+        sentCount={fileAtt.sentCount}
+        onRemove={fileAtt.removePending}
       />
 
       <ChatInput
-        textValue={imageAtt.textValue}
-        onTextChange={imageAtt.setTextValue}
-        onSubmit={imageAtt.handleSubmit}
-        onPaste={imageAtt.handlePaste}
-        onAttachClick={() => imageAtt.fileInputRef.current?.click()}
-        onFileChange={imageAtt.onFileChange}
-        fileInputRef={imageAtt.fileInputRef}
-        busy={imageAtt.busy}
-        overLimit={imageAtt.overLimit}
-        nearLimit={imageAtt.nearLimit}
-        enableAttachments={imageAtt.enableAttachments}
-        acceptImages={imageAtt.ACCEPT_IMAGES}
-        maxImageMB={Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}
-        isSendingImages={imageAtt.isSendingImages}
+        textValue={fileAtt.textValue}
+        onTextChange={fileAtt.setTextValue}
+        onSubmit={fileAtt.handleSubmit}
+        onPaste={fileAtt.handlePaste}
+        onAttachClick={() => fileAtt.fileInputRef.current?.click()}
+        onFileChange={fileAtt.onFileChange}
+        fileInputRef={fileAtt.fileInputRef}
+        busy={fileAtt.busy}
+        overLimit={fileAtt.overLimit}
+        nearLimit={fileAtt.nearLimit}
+        enableAttachments={fileAtt.enableAttachments}
+        acceptAllFiles={fileAtt.acceptAllFiles}
+        maxFileSizeMB={Math.round(100)}
+        isSendingFiles={fileAtt.isSendingFiles}
       />
     </div>
   );

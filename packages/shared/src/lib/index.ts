@@ -17,5 +17,26 @@ export { playChatNotificationSound } from './play-chat-notification';
 // Stream stats
 export { PING_HISTORY_SIZE, computeBitrate } from './stream-stats';
 
+// File transfer protocol
+export {
+  FILE_TRANSFER_TOPIC,
+  CHUNK_SIZE,
+  MAX_FILE_BYTES,
+  ACCEPT_ALL_FILES,
+  FileMsgType,
+  generateTransferId,
+  encodeWireMessage,
+  decodeWireMessage,
+  sha256Blob,
+  splitFileIntoChunks,
+  assembleChunks,
+  formatFileSize,
+  getFileIcon,
+  isImage,
+  isVideo,
+  isAudio,
+} from './file-transfer';
+export type { FileMeta, FileChunk, FileDone, FileCancel, FileWireMessage, TransferProgress } from './file-transfer';
+
 // Utils
 export { cn } from './utils';

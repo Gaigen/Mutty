@@ -14,9 +14,9 @@ interface ChatInputProps {
   overLimit: boolean;
   nearLimit: boolean;
   enableAttachments: boolean;
-  acceptImages: string;
-  maxImageMB: number;
-  isSendingImages: boolean;
+  acceptAllFiles: string;
+  maxFileSizeMB: number;
+  isSendingFiles: boolean;
 }
 
 export function ChatInput({
@@ -31,9 +31,9 @@ export function ChatInput({
   overLimit,
   nearLimit,
   enableAttachments,
-  acceptImages,
-  maxImageMB,
-  isSendingImages,
+  acceptAllFiles,
+  maxFileSizeMB,
+  isSendingFiles,
 }: ChatInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [textareaHadFocus, setTextareaHadFocus] = React.useState(false);
@@ -73,7 +73,7 @@ export function ChatInput({
           <input
             ref={fileInputRef}
             type="file"
-            accept={acceptImages}
+            accept={acceptAllFiles}
             multiple
             onChange={onFileChange}
             style={{ display: 'none' }}
@@ -83,9 +83,9 @@ export function ChatInput({
             type="button"
             className="lk-button chat-attach-button"
             onClick={onAttachClick}
-            title={`Attach image (max ${maxImageMB} MB)`}
+            title={`Attach file (max ${maxFileSizeMB} MB)`}
             disabled={busy}
-            aria-label="Attach image"
+            aria-label="Attach file"
           >
             <AttachIcon size={22} />
           </button>
@@ -148,7 +148,7 @@ export function ChatInput({
         disabled={busy || overLimit}
         style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1 }}
       >
-        {isSendingImages ? '…' : 'Send'}
+        {isSendingFiles ? '…' : 'Send'}
       </button>
     </form>
   );
