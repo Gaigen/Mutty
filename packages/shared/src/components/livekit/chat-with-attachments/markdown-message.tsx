@@ -11,6 +11,7 @@ function CodeBlock({ className, children }: { className?: string; children: Reac
   const [copied, setCopied] = React.useState(false);
   const match = /language-(\w+)/.exec(className || '');
   const code = String(children).replace(/\n$/, '');
+  const isBlock = code.includes('\n');
 
   const copy = () => {
     navigator.clipboard.writeText(code).then(() => {
@@ -19,13 +20,13 @@ function CodeBlock({ className, children }: { className?: string; children: Reac
     }).catch(() => {});
   };
 
-  if (match) {
-    // Fenced code block with language — syntax highlighted
+  // Block code (fenced with or without language) — styled with SyntaxHighlighter
+  if (isBlock) {
     return (
       <div className="chat-code-block-wrapper" style={{ position: 'relative' }}>
         <SyntaxHighlighter
           style={oneDark}
-          language={match[1]}
+          language={match?.[1] || 'text'}
           PreTag="div"
           customStyle={{
             margin: 0,
@@ -43,7 +44,7 @@ function CodeBlock({ className, children }: { className?: string; children: Reac
     );
   }
 
-  // Inline code or code without language
+  // Inline code
   return (
     <code className={className} style={{
       background: 'rgba(255,255,255,0.08)',
