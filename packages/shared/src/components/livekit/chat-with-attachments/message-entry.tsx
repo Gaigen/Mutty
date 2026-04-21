@@ -18,7 +18,7 @@ function getFallbackAvatar(identity: string): AvatarId {
   return AVATAR_POOL[Math.abs(hash) % AVATAR_POOL.length];
 }
 
-export function MessageEntry({
+export const MessageEntry = React.memo(function MessageEntry({
   msg,
   hideName,
   hideAvatar,
@@ -80,4 +80,15 @@ export function MessageEntry({
       </div>
     </div>
   );
-}
+}, (prev, next) => {
+  // Compare only what actually affects rendering
+  if (prev.msg.id !== next.msg.id) return false;
+  if (prev.msg.message !== next.msg.message) return false;
+  if (prev.msg.editTimestamp !== next.msg.editTimestamp) return false;
+  if (prev.hideName !== next.hideName) return false;
+  if (prev.hideAvatar !== next.hideAvatar) return false;
+  if (prev.hideTimestamp !== next.hideTimestamp) return false;
+  if (prev.formatter !== next.formatter) return false;
+  // avatarMap rarely changes, skip deep compare
+  return true;
+});

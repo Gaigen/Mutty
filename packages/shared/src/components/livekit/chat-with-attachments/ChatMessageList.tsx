@@ -203,7 +203,7 @@ function FileCardInline({
   );
 }
 
-export function ChatMessageList({
+export const ChatMessageList = React.memo(function ChatMessageList({
   messages,
   avatarMap,
   customFormatter,
@@ -306,4 +306,17 @@ export function ChatMessageList({
       )}
     </>
   );
-}
+}, (prev, next) => {
+  // Re-render only if messages array reference changed (new message) or key props differ
+  if (prev.messages !== next.messages) return false;
+  if (prev.receivedFiles !== next.receivedFiles) return false;
+  // avatarMap: new Map on every useLocalParticipant update, but content rarely changes
+  // Compare size + entries only if reference changed
+  if (prev.avatarMap !== next.avatarMap) {
+    if (prev.avatarMap.size !== next.avatarMap.size) return false;
+    for (const [k, v] of prev.avatarMap) {
+      if (next.avatarMap.get(k) !== v) return false;
+    }
+  }
+  return true;
+});
