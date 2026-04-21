@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { PictureInPicture2 } from 'lucide-react';
+import { usePictureInPicture } from '../../hooks/usePictureInPicture';
 import { useCallback, useState } from 'react';
 import type { Participant } from 'livekit-client';
 import { RemoteTrackPublication, Track } from 'livekit-client';
@@ -214,6 +216,7 @@ const ParticipantTileWithActionsInner = React.forwardRef<
 
   const isEncrypted = useIsEncrypted(trackReference.participant);
   const layoutContext = useMaybeLayoutContext();
+  const { isPiP, isSupported: isPiPSupported, enter: enterPiP, exit: exitPiP } = usePictureInPicture();
   const autoManageSubscription = useFeatureContext()?.autoSubscription;
 
   const identity = trackReference.participant.identity;
@@ -419,6 +422,25 @@ const ParticipantTileWithActionsInner = React.forwardRef<
             )}
             {isVideoSource && <HideTrackButton trackRef={trackReference} />}
             <FocusToggle trackRef={trackReference} />
+            {isVideoSource && isPiPSupported && (
+              <button
+                type="button"
+                className="lk-button lk-tile-pip-btn"
+                title={isPiP ? 'Exit PiP' : 'Picture-in-Picture'}
+                aria-label={isPiP ? 'Exit PiP' : 'Picture-in-Picture'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const videoEl = (e.currentTarget.closest('.lk-participant-tile') as HTMLElement)?.querySelector<HTMLVideoElement>('video');
+                  if (isPiP) {
+                    exitPiP();
+                  } else {
+                    enterPiP(videoEl || undefined);
+                  }
+                }}
+              >
+                <PictureInPicture2 size={14} />
+              </button>
+            )}
             {isVideoSource && isPinned && (
               <ExpandTabButton trackRef={trackReference} />
             )}
