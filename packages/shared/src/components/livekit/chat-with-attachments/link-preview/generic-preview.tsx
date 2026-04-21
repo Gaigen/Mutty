@@ -1,15 +1,20 @@
 import { getDomain } from './helpers';
+import { useLinkBrowser } from '../../../../hooks/useLinkBrowser';
 
 export function GenericPreview({ url }: { url: string }) {
   const domain = getDomain(url);
   const displayUrl = url.length > 100 ? url.slice(0, 100) + '\u2026' : url;
+  const { open } = useLinkBrowser();
 
   return (
     <a
       href={url}
-      target="_blank"
-      rel="noopener noreferrer"
       className="link-preview-generic"
+      onClick={(e) => {
+        e.preventDefault();
+        open(url);
+      }}
+      style={{ cursor: 'pointer' }}
     >
       <div className="lp-generic-icon">
         <img

@@ -14,12 +14,14 @@ import {
 } from '@livekit/components-react';
 import { ParticipantTileWithActions } from './ParticipantTileWithActions';
 import { ChatWithAttachments } from './ChatWithAttachments';
+import { LinkBrowserFloating } from './LinkBrowserFloating';
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
 import { appConfig, LS_KEYS } from '../../config';
 import { usePlatform } from '../../platform';
 import { ExpandedTrackProvider } from '../../context/ExpandedTrackContext';
+import { LinkBrowserProvider } from '../../hooks/useLinkBrowser';
 
 const CONTROL_BAR_CONTROLS = {
   chat: appConfig.showChat,
@@ -220,67 +222,71 @@ export function VideoConferenceWithVolume({
   ]);
 
   return (
-    <ExpandedTrackProvider>
-      <div className="lk-video-conference" {...props}>
-        {isWeb() && (
-          <LayoutContextProvider value={layoutContext} onWidgetChange={widgetUpdate}>
-            <div className="lk-video-conference-inner" style={{ flex: 1, minWidth: 0 }}>
-              {!focusTrack ? (
-                <div className="lk-grid-layout-wrapper">
-                  <GridLayout tracks={tracks}>
-                    <ParticipantTileWithActions />
-                  </GridLayout>
-                </div>
-              ) : (
-                <div className="lk-focus-layout-wrapper">
-                  <FocusLayoutContainer>
-                    <CarouselLayout tracks={carouselTracks}>
+    <LinkBrowserProvider>
+      <ExpandedTrackProvider>
+        <div className="lk-video-conference" {...props}>
+          {isWeb() && (
+            <LayoutContextProvider value={layoutContext} onWidgetChange={widgetUpdate}>
+              <div className="lk-video-conference-inner" style={{ flex: 1, minWidth: 0 }}>
+                {!focusTrack ? (
+                  <div className="lk-grid-layout-wrapper">
+                    <GridLayout tracks={tracks}>
                       <ParticipantTileWithActions />
-                    </CarouselLayout>
-                    {focusTrack && <ParticipantTileWithActions trackRef={focusTrack} />}
-                  </FocusLayoutContainer>
-                </div>
-              )}
-              <MemoizedControlBar controls={CONTROL_BAR_CONTROLS} rightControls={rightControls} />
-            </div>
-            <div
-              className="chat-resizer"
-              onMouseDown={handleResizeStart}
-              role="separator"
-              aria-orientation="vertical"
-              aria-valuenow={chatWidth}
-              aria-valuemin={CHAT_WIDTH_MIN}
-              aria-valuemax={CHAT_WIDTH_MAX}
-              style={{ display: widgetState.showChat ? 'block' : 'none' }}
-            />
-            <div
-              className="chat-panel-wrapper"
-              data-open={widgetState.showChat}
-              data-resizing={isResizing}
-              style={{
-                display: 'flex',
-                width: widgetState.showChat ? chatWidth : 0,
-                minWidth: widgetState.showChat ? chatWidth : 0,
-                maxWidth: widgetState.showChat ? chatWidth : 0,
-                opacity: widgetState.showChat ? 1 : 0,
-                overflow: 'hidden',
-                pointerEvents: widgetState.showChat ? 'auto' : 'none',
-                flexShrink: 0,
-                height: '100%',
-              }}
-            >
-              <MemoizedChatPanel
-                chatWidth={chatWidth}
-                enableAttachments={appConfig.showChatAttachments}
-                onClose={() => layoutContext.widget.dispatch?.({ msg: 'hide_chat' })}
+                    </GridLayout>
+                  </div>
+                ) : (
+                  <div className="lk-focus-layout-wrapper">
+                    <FocusLayoutContainer>
+                      <CarouselLayout tracks={carouselTracks}>
+                        <ParticipantTileWithActions />
+                      </CarouselLayout>
+                      {focusTrack && <ParticipantTileWithActions trackRef={focusTrack} />}
+                    </FocusLayoutContainer>
+                  </div>
+                )}
+                <MemoizedControlBar controls={CONTROL_BAR_CONTROLS} rightControls={rightControls} />
+              </div>
+              <div
+                className="chat-resizer"
+                onMouseDown={handleResizeStart}
+                role="separator"
+                aria-orientation="vertical"
+                aria-valuenow={chatWidth}
+                aria-valuemin={CHAT_WIDTH_MIN}
+                aria-valuemax={CHAT_WIDTH_MAX}
+                style={{ display: widgetState.showChat ? 'block' : 'none' }}
               />
-            </div>
-          </LayoutContextProvider>
-        )}
-        {/* Per-participant volume */}
-        <CustomRoomAudioRenderer outputVolume={outputVolume} />
-        <ConnectionStateToast />
-      </div>
-    </ExpandedTrackProvider>
+              <div
+                className="chat-panel-wrapper"
+                data-open={widgetState.showChat}
+                data-resizing={isResizing}
+                style={{
+                  display: 'flex',
+                  width: widgetState.showChat ? chatWidth : 0,
+                  minWidth: widgetState.showChat ? chatWidth : 0,
+                  maxWidth: widgetState.showChat ? chatWidth : 0,
+                  opacity: widgetState.showChat ? 1 : 0,
+                  overflow: 'hidden',
+                  pointerEvents: widgetState.showChat ? 'auto' : 'none',
+                  flexShrink: 0,
+                  height: '100%',
+                }}
+              >
+                <MemoizedChatPanel
+                  chatWidth={chatWidth}
+                  enableAttachments={appConfig.showChatAttachments}
+                  onClose={() => layoutContext.widget.dispatch?.({ msg: 'hide_chat' })}
+                />
+              </div>
+            </LayoutContextProvider>
+          )}
+          {/* Per-participant volume */}
+          <CustomRoomAudioRenderer outputVolume={outputVolume} />
+          <ConnectionStateToast />
+          {/* Floating link browser */}
+          <LinkBrowserFloating />
+        </div>
+      </ExpandedTrackProvider>
+    </LinkBrowserProvider>
   );
 }

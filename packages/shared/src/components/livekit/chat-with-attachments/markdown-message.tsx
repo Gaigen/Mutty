@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import hljs from 'highlight.js';
+import { useLinkBrowser } from '../../../hooks/useLinkBrowser';
 
 const COLLAPSE_HEIGHT = 120; // px
 
@@ -72,6 +73,7 @@ export function MarkdownMessage({ content }: { content: string }) {
   const [expanded, setExpanded] = React.useState(false);
   const [isLong, setIsLong] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const linkBrowser = useLinkBrowser();
 
   React.useLayoutEffect(() => {
     const el = contentRef.current;
@@ -109,6 +111,19 @@ export function MarkdownMessage({ content }: { content: string }) {
               }
               return <InlineCode>{children}</InlineCode>;
             },
+            a: ({ children, href }) => (
+              <a
+                href={href}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (href) linkBrowser.open(href);
+                }}
+                style={{ cursor: 'pointer' }}
+                title={`Open ${href} in browser panel`}
+              >
+                {children}
+              </a>
+            ),
           }}
         >
           {content}
