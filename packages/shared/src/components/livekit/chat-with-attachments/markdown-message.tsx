@@ -85,21 +85,17 @@ export function MarkdownMessage({ content }: { content: string }) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            code: ({ className, children }) => {
-              // react-markdown v10: inline prop removed
-              // className="language-xxx" → block code (inside <pre>)
-              // no className → inline code (backtick)
-              const isBlock = !!className;
+            pre: ({ children }) => <>{children}</>,
+            code: ({ className, children, node }) => {
+              // Блочный код — всегда имеет className "language-xxx"
+              // ИЛИ находится внутри <pre> (фenced без языка)
+              const isBlock = !!className || node?.position?.start.line !== node?.position?.end.line;
+              
               if (isBlock) {
                 return <CodeBlock className={className}>{children}</CodeBlock>;
               }
               return <InlineCode>{children}</InlineCode>;
             },
-            a: ({ children, href }) => (
-              <a href={href} target="_blank" rel="noopener noreferrer">
-                {children}
-              </a>
-            ),
           }}
         >
           {content}

@@ -208,6 +208,13 @@ input[type="range"]::-moz-range-thumb:active {
   overflow-x: auto;
   margin: 0;
 }
+
+.chat-code-block-wrapper code {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
 .chat-code-block-wrapper pre code {
   background: none;
   border: none;
