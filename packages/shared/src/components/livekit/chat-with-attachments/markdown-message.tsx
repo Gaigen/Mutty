@@ -116,10 +116,23 @@ export function MarkdownMessage({ content }: { content: string }) {
                 href={href}
                 onClick={(e) => {
                   e.preventDefault();
-                  if (href) linkBrowser.open(href);
+                  if (!href) return;
+                  // Ctrl/Cmd+Click → open in browser directly
+                  if (e.ctrlKey || e.metaKey) {
+                    linkBrowser.openInBrowser(href);
+                  } else {
+                    linkBrowser.open(href);
+                  }
+                }}
+                onMouseDown={(e) => {
+                  // Middle-click → open in browser directly
+                  if (e.button === 1) {
+                    e.preventDefault();
+                    if (href) linkBrowser.openInBrowser(href);
+                  }
                 }}
                 style={{ cursor: 'pointer' }}
-                title={`Open ${href} in browser panel`}
+                title={`${href}\nClick to preview / Ctrl+Click to open in browser`}
               >
                 {children}
               </a>

@@ -4,7 +4,7 @@ import { useLinkBrowser } from '../../../../hooks/useLinkBrowser';
 export function GenericPreview({ url }: { url: string }) {
   const domain = getDomain(url);
   const displayUrl = url.length > 100 ? url.slice(0, 100) + '\u2026' : url;
-  const { open } = useLinkBrowser();
+  const { open, openInBrowser } = useLinkBrowser();
 
   return (
     <a
@@ -12,9 +12,20 @@ export function GenericPreview({ url }: { url: string }) {
       className="link-preview-generic"
       onClick={(e) => {
         e.preventDefault();
-        open(url);
+        if (e.ctrlKey || e.metaKey) {
+          openInBrowser(url);
+        } else {
+          open(url);
+        }
+      }}
+      onMouseDown={(e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          openInBrowser(url);
+        }
       }}
       style={{ cursor: 'pointer' }}
+      title={`${url}\nClick to preview / Ctrl+Click to open in browser`}
     >
       <div className="lp-generic-icon">
         <img

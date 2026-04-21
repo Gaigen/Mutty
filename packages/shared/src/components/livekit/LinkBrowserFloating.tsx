@@ -262,17 +262,17 @@ export function LinkBrowserFloating() {
           {displayUrl}
         </div>
 
-        <HeaderButton onClick={() => setMinimized(v => !v)} title={minimized ? 'Развернуть' : 'Свернуть'}>
+        <HeaderButton onClick={() => setMinimized(v => !v)} title={minimized ? 'Expand' : 'Minimize'}>
           {minimized ? '▲' : '▼'}
         </HeaderButton>
-        <HeaderButton onClick={() => handleOpenInBrowser(state.url!)} title="Открыть в браузере">
+        <HeaderButton onClick={() => handleOpenInBrowser(state.url!)} title="Open in browser">
           🌐
         </HeaderButton>
-        <HeaderButton onClick={handleCopy} title="Скопировать"
-          style={{ background: copied ? 'rgba(34,197,94,0.25)' : undefined }}>
+        <HeaderButton onClick={handleCopy} title="Copy link"
+          style={copied ? { background: 'rgba(34,197,94,0.25)' } : undefined}>
           {copied ? '✓' : '📋'}
         </HeaderButton>
-        <HeaderButton onClick={close} title="Закрыть">✕</HeaderButton>
+        <HeaderButton onClick={close} title="Close">✕</HeaderButton>
       </div>
 
       {/* Content */}
@@ -285,7 +285,7 @@ export function LinkBrowserFloating() {
             }}>
               <span style={{ fontSize: 40 }}>🔗</span>
               <div style={{ fontSize: 13, opacity: 0.6, maxWidth: 300 }}>
-                Этот сайт не разрешает встраивание.
+                This site doesn't allow embedding.
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" onClick={handleCopy}
@@ -294,14 +294,14 @@ export function LinkBrowserFloating() {
                     background: copied ? '#22c55e' : 'rgba(255,255,255,0.1)',
                     color: '#fff', fontSize: 13, cursor: 'pointer',
                   }}>
-                  {copied ? '✓ Скопировано!' : '📋 Скопировать'}
+                  {copied ? '✓ Copied!' : '📋 Copy link'}
                 </button>
                 <button type="button" onClick={() => handleOpenInBrowser(state.url!)}
                   style={{
                     padding: '8px 16px', borderRadius: 6, border: 'none',
                     background: '#1f8cf9', color: '#fff', fontSize: 13, cursor: 'pointer',
                   }}>
-                  Открыть в браузере →
+                  Open in browser →
                 </button>
               </div>
             </div>
