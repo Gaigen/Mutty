@@ -21,12 +21,22 @@ export function FullscreenImageOverlay({
     };
   }, [onClose]);
 
+  // Prevent all events from bubbling to LiveKit handlers
+  const stopAll = React.useCallback((e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  }, []);
+
   return ReactDOM.createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Image fullscreen"
-      onClick={onClose}
+      onClick={(e) => {
+        // Only close if clicking the backdrop itself, not children
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onContextMenu={stopAll}
       style={{
         position: 'fixed',
         inset: 0,
@@ -35,13 +45,16 @@ export function FullscreenImageOverlay({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: 'pointer',
+        cursor: 'default',
         padding: 16,
       }}
     >
       <button
         type="button"
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         aria-label="Close fullscreen"
         style={{
           position: 'absolute',
@@ -58,6 +71,7 @@ export function FullscreenImageOverlay({
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'background 0.15s',
+          zIndex: 10000,
         }}
         onMouseEnter={(e) =>
           ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.82)')
@@ -71,13 +85,15 @@ export function FullscreenImageOverlay({
       <img
         src={src}
         alt="Fullscreen"
-        onClick={(e) => e.stopPropagation()}
+        onClick={stopAll}
+        onDoubleClick={stopAll}
         style={{
           maxWidth: '100%',
           maxHeight: '100%',
           objectFit: 'contain',
           borderRadius: 8,
           boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+          cursor: 'default',
         }}
       />
     </div>,

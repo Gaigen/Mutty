@@ -310,6 +310,7 @@ export const ChatMessageList = React.memo(function ChatMessageList({
   // Re-render only if messages array reference changed (new message) or key props differ
   if (prev.messages !== next.messages) return false;
   if (prev.receivedFiles !== next.receivedFiles) return false;
+  if (prev.fullscreenImage !== next.fullscreenImage) return false;
   // avatarMap: new Map on every useLocalParticipant update, but content rarely changes
   // Compare size + entries only if reference changed
   if (prev.avatarMap !== next.avatarMap) {
