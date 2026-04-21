@@ -461,31 +461,40 @@ input[type="range"]::-moz-range-thumb:active {
   transition-delay: 0s;
 }
 
-/* Override FocusToggle's own absolute positioning when inside the group */
+/* ── Unified tile control button style ─────────────────── */
+/* ALL buttons in tile controls (fullscreen, hide, focus, pip, expand) */
+.lk-tile-controls button,
 .lk-tile-controls .lk-focus-toggle-button {
   position: static !important;
   opacity: 1 !important;
   transition: none !important;
-}
-
-/* Hide video button style — mirrors focus-toggle-button */
-.lk-hide-track-button {
   padding: 0.25rem !important;
   background-color: rgba(0, 0, 0, 0.5) !important;
   border-radius: calc(var(--lk-border-radius) / 2) !important;
   line-height: 0;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.lk-hide-track-button[aria-pressed='true'] {
+.lk-tile-controls button:hover,
+.lk-tile-controls .lk-focus-toggle-button:hover {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Active/pressed state — blue highlight */
+.lk-tile-controls button[aria-pressed='true'],
+.lk-tile-controls button.lk-active,
+.lk-tile-controls .lk-focus-toggle-button[aria-pressed='true'] {
   background-color: rgba(14, 165, 233, 0.6) !important;
   color: #fff;
 }
 
-.lk-hide-track-button:hover {
-  background-color: rgba(0, 0, 0, 0.75) !important;
-}
-
-.lk-hide-track-button[aria-pressed='true']:hover {
+.lk-tile-controls button[aria-pressed='true']:hover,
+.lk-tile-controls button.lk-active:hover,
+.lk-tile-controls .lk-focus-toggle-button[aria-pressed='true']:hover {
   background-color: rgba(14, 165, 233, 0.85) !important;
 }
 
