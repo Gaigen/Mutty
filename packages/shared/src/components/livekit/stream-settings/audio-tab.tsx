@@ -157,7 +157,7 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
           )}
           <div>
             <label className="block text-xs text-gray-400 mb-1.5">
-              Speaker volume: <span className="text-white">{Math.round(audioSettings.outputVolume * 100)}%</span>
+              Speaker volume: <span className="text-white">{Math.round(audioSettings.outputVolume * audioSettings.outputVolume * 100)}%</span>
             </label>
             <input
               type="range" min="0" max="1" step="0.01"

@@ -51,6 +51,11 @@ export function CustomRoomAudioRenderer({ outputVolume = 1 }: CustomRoomAudioRen
 
   const masterVolume = Math.min(1, Math.max(0, outputVolume));
 
+  // Linear → perceptual (logarithmic) gain curve
+  // Human hearing is logarithmic: 50% slider should feel like ~50% loudness
+  // pow(x, 2) gives a more natural feel than linear x
+  const toPerceptual = (v: number) => (v <= 0 ? 0 : v >= 1 ? 1 : v * v);
+
   return (
     <div style={{ display: 'none' }}>
       {!isAudioMuted &&
@@ -61,7 +66,7 @@ export function CustomRoomAudioRenderer({ outputVolume = 1 }: CustomRoomAudioRen
             trackRef.publication.source,
           );
           const rawVolume = participantVolume * masterVolume;
-          const volume = Math.min(1, Math.max(0, rawVolume));
+          const volume = toPerceptual(Math.min(1, Math.max(0, rawVolume)));
           return (
             <AudioTrack
               key={getTrackReferenceId(trackRef)}

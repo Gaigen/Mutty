@@ -35,7 +35,7 @@ export function VolumeSection({ volumes, setParticipantVolume }: Props) {
             style={{ flex: 1, height: 4, '--thumb-color': 'var(--lk-accent, #0ea5e9)' } as React.CSSProperties}
           />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
-            {Math.round(botVoiceVolume * 100)}%
+            {Math.round(botVoiceVolume * botVoiceVolume * 100)}%
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -52,7 +52,7 @@ export function VolumeSection({ volumes, setParticipantVolume }: Props) {
             style={{ flex: 1, height: 4, '--thumb-color': 'var(--lk-accent, #0ea5e9)' } as React.CSSProperties}
           />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
-            {Math.round(botScreenVolume * 100)}%
+            {Math.round(botScreenVolume * botScreenVolume * 100)}%
           </span>
         </div>
       </div>
