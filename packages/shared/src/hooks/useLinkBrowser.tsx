@@ -27,7 +27,16 @@ export function LinkBrowserProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const openInBrowser = React.useCallback((url: string) => {
-    window.open(url, '_blank');
+    // Use <a target="_blank"> instead of window.open — Tauri webview handles
+    // this natively by opening in system browser
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }, []);
 
   const copyLink = React.useCallback(async (url: string): Promise<boolean> => {
