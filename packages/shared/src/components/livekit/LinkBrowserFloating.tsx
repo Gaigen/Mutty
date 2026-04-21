@@ -28,6 +28,7 @@ export function LinkBrowserFloating() {
   const [iframeError, setIframeError] = React.useState(false);
   const [minimized, setMinimized] = React.useState(false);
   const [isResizing, setIsResizing] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
   const prevUrlRef = React.useRef<string | null>(null);
   const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -69,6 +70,7 @@ export function LinkBrowserFloating() {
 
     document.body.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
+    setIsDragging(true);
 
     const onMove = (ev: MouseEvent) => {
       const newX = startPosX + (ev.clientX - startX);
@@ -85,6 +87,7 @@ export function LinkBrowserFloating() {
       document.removeEventListener('mouseup', onUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      setIsDragging(false);
     };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -312,10 +315,10 @@ export function LinkBrowserFloating() {
                 onLoad={handleIframeLoad}
                 style={{
                   width: '100%', height: '100%', border: 'none', background: '#fff',
-                  pointerEvents: isResizing ? 'none' : 'auto',
+                  pointerEvents: (isResizing || isDragging) ? 'none' : 'auto',
                 }}
               />
-              {isResizing && (
+              {(isResizing || isDragging) && (
                 <div style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'inherit' }} />
               )}
             </>
@@ -368,7 +371,7 @@ function HeaderButton({ children, onClick, title, style }: {
 }) {
   return (
     <button type="button" onClick={onClick} title={title} style={{
-      padding: '3px 6px', borderRadius: 4, border: 'none',
+      padding: '3px 6px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.12)',
       background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)',
       fontSize: 12, cursor: 'pointer', flexShrink: 0, lineHeight: 1,
       ...style,
