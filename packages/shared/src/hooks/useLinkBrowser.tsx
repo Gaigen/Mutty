@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { usePlatform } from '../platform';
 
 interface LinkBrowserState {
   url: string | null;
@@ -18,7 +17,6 @@ const LinkBrowserContext = React.createContext<LinkBrowserContextValue | null>(n
 
 export function LinkBrowserProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = React.useState<LinkBrowserState>({ url: null, isOpen: false });
-  const platform = usePlatform();
 
   const open = React.useCallback((url: string) => {
     setState({ url, isOpen: true });
@@ -29,19 +27,8 @@ export function LinkBrowserProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const openInBrowser = React.useCallback((url: string) => {
-    if (platform.type === 'desktop') {
-      // Tauri: try shell plugin dynamically
-      import(/* @vite-ignore */ '@tauri-apps/plugin-shell')
-        .then(({ open: shellOpen }: any) => shellOpen(url))
-        .catch(() => {
-          // Fallback if shell plugin not installed
-          window.open(url, '_blank');
-        });
-    } else {
-      // Web: open in new tab
-      window.open(url, '_blank');
-    }
-  }, [platform.type]);
+    window.open(url, '_blank');
+  }, []);
 
   const copyLink = React.useCallback(async (url: string): Promise<boolean> => {
     try {
