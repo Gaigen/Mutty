@@ -262,6 +262,9 @@ export function LinkBrowserFloating() {
         <HeaderButton onClick={() => setMinimized(v => !v)} title={minimized ? 'Развернуть' : 'Свернуть'}>
           {minimized ? '▲' : '▼'}
         </HeaderButton>
+        <HeaderButton onClick={() => handleOpenInBrowser(state.url!)} title="Открыть в браузере">
+          🌐
+        </HeaderButton>
         <HeaderButton onClick={handleCopy} title="Скопировать"
           style={{ background: copied ? 'rgba(34,197,94,0.25)' : undefined }}>
           {copied ? '✓' : '📋'}
