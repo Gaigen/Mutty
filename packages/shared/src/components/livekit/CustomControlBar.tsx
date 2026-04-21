@@ -17,9 +17,11 @@ import {
   ScreenShare, ScreenShareOff,
   MessageSquare,
   LogOut,
+  PictureInPicture2,
 } from 'lucide-react';
 import { useUserChoicesContext } from '../../context/UserChoicesContext';
 import { useAudioMute } from '../../context/AudioMuteContext';
+import { usePictureInPicture } from '../../hooks/usePictureInPicture';
 import { playMicMuteSound, playMicUnmuteSound } from '../../utils/sounds';
 import { supportsScreenSharing } from '@livekit/components-core';
 import { useOverflowControls, type ControlDef } from '../../hooks/useOverflowControls';
@@ -62,6 +64,7 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
   const room = useRoomContext();
   const { isAudioMuted, toggleAudioMuted } = useAudioMute();
   const { isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const { isPiP, isSupported: isPiPSupported, toggle: togglePiP } = usePictureInPicture();
   const micEnabledBeforeFullMute = React.useRef<boolean | null>(null);
 
   const localPermissions = useLocalParticipantPermissions();
@@ -261,6 +264,21 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
           >
             <MessageSquare size={18} aria-hidden />
           </ChatToggle>
+        </div>
+      )}
+
+      {/* Picture-in-Picture */}
+      {isPiPSupported && (
+        <div data-control-id="pip">
+          <button
+            type="button"
+            className={`lk-button${isPiP ? ' lk-active' : ''}`}
+            onClick={() => togglePiP()}
+            aria-label={isPiP ? 'Exit PiP' : 'Picture-in-Picture'}
+            title={isPiP ? 'Exit PiP' : 'Picture-in-Picture'}
+          >
+            <PictureInPicture2 size={18} aria-hidden />
+          </button>
         </div>
       )}
 
