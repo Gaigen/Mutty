@@ -15,6 +15,7 @@ import {
 import { ParticipantTileWithActions } from './ParticipantTileWithActions';
 import { ChatWithAttachments } from './ChatWithAttachments';
 import { LinkBrowserFloating } from './LinkBrowserFloating';
+import { WhiteboardFloating } from './WhiteboardFloating';
 import { isEqualTrackRef, isTrackReference, isWeb, type TrackReferenceOrPlaceholder } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import * as React from 'react';
@@ -22,6 +23,7 @@ import { appConfig, LS_KEYS } from '../../config';
 import { usePlatform } from '../../platform';
 import { ExpandedTrackProvider } from '../../context/ExpandedTrackContext';
 import { LinkBrowserProvider } from '../../hooks/useLinkBrowser';
+import { WhiteboardProvider, useWhiteboard } from '../../hooks/useWhiteboard';
 
 const CONTROL_BAR_CONTROLS = {
   chat: appConfig.showChat,
@@ -84,6 +86,16 @@ const MemoizedChatPanel = React.memo(function ChatPanel({
 interface VideoConferenceWithVolumeProps extends React.HTMLAttributes<HTMLDivElement> {
   outputVolume?: number;
   rightControls?: React.ReactNode;
+}
+
+function WhiteboardHotkeyListener() {
+  const { toggle } = useWhiteboard();
+  React.useEffect(() => {
+    const handler = () => toggle();
+    window.addEventListener('whiteboard:toggle', handler);
+    return () => window.removeEventListener('whiteboard:toggle', handler);
+  }, [toggle]);
+  return null;
 }
 
 export function VideoConferenceWithVolume({
@@ -223,6 +235,7 @@ export function VideoConferenceWithVolume({
 
   return (
     <LinkBrowserProvider>
+      <WhiteboardProvider>
       <ExpandedTrackProvider>
         <div className="lk-video-conference" {...props}>
           {isWeb() && (
@@ -285,8 +298,12 @@ export function VideoConferenceWithVolume({
           <ConnectionStateToast />
           {/* Floating link browser */}
           <LinkBrowserFloating />
+          {/* Floating whiteboard */}
+          <WhiteboardFloating />
+          <WhiteboardHotkeyListener />
         </div>
       </ExpandedTrackProvider>
+      </WhiteboardProvider>
     </LinkBrowserProvider>
   );
 }
