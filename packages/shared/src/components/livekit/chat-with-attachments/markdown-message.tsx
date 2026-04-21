@@ -30,7 +30,6 @@ function CodeBlock({ className, children }: { className?: string; children: Reac
     if (match?.[1]) return match[1];
     if (code.length < 5) return 'text';
     const result = hljs.highlightAuto(code);
-    console.log('[hljs] detected:', result.language, 'relevance:', result.relevance, 'code:', code.slice(0, 40));
     // Only use detection if confidence is reasonable
     if (result.language && result.relevance >= 3) {
       return result.language;
