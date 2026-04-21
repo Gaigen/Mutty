@@ -62,6 +62,17 @@ export function LinkBrowserProvider({ children }: { children: React.ReactNode })
 
 export function useLinkBrowser(): LinkBrowserContextValue {
   const ctx = React.useContext(LinkBrowserContext);
-  if (!ctx) throw new Error('useLinkBrowser must be used within LinkBrowserProvider');
+  if (!ctx) {
+    // Fallback if provider not mounted (e.g. hot reload)
+    return {
+      state: { url: null, isOpen: false },
+      open: (url: string) => window.open(url, '_blank'),
+      close: () => {},
+      openInBrowser: (url: string) => window.open(url, '_blank'),
+      copyLink: async (url: string) => {
+        try { await navigator.clipboard.writeText(url); return true; } catch { return false; }
+      },
+    };
+  }
   return ctx;
 }
