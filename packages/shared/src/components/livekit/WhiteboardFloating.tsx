@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Tldraw } from 'tldraw';
 import 'tldraw/tldraw.css';
 import { useWhiteboard } from '../../hooks/useWhiteboard';
 
@@ -32,9 +33,6 @@ export function WhiteboardFloating() {
   const sizeRef = React.useRef(size);
   posRef.current = pos;
   sizeRef.current = size;
-
-  // Lazy-load tldraw to avoid big initial bundle
-  const TldrawComponent = React.useMemo(() => React.lazy(() => import('tldraw').then(m => ({ default: m.Tldraw }))), []);
 
   // Cleanup body styles on unmount
   React.useEffect(() => {
@@ -203,18 +201,9 @@ export function WhiteboardFloating() {
             <div style={{ position: 'absolute', inset: 0, zIndex: 10, cursor: 'inherit' }} />
           )}
 
-          <React.Suspense fallback={
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              height: '100%', color: 'rgba(255,255,255,0.4)', fontSize: 13,
-            }}>
-              Loading whiteboard...
-            </div>
-          }>
-            <div style={{ width: '100%', height: '100%' }}>
-              <TldrawComponent />
-            </div>
-          </React.Suspense>
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <Tldraw />
+          </div>
 
           {/* Resize handles */}
           <ResizeHandle onMouseDown={handleResizeStart('left')} style={{ top: 0, left: -3, width: 6, height: '100%', cursor: 'ew-resize' }} />
