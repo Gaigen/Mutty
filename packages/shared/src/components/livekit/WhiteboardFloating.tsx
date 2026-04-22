@@ -201,7 +201,16 @@ export function WhiteboardFloating() {
             <div style={{ position: 'absolute', inset: 0, zIndex: 10, cursor: 'inherit' }} />
           )}
 
-          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          <div
+            style={{
+              all: 'initial',
+              width: '100%',
+              height: '100%',
+              position: 'relative',
+              display: 'block',
+              isolation: 'isolate',
+            }}
+          >
             <Tldraw />
           </div>
 
