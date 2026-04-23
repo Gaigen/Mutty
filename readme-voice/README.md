@@ -1,8 +1,9 @@
-# Voice App 🎙️
+# Voice App / Mutty 🎙️
 
-![GitHub release (latest SemVer)]
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 ![LiveKit](https://img.shields.io/github/v/release/livekit/livekit)
+![Tauri](https://img.shields.io/badge/tauri-%2324C8DB.svg?style=for-the-badge&logo=tauri&logoColor=%23FFFFFF)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
 **Voice App** — open-source платформа для голосового общения в реальном времени, вдохновлённая Discord и построенная на базе **LiveKit**. Позволяет разворачивать голосовые приложения с низкой задержкой, масштабируемой WebRTC-инфраструктурой и кастомизируемым UI.
@@ -13,14 +14,14 @@
 
 ## Возможности
 
-- Голосовая связь в реальном времени (WebRTC, низкая задержка)
-- Discord-подобные голосовые каналы
-- Шаринг экрана с автозвуком (стартовые/стоповые звуковые сигналы)
-- Бот-агент, стримящий YouTube/Twitch/SoundCloud/Telegram прямо в голосовую комнату
-- Чат с вложениями изображений и превью твитов
-- Модульная архитектура для кастомизации
-- Кроссплатформенность: веб + десктоп (Tauri)
-- Self-hosted — полностью под твоим контролем
+- **Голосовая связь** в реальном времени (WebRTC, низкая задержка)
+- **Discord-подобные** голосовые каналы
+- **Шаринг экрана** со звуковыми сигналами (start/stop chime)
+- **Плавающие окна** — коллаборативный whiteboard (Excalidraw) и shared notepad
+- **Бот-агент** со встроенным AI через OpenRouter — стримит YouTube/Twitch/SoundCloud/Telegram и отвечает в чате
+- **Чат** с вложениями изображений, drag-and-drop, превью твитов
+- **Кроссплатформенность** — веб (React) + десктоп (Tauri + Rust)
+- **Self-hosted** — полностью под твоим контролем
 
 ---
 
@@ -28,9 +29,9 @@
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────────┐
-│   Frontend          │◄───────►│   Backend (Token Server)     │
-│   React + nginx     │  HTTP    │   Node.js (tsx)              │
-│   :1420             │         │   :4000                      │
+│   Web/Desktop       │◄───────►│   Backend (Token Server)     │
+│   React + Vite      │  HTTP    │   Node.js / tsx              │
+│   :1420 / :1421     │         │   :4000                      │
 └──────────┬──────────┘         └──────────────┬───────────────┘
            │                                    │
            │  WebSocket / WebRTC               │  HTTP (внутри Docker)
@@ -44,57 +45,90 @@
             WebSocket (внутри Docker)
                           ▼
    ┌───────────────────────────────────────────────────┐
-   │          Agent Server (YouTube-бот)               │
-   │        Python + livekit-agents                    │
+   │          Agent Server (Python бот)                │
+   │        livekit-agents + OpenRouter AI             │
    │                  :8081                            │
    └───────────────────────────────────────────────────┘
+```
+
+### Монорепо (pnpm workspace)
+
+```
+Voice-app/
+├── backend/                    # Token Server (Node.js + tsx)
+├── packages/
+│   ├── web/                    # Веб-клиент (React + Vite)
+│   ├── desktop/                # Десктоп (Tauri v2 + Rust)
+│   └── shared/                 # Shared компоненты (React hooks, UI, collab)
+├── agent-server/               # Python бот
+├── livekit/                    # Конфиги LiveKit
+└── readme-voice/               # Документация
 ```
 
 ### Модули
 
 #### 1. LiveKit Server
-- **Что:** Ядро WebRTC-инфраструктуры (Go), образ `livekit/livekit-server:latest`
-- **За что отвечает:** медиа-маршрутизация, сигнализация, управление комнатами
+- **Ядро WebRTC-инфраструктуры** (Go), образ `livekit/livekit-server:latest`
+- **Медиа-маршрутизация**, сигнализация, управление комнатами
 - **Порты:**
   - `7880` — WebSocket (сигнализация)
   - `7881` — TCP (fallback для WebRTC)
   - `7882` — UDP (RTC, медиа)
-- **Конфиг:** `livekit/livekit.prod.yaml` (production) или `livekit/livekit.dev.yaml` (dev)
-- **Ключи:** блок `keys` в YAML — должны совпадать с `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` из `.env`
-- **Healthcheck:** `wget --quiet --tries=1 --spider http://localhost:7880/`
+- **Конфиг:** `livekit/livekit.prod.yaml` (production) / `livekit/livekit.dev.yaml` (dev)
+- **Ключи:** блок `keys` в YAML должен совпадать с `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` из `.env`
 
 #### 2. Backend (Token Server)
-- **Что:** Node.js сервер на `tsx` (TypeScript), выделен в отдельный пакет `backend/`
 - **Стек:** TypeScript + tsx + `livekit-server-sdk` v2 + dotenv
-- **За что отвечает:** выдача JWT-токенов LiveKit для аутентификации пользователей в комнатах
-- **Путь:** `backend/`
-- **Dockerfile:** `backend/Dockerfile` (node:20-alpine, tsx runtime)
+- **За что отвечает:** выдача JWT-токенов LiveKit для аутентификации в комнатах
 - **Порт:** `4000`
-- **Зависит от:** `livekit`
 - **Ключевые env:**
-  - `LIVEKIT_WS_URL` — URL, отдаваемый браузеру (должен быть `localhost` или твой домен)
-  - `LIVEKIT_API_URL` — авто-вычисляется из WS-URL (`ws/` → `http/`), для внутренних запросов
+  - `LIVEKIT_WS_URL` — URL, отдаваемый браузеру (`localhost` или твой домен)
+  - `LIVEKIT_API_URL` — авто-вычисляется из WS-URL (`ws/` → `http/`)
   - `TOKEN_CORS_ORIGINS` — origins через запятую (пусто = `[*]`)
-  - `TOKEN_ROOM_MAX_LENGTH` / `TOKEN_IDENTITY_MAX_LENGTH` / `TOKEN_TTL` — лимиты токенов
-- **Healthcheck:** `node -e "fetch('http://127.0.0.1:4000/health')..."` (start_period: 15s, 5 retry)
+  - `TOKEN_ROOM_MAX_LENGTH` / `TOKEN_IDENTITY_MAX_LENGTH` / `TOKEN_TTL`
 
-#### 3. Frontend
-- **Что:** React SPA, собранная Vite и раздаваемая через nginx
-- **Стек:** React + TypeScript + Vite + Tailwind + shadcn/ui + LiveKit SDK + React Router
-- **Dockerfile:** `frontend/Dockerfile` → мультистейдж-билд, затем nginx
-- **Порт:** `1420` (host) → `80` (контейнер nginx)
-- **Зависит от:**
-  - `token-server` (condition: `service_healthy`, required: `true`)
-  - `livekit` (condition: `service_healthy`, required: `true`)
-  - `agent-server` (condition: `service_started`, required: `false`) — опционально
-- **VITE_* переменные встраиваются при сборке.** После смены `.env`: `docker-compose build --no-cache frontend`
+#### 3. Web Client (`packages/web`)
+- **Стек:** React + TypeScript + Vite + Tailwind CSS + shadcn/ui + LiveKit SDK + React Router
+- **Порт:** `1420` (dev)
+- **Фичи:**
+  - Голос/видео, screen share
+  - Чат с вложениями изображений, drag-and-drop
+  - Коллаборативный whiteboard (Excalidraw + Yjs)
+  - Shared notepad (LiveKit data channels)
+  - Floating windows — drag, resize, minimize
 
-#### 4. Agent Server (YouTube-бот)
-- **Что:** Python-бот на `livekit-agents`, регистрируется как участник комнаты `youtube-bot`
-- **За что отвечает:** воспроизведение YouTube/Twitch/SoundCloud/Telegram в голосовой комнате
+#### 4. Desktop Client (`packages/desktop`)
+- **Стек:** Tauri v2 (React frontend + Rust backend)
+- **Порт:** `1421` (dev)
+- **Фичи:**
+  - Все фичи веб-клиента
+  - **Глобальные горячие клавиши** (настраиваемые через UI, работают даже когда окно не в фокусе)
+  - Трей (сворачивание в системный луч)
+  - Звуки шаринга экрана (start/stop chime)
+  - Agent controls — меню управления ботом (режимы, качество, очередь, громкость)
+  - Сплэш-скрин при запуске
+
+#### 5. Shared (`packages/shared`)
+- **Стек:** React + TypeScript
+- **Что внутри:**
+  - `floating/` — система плавающих окон (drag, resize, z-index, minimize)
+  - `collab/` — синхронизация через LiveKit data channels (Yjs для whiteboard, JSON-reducer для notes)
+  - `components/livekit/` — UI компоненты комнаты (control bar, settings, chat)
+  - `hooks/` — React hooks (audio settings, camera, screen share, hotkeys)
+  - `modules/whiteboard/` — Excalidraw-интеграция с коллаборацией
+  - `modules/notes/` — shared notepad с экспортом в `.txt`
+
+#### 6. Agent Server (Python бот)
+- **Стек:** Python 3.11 + `livekit-agents` + `yt-dlp` + `ffmpeg`
 - **Порт:** `8081`
+- **Модульная архитектура:**
+  - `src/bot.py` — основной оркестратор
+  - `src/chat/` — чат-шлюз и парсер команд
+  - `src/media/` — стриминг, очередь воспроизведения, резолвер URL
+  - `src/llm/` — OpenRouter провайдер + промпты (AI-ассистент, поиск, плейлисты)
+  - `src/memory/` — SQLite memory store (история разговоров)
 - **Команды в чате** (без "!"):
-  - `<url>` — воспроизвести ссылку
+  - `<url>` — воспроизвести ссылку (YouTube / Twitch / SoundCloud / Telegram)
   - `add <url>` / `queue <url>` — добавить в очередь
   - `skip` / `next` — пропустить трек
   - `queue` / `list` — показать очередь
@@ -105,19 +139,13 @@
   - `аудио <url>` — только звук
   - `видео <url>` — видео + звук
   - `youtube <запрос>` / `soundcloud <запрос>` — поиск
-
-#### 5. Mutty App (десктоп)
-- **Что:** Tauri desktop-приложение (React + Rust)
-- **Путь:** `mutty-app/`
-- **Фичи:**
-  - Автозапуск, трей (сворачивание)
-  - Настройки через Tauri Store (persistent)
-  - Горячие клавиши
-  - Звуки шаринга экрана (start chime / stop chime)
-  - Агент-контроль с выпадающим меню (режимы, качество, очередь, громкость, now playing)
-  - Чат с вложениями, drag-and-drop, автоскролл, уведомления
-  - Превью твитов
-  - Сплэш-скрин при запуске
+  - `ai <вопрос>` / `jarvis <вопрос>` / `бот <вопрос>` — AI-ассистент
+  - `playlist <описание>` / `плейлист <описание>` — AI генерирует плейлист
+- **AI через OpenRouter:**
+  - Установи `OPENROUTER_API_KEY` в env
+  - Бот отвечает на вопросы, может искать и играть музыку по запросу
+  - Генерирует плейлисты по описанию (например, "lofi для программирования")
+  - Помнит контекст разговора (SQLite per room)
 
 ---
 
@@ -130,51 +158,66 @@ git clone https://github.com/Gaigen/Voice-app.git
 cd Voice-app
 ```
 
-### 2. Настрой .env
+### 2. Зависимости
+
+```bash
+pnpm install
+```
+
+### 3. Настрой `.env`
 
 ```bash
 cp .env.example .env
 ```
 
 ```env
-# Ключи LiveKit (в проде — ОБЯЗАТЕЛЬНО свои!)
+# LiveKit ключи (в проде — ОБЯЗАТЕЛЬНО свои!)
 LIVEKIT_API_KEY=devkey
 LIVEKIT_API_SECRET=secret
 
 # URL для браузера (локально = localhost)
 VITE_LIVEKIT_URL=ws://localhost:7880
 VITE_TOKEN_ENDPOINT=http://localhost:4000/api/token
-VITE_AGENT_ENDPOINT=http://localhost:5000
 
 # Token Server
-TOKEN_SERVER_PORT=4000
-TOKEN_SERVER_HOST=0.0.0.0
-LIVEKIT_WS_URL=ws://localhost:7880
+LIVEKIT_WS_URL=ws://livekit:7880
+LIVEKIT_PUBLIC_WS_URL=ws://localhost:7880
 
 # Опционально
-# TOKEN_CORS_ORIGINS=
-# TOKEN_ROOM_MAX_LENGTH=100
-# TOKEN_IDENTITY_MAX_LENGTH=100
-# TOKEN_TTL=3600
+# OPENROUTER_API_KEY=sk-or-v1-...
+# AGENT_MEDIA_PROXY=http://proxy:8080
 # AGENT_VIDEO_FPS=30
+# AGENT_VIDEO_QUALITY=720p
 ```
 
-### 3. Запусти
+### 4. Запуск (Docker — всё вместе)
 
 ```bash
-# С Makefile (рекомендуется)
-make build    # собрать образы
-make up       # запустить всё
-
-# Или без make
+# Собрать и запустить все сервисы
 docker-compose up -d --build
 ```
 
-### 4. Открой приложение
+### 5. Запуск (Dev — только инфра, фронт локально)
+
+```bash
+# 1. Инфраструктура в Docker
+docker-compose -f docker-compose.dev.yml up -d
+
+# 2. Веб-клиент локально
+cd packages/web
+pnpm dev          # http://localhost:1420
+
+# 3. Десктоп локально
+cd packages/desktop
+pnpm tauri dev    # http://localhost:1421 + Tauri window
+```
+
+### 6. Открой приложение
 
 | Сервис         | URL                         | Описание                        |
 |----------------|-----------------------------|---------------------------------|
-| Frontend       | `http://localhost:1420`     | Веб-интерфейс                   |
+| Web Client     | `http://localhost:1420`     | Веб-интерфейс                   |
+| Desktop Client | `pnpm tauri dev`            | Нативное окно                   |
 | Token Server   | `http://localhost:4000`     | API выдачи токенов (`/health`)  |
 | LiveKit WS     | `ws://localhost:7880`       | WebSocket (сигнализация)        |
 | LiveKit Admin  | `http://localhost:7880`     | HTTP API LiveKit                |
@@ -182,83 +225,26 @@ docker-compose up -d --build
 
 ---
 
-## Как связаны порты и модули
+## Горячие клавиши
 
-### Карта коммуникаций
+### Веб (`packages/web`)
 
-```
-БРАУЗЕР (пользователь)
-  │
-  ├─ http://localhost:1420 ──────────► Frontend (nginx :80 в контейнере)
-  │
-  ├─ ws://localhost:7880   ──────────► LiveKit Server (WebRTC через браузер)
-  │
-  ├─ http://localhost:4000/api/token ─► Backend / Token Server (JWT-токен)
-  │
-  └─ http://localhost:5000           ─► Agent Control (управление ботом из UI)
+| Комбо        | Действие               |
+|--------------|------------------------|
+| `Ctrl + B`   | Открыть/закрыть Whiteboard |
+| `Ctrl + N`   | Открыть/закрыть Notes      |
 
-ВНУТРИ DOCKER NETWORK:
-  │
-  Backend ──http://livekit:7880──► LiveKit Server  (генерация токенов)
-  Agent   ──ws://livekit:7880────► LiveKit Server  (подключение в комнату)
-```
+### Десктоп (`packages/desktop`)
 
-### Ключевой принцип: VITE_* vs внутренние URL
+| Комбо (дефолт)    | Действие               | Настраиваемый |
+|-------------------|------------------------|---------------|
+| `Ctrl + B`        | Whiteboard toggle      | ✅              |
+| `Ctrl + N`        | Notes toggle           | ✅              |
+| `Ctrl + M`        | Mute/unmute mic        | ✅              |
+| `Ctrl + F`        | Full mute toggle       | ✅              |
+| `MouseBack`       | (опционально)          | ✅              |
 
-`VITE_*` переменные **встраиваются в JS-бандл при сборке**. Это URL-ы, по которым **браузер пользователя** подключается — поэтому нужен `localhost` (или твой домен).
-
-```
-✅ VITE_LIVEKIT_URL=ws://localhost:7880    — браузер понимает localhost
-❌ VITE_LIVEKIT_URL=ws://livekit:7880      — "livekit" — имя контейнера, браузер его не знает
-```
-
-Контейнеры внутри Docker-сети общаются по именам сервисов: `ws://livekit:7880`, `http://livekit:7880`.
-
-### Зависимости запуска
-
-```
-1. livekit (порт 7880)           — запускается первым
-   ├── healthcheck → ok
-       │
-       ├── 2. backend/token-server (порт 4000)
-       │      depends_on: livekit
-       │      healthcheck → ok
-       │          │
-       │          └── 3. frontend (порт 1420)
-       │                 depends_on: livekit ✅ (healthy)
-       │                    + backend ✅ (healthy)
-       │                    + agent (опционально)
-       │
-       └── 4. agent-server (порт 8081) [опционально]
-              depends_on: livekit
-```
-
----
-
-## Режим разработки
-
-Запускаешь инфраструктуру в Docker, фронтенд — локально с hot reload:
-
-```bash
-# Только LiveKit + Backend в Docker
-make dev
-# или
-docker-compose -f docker-compose.dev.yml up -d
-
-# Фронтенд локально
-cd frontend
-npm install
-npm run dev
-```
-
-Backend в dev режиме — с `tsx watch` и `volumes: - ./backend/src:/app/src:ro` для hot reload.
-
-```bash
-# Backend локально (если хочешь dev без Docker)
-cd backend
-npm install
-npm run dev    # tsx watch src/index.ts
-```
+Настройка — в Settings → Hotkeys. Работает **глобально**, даже когда окно свёрнуто (Windows).
 
 ---
 
@@ -268,10 +254,10 @@ npm run dev    # tsx watch src/index.ts
 
 В `.env` и `livekit/livekit.prod.yaml` — задай реальные ключи.
 
-### 2. Публичный адрес в .env
+### 2. Публичный адрес
 
 ```env
-# С HTTPS (рекомендуется)
+# С HTTPS
 VITE_LIVEKIT_URL=wss://example.com/livekit
 VITE_TOKEN_ENDPOINT=https://example.com/api/token
 LIVEKIT_WS_URL=wss://example.com/livekit
@@ -279,7 +265,6 @@ LIVEKIT_WS_URL=wss://example.com/livekit
 # Без HTTPS (по IP)
 VITE_LIVEKIT_URL=ws://YOUR_SERVER_IP:7880
 VITE_TOKEN_ENDPOINT=http://YOUR_SERVER_IP:4000/api/token
-LIVEKIT_WS_URL=ws://YOUR_SERVER_IP:7880
 ```
 
 ### 3. Пересобери фронтенд
@@ -291,21 +276,20 @@ docker-compose up -d
 
 ### 4. Reverse proxy + HTTPS
 
-Nginx/Caddy/Traefik перед сервисами:
-| Маршрут | Бэкенд |
-|---------|--------|
-| `:443` | frontend `:80` |
-| `/api/token` | backend `:4000` |
-| `/livekit` | livekit `:7880` |
+| Маршрут         | Бэкенд           |
+|-----------------|------------------|
+| `/`             | web `:80`        |
+| `/api/token`    | backend `:4000`  |
+| `/livekit`      | livekit `:7880`  |
 
 ### 5. Фаервол
 
-| Порт | Назначение |
-|------|-----------|
-| `80` / `443` | HTTP/HTTPS через reverse proxy |
-| `7880` | WebSocket (прямой доступ к LiveKit) |
-| `7881` | TCP fallback (WebRTC) |
-| `7882/UDP` | Медиа (WebRTC) |
+| Порт            | Назначение                      |
+|-----------------|---------------------------------|
+| `80` / `443`    | HTTP/HTTPS через reverse proxy  |
+| `7880`          | WebSocket (LiveKit)             |
+| `7881`          | TCP fallback (WebRTC)           |
+| `7882/UDP`      | Медиа (WebRTC)                  |
 
 ### 6. TURN
 
@@ -313,73 +297,68 @@ Nginx/Caddy/Traefik перед сервисами:
 
 ---
 
-## Makefile команды
-
-| Команда | Описание |
-|---------|----------|
-| `make help` | Список команд |
-| `make build` | Собрать все образы |
-| `make up` | Запустить всё |
-| `make down` | Остановить всё |
-| `make logs` | Логи всех сервисов |
-| `make restart` | Перезапустить всё |
-| `make clean` | Остановить + удалить контейнеры + volumes |
-| `make dev` | Dev-режим (LiveKit + Backend) |
-| `make dev-down` | Остановить dev |
-| `make rebuild` | Пересобрать + перезапустить |
-| `make ps` | Статус контейнеров |
-
----
-
 ## Структура проекта
 
 ```
 Voice-app/
-├── docker-compose.yml          # Production: 4 сервиса
-├── docker-compose.dev.yml      # Development: LiveKit + Backend
-├── .env.example                # Шаблон переменных
-├── Makefile                    # Удобные команды
-├── README.Docker.md            # Подробная Docker-документация
+├── docker-compose.yml              # Production
+├── docker-compose.dev.yml          # Development (LiveKit + Backend)
+├── .env.example                    # Шаблон переменных
+├── pnpm-workspace.yaml             # pnpm monorepo
 │
-├── backend/                    # Token Server (раньше в frontend/scripts/)
-│   ├── Dockerfile              # Node.js 20 Alpine + tsx
-│   ├── src/index.ts            # Точка входа (HTTP server)
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── tsconfig.json
-│   └── .dockerignore
-│
-├── frontend/                   # React фронтенд
-│   ├── Dockerfile              # Production (Vite build → nginx)
-│   ├── nginx.conf
-│   ├── package.json
-│   └── src/                    # React компоненты
-│
-├── agent-server/               # Python бот (модульная архитектура)
+├── backend/                        # Token Server (Node.js + tsx)
 │   ├── Dockerfile
-│   ├── main.py                 # LiveKit Agent Server entrypoint
+│   ├── src/index.ts
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── packages/
+│   ├── web/                        # Веб-клиент (React + Vite)
+│   │   ├── src/
+│   │   │   ├── App.tsx
+│   │   │   └── ...
+│   │   ├── package.json
+│   │   └── vite.config.ts
+│   │
+│   ├── desktop/                    # Десктоп (Tauri v2)
+│   │   ├── src/
+│   │   │   ├── App.tsx
+│   │   │   ├── components/
+│   │   │   └── hooks/
+│   │   ├── src-tauri/              # Rust код
+│   │   │   ├── src/main.rs         # Глобальные хоткеи, трей
+│   │   │   └── tauri.conf.json
+│   │   └── package.json
+│   │
+│   └── shared/                     # Shared компоненты
+│       ├── src/
+│       │   ├── floating/           # Плавающие окна (drag, resize)
+│       │   ├── collab/             # Коллаб-синхронизация (Yjs, LiveKit)
+│       │   ├── components/livekit/ # UI комнаты
+│       │   ├── modules/
+│       │   │   ├── whiteboard/     # Excalidraw + Yjs
+│       │   │   └── notes/          # Shared notepad + export .txt
+│       │   ├── hooks/              # React hooks
+│       │   └── config.ts           # Shared константы
+│       └── package.json
+│
+├── agent-server/                   # Python бот
+│   ├── Dockerfile
+│   ├── main.py                     # Entrypoint
 │   ├── requirements.txt
 │   └── src/
-│       ├── bot.py              # Основной оркестратор
-│       ├── chat/               # Чат-шлюз и парсер команд
-│       ├── media/              # Стриминг, очередь, резолвер
-│       ├── llm/                # OpenRouter провайдер + промпты
-│       └── memory/             # SQLite memory store
+│       ├── bot.py                  # Оркестратор
+│       ├── chat/                   # Чат-шлюз, парсер команд
+│       ├── media/                  # Стриминг, очередь, резолвер
+│       ├── llm/                    # OpenRouter AI
+│       └── memory/                 # SQLite store
 │
-├── livekit/                    # Конфиги LiveKit
+├── livekit/                        # Конфиги LiveKit
 │   ├── livekit.prod.yaml
 │   └── livekit.dev.yaml
 │
-└── mutty-app/                  # Tauri десктоп
-    ├── src/                    # React + компоненты
-    │   ├── components/livekit/
-    │   │   ├── AgentControls.tsx
-    │   │   ├── SoundHandler.tsx
-    │   │   ├── agent-controls/     # Меню бота
-    │   │   └── chat-with-attachments/  # Чат
-    │   └── hooks/              # Custom React hooks
-    ├── src-tauri/              # Rust + Tauri конфиг
-    └── package.json
+└── readme-voice/
+    └── README.md                   # Этот файл
 ```
 
 ---
@@ -388,8 +367,8 @@ Voice-app/
 
 ### Контейнеры не стартуют
 ```bash
-make logs    # смотри логи
-make ps      # статус контейнеров
+docker-compose logs -f          # смотри логи
+docker-compose ps               # статус
 ```
 
 ### Фронтенд не подключается к LiveKit
@@ -405,5 +384,13 @@ make ps      # статус контейнеров
 - `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` в `.env` и `livekit/livekit.prod.yaml` должны совпадать
 - Healthcheck бэкенда: `http://localhost:4000/health`
 
-### Backend не видит .env
-Backend ищет `.env` по двум путям: `../../.env` и `../.env` (относительно `backend/src/index.ts`). Убедись, что файл лежит в корне проекта.
+### Бот не отвечает / не стримит
+- Проверь `OPENROUTER_API_KEY` (опционально, без него AI-фичи не работают, но стриминг да)
+- Проверь `AGENT_MEDIA_PROXY` если yt-dlp не достаёт YouTube
+- Логи: `docker-compose logs -f agent-server`
+
+---
+
+## Лицензия
+
+MIT
