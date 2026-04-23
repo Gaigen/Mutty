@@ -57,10 +57,11 @@ export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => 
 
   // 1. Web fallback: hardcoded keydown listener (skipped in Tauri desktop — global shortcuts handled by Rust)
   useEffect(() => {
-    if (isTauri) return; // Desktop uses Tauri global shortcuts via custom events below
+    if (isTauri) return;
     const combo = DEFAULT_HOTKEYS[id];
     const handler = (e: KeyboardEvent) => {
       if (matchHotkey(e, combo)) {
+        console.log(`[useModuleToggle] Hotkey matched for "${id}", calling toggle`);
         e.preventDefault();
         e.stopPropagation();
         safeToggle.current();
