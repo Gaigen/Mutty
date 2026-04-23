@@ -6,6 +6,7 @@ import { Excalidraw } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 import { useFloatingWindow, FloatingWindow } from '../../floating';
 import { useYjsDoc } from '../../collab/useYjsDoc';
+import { matchHotkey, useModuleHotkeys } from '../../hooks';
 
 export const WHITEBOARD_ID = 'whiteboard';
 
@@ -58,17 +59,19 @@ export function WhiteboardModule() {
     [doc, yElements]
   );
 
-  // Toggle hotkey Ctrl+B
+  const { settings } = useModuleHotkeys();
+
+  // Toggle hotkey
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+      if (matchHotkey(e, settings.toggleWhiteboard)) {
         e.preventDefault();
         win.toggle();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [win]);
+  }, [win, settings.toggleWhiteboard]);
 
   if (!win.isOpen) return null;
 

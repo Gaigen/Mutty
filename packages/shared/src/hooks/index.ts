@@ -16,3 +16,10 @@ export { useScreenShareSettings, getScreenShareSettings } from './useScreenShare
 export type { ScreenShareSettings, VideoCodec, ContentHint } from './useScreenShareSettings';
 export { useStatsPolling } from './useStatsPolling';
 export { useUnreadMessages } from './useUnreadMessages';
+export {
+  useModuleHotkeys,
+  matchHotkey,
+  getModuleHotkeys,
+  DEFAULT_MODULE_HOTKEYS,
+} from './useModuleHotkeys';
+export type { ModuleHotkeySettings } from './useModuleHotkeys';
