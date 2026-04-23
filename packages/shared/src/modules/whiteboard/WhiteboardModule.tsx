@@ -3,6 +3,7 @@
 import * as React from 'react';
 import * as Y from 'yjs';
 import { Excalidraw } from '@excalidraw/excalidraw';
+import '@excalidraw/excalidraw/index.css';
 import { useFloatingWindow, FloatingWindow } from '../../floating';
 import { useYjsDoc } from '../../collab/useYjsDoc';
 
