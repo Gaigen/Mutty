@@ -20,6 +20,12 @@ export * from './hooks';
 // Lib
 export * from './lib';
 
+// Floating windows
+export * from './floating';
+
+// Collab sync
+export * from './collab';
+
 // Store
 export * from './store';
 
