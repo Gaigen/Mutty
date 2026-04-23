@@ -5,11 +5,13 @@ const DEFAULT_HOTKEYS = {
   notes: 'ctrl+m',
 } as const;
 
-/** Detect Tauri desktop environment */
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
-
 /** Minimum ms between toggles to prevent double-fires */
 const TOGGLE_DEBOUNCE_MS = 300;
+
+function getIsTauri(): boolean {
+  if (typeof window === 'undefined') return false;
+  return '__TAURI__' in window || '__TAURI_INTERNALS__' in window;
+}
 
 function matchHotkey(e: KeyboardEvent, combo: string): boolean {
   const parts = combo.toLowerCase().split('+').map((p) => p.trim());
@@ -57,7 +59,7 @@ export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => 
 
   // 1. Web fallback: hardcoded keydown listener (skipped in Tauri desktop — global shortcuts handled by Rust)
   useEffect(() => {
-    if (isTauri) return;
+    if (getIsTauri()) return;
     const combo = DEFAULT_HOTKEYS[id];
     const handler = (e: KeyboardEvent) => {
       if (matchHotkey(e, combo)) {
