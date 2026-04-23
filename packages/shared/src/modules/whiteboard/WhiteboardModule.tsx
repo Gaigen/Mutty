@@ -12,6 +12,15 @@ export const WHITEBOARD_ID = 'whiteboard';
 
 const EMPTY_INITIAL_DATA = { elements: [] };
 
+/** Convert Yjs Y.Map array to plain Excalidraw elements */
+function yElementsToPlain(yElements: Y.Array<Y.Map<any>>): Record<string, any>[] {
+  return yElements.toArray().map((ymap) => {
+    const obj: Record<string, any> = {};
+    ymap.forEach((val, key) => { obj[key] = val; });
+    return obj;
+  });
+}
+
 export function WhiteboardModule() {
   const win = useFloatingWindow({
     id: WHITEBOARD_ID,
@@ -26,33 +35,52 @@ export function WhiteboardModule() {
   const yElements = React.useMemo(() => doc.getArray<Y.Map<any>>('elements'), [doc]);
 
   const excalidrawRef = React.useRef<any>(null);
+  const lastRemoteRef = React.useRef<string>('');
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const setExcalidrawApi = React.useCallback((api: any) => {
-    excalidrawRef.current = api;
-  }, []);
+  // Serialize elements for cheap comparison
+  const serializeElements = React.useCallback(
+    (elements: readonly any[]) => JSON.stringify(elements.map((e) => e.id).sort()),
+    []
+  );
 
-  // Sync Yjs → Excalidraw (remote changes only)
+  // Load elements from Yjs into Excalidraw (initialization + remote updates)
+  const loadFromYjs = React.useCallback(() => {
+    const api = excalidrawRef.current;
+    if (!api) return;
+    const elements = yElementsToPlain(yElements);
+    const fingerprint = JSON.stringify(elements.map((e) => e.id).sort());
+    if (fingerprint === lastRemoteRef.current) return; // already up to date
+    lastRemoteRef.current = fingerprint;
+    api.updateScene({ elements, commitToHistory: false });
+  }, [yElements]);
+
+  // Called once when Excalidraw API is ready — initialize with current Yjs state
+  const setExcalidrawApi = React.useCallback(
+    (api: any) => {
+      excalidrawRef.current = api;
+      loadFromYjs(); // load existing remote data on open
+    },
+    [loadFromYjs]
+  );
+
+  // Sync Yjs → Excalidraw (remote changes + initial load)
   React.useEffect(() => {
-    const observer = (_event: any, transaction: any) => {
-      // Ignore our own local updates — they already exist in Excalidraw
-      if (transaction?.origin === 'excalidraw-local') return;
-      const elements = yElements.toArray().map((ymap) => {
-        const obj: Record<string, any> = {};
-        ymap.forEach((val, key) => { obj[key] = val; });
-        return obj;
-      });
-      excalidrawRef.current?.updateScene({ elements, commitToHistory: false });
+    const observer = () => {
+      loadFromYjs();
     };
     yElements.observe(observer);
     return () => { yElements.unobserve(observer); };
-  }, [yElements]);
+  }, [yElements, loadFromYjs]);
 
   // Sync Excalidraw → Yjs (debounced so we don't write 60fps)
   const handleChange = React.useCallback(
     (elements: readonly any[]) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
+        const fingerprint = serializeElements(elements);
+        if (fingerprint === lastRemoteRef.current) return; // came from Yjs, don't echo
+        lastRemoteRef.current = fingerprint;
         doc.transact(() => {
           yElements.delete(0, yElements.length);
           for (const el of elements) {
@@ -62,10 +90,10 @@ export function WhiteboardModule() {
             }
             yElements.push([ymap]);
           }
-        }, 'excalidraw-local');
-      }, 100);
+        });
+      }, 150);
     },
-    [doc, yElements]
+    [doc, yElements, serializeElements]
   );
 
   useModuleToggle('whiteboard', win.toggle);
