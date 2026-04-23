@@ -355,11 +355,16 @@ Voice-app/
 │   ├── package.json
 │   └── src/                    # React компоненты
 │
-├── agent-server/               # Python бот
+├── agent-server/               # Python бот (модульная архитектура)
 │   ├── Dockerfile
 │   ├── main.py                 # LiveKit Agent Server entrypoint
-│   ├── agent.py                # Логика бота (стриминг, очередь)
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── src/
+│       ├── bot.py              # Основной оркестратор
+│       ├── chat/               # Чат-шлюз и парсер команд
+│       ├── media/              # Стриминг, очередь, резолвер
+│       ├── llm/                # OpenRouter провайдер + промпты
+│       └── memory/             # SQLite memory store
 │
 ├── livekit/                    # Конфиги LiveKit
 │   ├── livekit.prod.yaml
