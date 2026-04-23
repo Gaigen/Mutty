@@ -5,6 +5,9 @@ const DEFAULT_HOTKEYS = {
   notes: 'ctrl+shift+x',
 } as const;
 
+/** Detect Tauri desktop environment */
+const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+
 /** Minimum ms between toggles to prevent double-fires */
 const TOGGLE_DEBOUNCE_MS = 300;
 
@@ -52,8 +55,9 @@ export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => 
     }
   };
 
-  // 1. Web fallback: hardcoded keydown listener
+  // 1. Web fallback: hardcoded keydown listener (skipped in Tauri desktop — global shortcuts handled by Rust)
   useEffect(() => {
+    if (isTauri) return; // Desktop uses Tauri global shortcuts via custom events below
     const combo = DEFAULT_HOTKEYS[id];
     const handler = (e: KeyboardEvent) => {
       if (matchHotkey(e, combo)) {
