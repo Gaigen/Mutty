@@ -12,6 +12,11 @@ export const WHITEBOARD_ID = 'whiteboard';
 
 const EMPTY_INITIAL_DATA = { elements: [] };
 
+/** Excalidraw image elements contain base64 data >65KB — too large for LiveKit data channel. Filter them out. */
+function filterImages(elements: readonly any[]): any[] {
+  return elements.filter((el) => el.type !== 'image');
+}
+
 /** Convert Yjs Y.Map array to plain Excalidraw elements */
 function yElementsToPlain(yElements: Y.Array<Y.Map<any>>): Record<string, any>[] {
   return yElements.toArray().map((ymap) => {
@@ -48,7 +53,7 @@ export function WhiteboardModule() {
   const loadFromYjs = React.useCallback(() => {
     const api = excalidrawRef.current;
     if (!api) return;
-    const elements = yElementsToPlain(yElements);
+    const elements = filterImages(yElementsToPlain(yElements));
     const fingerprint = JSON.stringify(elements.map((e) => e.id).sort());
     if (fingerprint === lastRemoteRef.current) return; // already up to date
     lastRemoteRef.current = fingerprint;
@@ -78,12 +83,13 @@ export function WhiteboardModule() {
     (elements: readonly any[]) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        const fingerprint = serializeElements(elements);
+        const syncable = filterImages(elements);
+        const fingerprint = serializeElements(syncable);
         if (fingerprint === lastRemoteRef.current) return; // came from Yjs, don't echo
         lastRemoteRef.current = fingerprint;
         doc.transact(() => {
           yElements.delete(0, yElements.length);
-          for (const el of elements) {
+          for (const el of syncable) {
             const ymap = new Y.Map<any>();
             for (const [k, v] of Object.entries(el)) {
               ymap.set(k, v);
