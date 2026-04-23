@@ -67,6 +67,10 @@ services:
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - AGENT_MEDIA_PROXY=${AGENT_MEDIA_PROXY:-}
       - AGENT_VIDEO_FPS=${AGENT_VIDEO_FPS:-30}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      - OPENROUTER_HTTP_REFERER=${OPENROUTER_HTTP_REFERER:-}
+      - OPENROUTER_SITE_NAME=${OPENROUTER_SITE_NAME:-}
     depends_on:
       - livekit
     restart: unless-stopped
