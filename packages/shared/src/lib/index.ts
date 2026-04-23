@@ -27,7 +27,6 @@ export {
   generateTransferId,
   encodeWireMessage,
   decodeWireMessage,
-  sha256Blob,
   splitFileIntoChunks,
   assembleChunks,
   formatFileSize,
