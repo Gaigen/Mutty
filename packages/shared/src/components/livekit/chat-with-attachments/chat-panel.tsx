@@ -8,7 +8,6 @@ import { useChatNotifications } from '../../../hooks/useChatNotifications';
 import { useChatScroll } from '../../../hooks/useChatScroll';
 import { useUnreadMessages } from '../../../hooks/useUnreadMessages';
 import { useFileAttachments } from '../../../hooks/useImageAttachments';
-import { useWhiteboard } from '../../../hooks/useWhiteboard';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatDragOverlay } from './ChatDragOverlay';
@@ -53,21 +52,6 @@ export function ChatWithAttachments({
   useUnreadMessages(chatMessages);
 
   const fileAtt = useFileAttachments(enableAttachments);
-  const whiteboard = useWhiteboard();
-
-  const handleChatSubmit = React.useCallback(
-    async (e?: React.FormEvent) => {
-      e?.preventDefault();
-      const text = fileAtt.textValue.trim();
-      if (text === '/board') {
-        whiteboard.toggle();
-        fileAtt.setTextValue('');
-        return;
-      }
-      await fileAtt.handleSubmit(e);
-    },
-    [fileAtt, whiteboard],
-  );
 
   const openFullscreen = React.useCallback((src: string) => setFullscreenImage(src), []);
   const closeFullscreen = React.useCallback(() => setFullscreenImage(null), []);
@@ -130,7 +114,7 @@ export function ChatWithAttachments({
       <ChatInput
         textValue={fileAtt.textValue}
         onTextChange={fileAtt.setTextValue}
-        onSubmit={handleChatSubmit}
+        onSubmit={fileAtt.handleSubmit}
         onPaste={fileAtt.handlePaste}
         onAttachClick={() => fileAtt.fileInputRef.current?.click()}
         onFileChange={fileAtt.onFileChange}
