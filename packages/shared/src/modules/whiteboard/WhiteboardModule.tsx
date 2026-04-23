@@ -26,44 +26,44 @@ export function WhiteboardModule() {
   const yElements = React.useMemo(() => doc.getArray<Y.Map<any>>('elements'), [doc]);
 
   const excalidrawRef = React.useRef<any>(null);
-  const isRemoteRef = React.useRef(false);
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setExcalidrawApi = React.useCallback((api: any) => {
     excalidrawRef.current = api;
   }, []);
 
-  // Sync Yjs → Excalidraw
+  // Sync Yjs → Excalidraw (remote changes only)
   React.useEffect(() => {
-    const observer = () => {
-      if (isRemoteRef.current) return;
+    const observer = (_event: any, transaction: any) => {
+      // Ignore our own local updates — they already exist in Excalidraw
+      if (transaction?.origin === 'excalidraw-local') return;
       const elements = yElements.toArray().map((ymap) => {
         const obj: Record<string, any> = {};
         ymap.forEach((val, key) => { obj[key] = val; });
         return obj;
       });
-      isRemoteRef.current = true;
-      excalidrawRef.current?.updateScene({ elements });
-      // Reset after current microtask queue clears (Excalidraw may fire onChange async)
-      window.setTimeout(() => { isRemoteRef.current = false; }, 0);
+      excalidrawRef.current?.updateScene({ elements, commitToHistory: false });
     };
     yElements.observe(observer);
     return () => { yElements.unobserve(observer); };
   }, [yElements]);
 
-  // Sync Excalidraw → Yjs
+  // Sync Excalidraw → Yjs (debounced so we don't write 60fps)
   const handleChange = React.useCallback(
     (elements: readonly any[]) => {
-      if (isRemoteRef.current) return;
-      doc.transact(() => {
-        yElements.delete(0, yElements.length);
-        for (const el of elements) {
-          const ymap = new Y.Map<any>();
-          for (const [k, v] of Object.entries(el)) {
-            ymap.set(k, v);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        doc.transact(() => {
+          yElements.delete(0, yElements.length);
+          for (const el of elements) {
+            const ymap = new Y.Map<any>();
+            for (const [k, v] of Object.entries(el)) {
+              ymap.set(k, v);
+            }
+            yElements.push([ymap]);
           }
-          yElements.push([ymap]);
-        }
-      });
+        }, 'excalidraw-local');
+      }, 100);
     },
     [doc, yElements]
   );
