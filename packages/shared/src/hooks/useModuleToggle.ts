@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 const DEFAULT_HOTKEYS = {
   whiteboard: 'ctrl+b',
-  notes: 'ctrl+alt+n',
+  notes: 'ctrl+shift+x',
 } as const;
 
 /** Minimum ms between toggles to prevent double-fires */
