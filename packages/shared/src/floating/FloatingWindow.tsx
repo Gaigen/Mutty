@@ -160,7 +160,7 @@ export function FloatingWindow({ api, children, className = "" }: Props) {
           {children}
           {/* Resize handle */}
           <div
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-gradient-to-tl from-white/20 to-transparent"
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-gradient-to-tl from-white/20 to-transparent z-10"
             onMouseDown={onResizeMouseDown}
           />
         </div>
