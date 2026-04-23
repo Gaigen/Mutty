@@ -79,6 +79,7 @@ export function WhiteboardModule() {
           onChange={handleChange}
           theme="dark"
           UIOptions={{
+            welcomeScreen: false,
             canvasActions: {
               changeViewBackgroundColor: false,
               clearCanvas: false,
