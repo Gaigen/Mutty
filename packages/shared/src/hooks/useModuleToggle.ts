@@ -1,9 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const DEFAULT_HOTKEYS = {
   whiteboard: 'ctrl+b',
   notes: 'ctrl+n',
 } as const;
+
+/** Minimum ms between toggles to prevent double-fires */
+const TOGGLE_DEBOUNCE_MS = 300;
 
 function matchHotkey(e: KeyboardEvent, combo: string): boolean {
   const parts = combo.toLowerCase().split('+').map((p) => p.trim());
@@ -32,13 +35,31 @@ function matchHotkey(e: KeyboardEvent, combo: string): boolean {
  * @param toggle - function to call when hotkey fires
  */
 export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => void) {
+  const lastToggleRef = useRef(0);
+
+  const safeToggle = useRef(() => {
+    const now = Date.now();
+    if (now - lastToggleRef.current > TOGGLE_DEBOUNCE_MS) {
+      lastToggleRef.current = now;
+      toggle();
+    }
+  });
+  safeToggle.current = () => {
+    const now = Date.now();
+    if (now - lastToggleRef.current > TOGGLE_DEBOUNCE_MS) {
+      lastToggleRef.current = now;
+      toggle();
+    }
+  };
+
   // 1. Web fallback: hardcoded keydown listener
   useEffect(() => {
     const combo = DEFAULT_HOTKEYS[id];
     const handler = (e: KeyboardEvent) => {
       if (matchHotkey(e, combo)) {
         e.preventDefault();
-        toggle();
+        e.stopPropagation();
+        safeToggle.current();
       }
     };
     window.addEventListener('keydown', handler);
@@ -48,7 +69,7 @@ export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => 
   // 2. Desktop global hotkey bridge: listen for custom events dispatched by HotkeyListener
   useEffect(() => {
     const eventName = `toggle-${id}`;
-    const handler = () => toggle();
+    const handler = () => safeToggle.current();
     window.addEventListener(eventName, handler);
     return () => window.removeEventListener(eventName, handler);
   }, [id, toggle]);
