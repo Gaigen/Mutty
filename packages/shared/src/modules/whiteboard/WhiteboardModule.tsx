@@ -27,6 +27,11 @@ function yElementsToPlain(yElements: Y.Array<Y.Map<any>>): Record<string, any>[]
   });
 }
 
+/** Deep clone plain JSON objects */
+function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 /** Deep-equal check for plain JSON values */
 function valueChanged(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) !== JSON.stringify(b);
@@ -95,7 +100,7 @@ export function WhiteboardModule() {
   const loadFromYjs = React.useCallback(() => {
     const api = excalidrawRef.current;
     if (!api) return;
-    const elements = filterImages(yElementsToPlain(yElements));
+    const elements = filterImages(yElementsToPlain(yElements)).map((e) => deepClone(e));
     const fp = fingerprint(elements);
     if (fp === lastAppliedFp.current) return; // already up to date
     lastAppliedFp.current = fp;
@@ -157,7 +162,7 @@ export function WhiteboardModule() {
     (elements: readonly any[]) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        const syncable = filterImages(elements);
+        const syncable = deepClone(filterImages(elements));
         const fp = fingerprint(syncable);
         if (fp === lastSyncedFp.current) return; // already synced this state
 
