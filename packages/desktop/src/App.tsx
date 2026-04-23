@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { FloatingWindowManagerProvider } from '@mutty/shared';
 import HomePage from '@shared/pages/HomePage';
 import RoomPage from '@shared/pages/RoomPage';
 import ServerUrlSection from './components/ServerUrlSection';
@@ -56,19 +57,21 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full">
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <HomePage
-              serverUrlSection={<ServerUrlSection onConfigured={handleConfigured} />}
-              hideForm={!serverConfigured}
-            />
-          }
-        />
-        <Route path="/room/:roomName" element={<DesktopRoomPage />} />
-      </Routes>
-    </div>
+    <FloatingWindowManagerProvider>
+      <div className="min-h-screen w-full">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomePage
+                serverUrlSection={<ServerUrlSection onConfigured={handleConfigured} />}
+                hideForm={!serverConfigured}
+              />
+            }
+          />
+          <Route path="/room/:roomName" element={<DesktopRoomPage />} />
+        </Routes>
+      </div>
+    </FloatingWindowManagerProvider>
   );
 }

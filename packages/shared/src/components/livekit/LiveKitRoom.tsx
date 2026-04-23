@@ -18,6 +18,8 @@ import ScreenShareHandler from './ScreenShareHandler';
 import SoundHandler from './SoundHandler';
 import StreamSettings from './StreamSettings';
 import { VideoConferenceWithVolume } from './VideoConferenceWithVolume';
+import { CollabProvider } from '../../collab';
+import { WhiteboardModule } from '../../modules/whiteboard/WhiteboardModule';
 
 interface LiveKitRoomProps {
   roomName: string;
@@ -275,10 +277,12 @@ export default function LiveKitRoomComponent({
       <UserChoicesProvider>
       <ParticipantVolumesProvider>
       <AudioMuteProvider>
+      <CollabProvider>
       <VideoConferenceWithVolume
         outputVolume={audioSettings.outputVolume}
         rightControls={rightControls}
       />
+      <WhiteboardModule />
       <AudioHandler />
       <SoundHandler />
       <ScreenShareHandler />
@@ -293,6 +297,7 @@ export default function LiveKitRoomComponent({
           extraTabs={extraSettingsTabs}
         />
       )}
+      </CollabProvider>
       </AudioMuteProvider>
       </ParticipantVolumesProvider>
       </UserChoicesProvider>
