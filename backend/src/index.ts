@@ -15,9 +15,9 @@ const {
   LIVEKIT_WS_URL = 'ws://127.0.0.1:7880',
   LIVEKIT_PUBLIC_WS_URL = 'ws://localhost:7880',
   LIVEKIT_API_URL: _apiUrl,
-  TOKEN_CORS_ORIGINS = 'http://localhost:1420',
+  TOKEN_CORS_ORIGINS = '*',
   TOKEN_ROOM_MAX_LENGTH = '100',
-  TOKEN_IDENTITY_MAX_LENGTH = '64',
+  TOKEN_IDENTITY_MAX_LENGTH = '100',
   TOKEN_TTL = '3600',
 } = process.env;
 
