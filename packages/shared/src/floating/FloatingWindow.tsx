@@ -87,6 +87,8 @@ export function FloatingWindow({ api, children, className = "" }: Props) {
     resizeRef.current.resizing = false;
     window.removeEventListener("mousemove", onResizeMove);
     window.removeEventListener("mouseup", onResizeUp);
+    // Notify canvas-based children (e.g. Excalidraw) that container resized
+    window.dispatchEvent(new Event('resize'));
   }, [onResizeMove]);
 
   const onResizeMouseDown = useCallback(
