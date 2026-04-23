@@ -9,7 +9,6 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN sh -c "pip install --no-cache-dir -r requirements.txt"
-# RUN sh -c "pip install --proxy $DOCKER_BUILD_STAGE_PROXY --no-cache-dir -r requirements.txt"
 
 COPY . .
 

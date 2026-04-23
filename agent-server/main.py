@@ -1,23 +1,26 @@
 """
-YouTube Bot — LiveKit Agent Server entrypoint.
+Bot entrypoint — registers as "youtube-bot" with explicit dispatch.
 
-Registers as agent "youtube-bot" with explicit dispatch.
-Run: python main.py dev   (development) or  python main.py start  (production)
+Run: python main.py dev   (development)
+     python main.py start  (production)
 """
 
 import asyncio
 import os
 
-
-
 from livekit.agents import AgentServer, JobContext, JobRequest, cli
 from livekit.agents import AutoSubscribe
 
-from agent import BOT_IDENTITY, BOT_NAME, YouTubeAgent
+from src.bot import Bot
+from src.config import AGENT_NAME, BOT_IDENTITY, BOT_NAME, LIVEKIT_URL
+from src.llm import OpenRouterProvider
+from src.memory import MemoryStore
 
-AGENT_NAME = "youtube-bot"
-os.environ["LIVEKIT_URL"] = os.getenv("LIVEKIT_WS_URL", "ws://livekit:7880")
+os.environ["LIVEKIT_URL"] = LIVEKIT_URL
 server = AgentServer(num_idle_processes=1)
+
+# Shared ephemeral memory store (lives only while bot is in the room)
+memory = MemoryStore()
 
 
 async def on_request(req: JobRequest) -> None:
@@ -25,23 +28,21 @@ async def on_request(req: JobRequest) -> None:
 
 
 @server.rtc_session(agent_name=AGENT_NAME, on_request=on_request)
-async def youtube_agent(ctx: JobContext) -> None:
+async def bot_session(ctx: JobContext) -> None:
     room = ctx.room
     shutdown_event = asyncio.Event()
 
-    def on_shutdown() -> None:
-        shutdown_event.set()
-
-    agent = YouTubeAgent(room, on_shutdown=on_shutdown)
+    # Optional: add OPENROUTER_API_KEY env var to enable AI features
+    llm = OpenRouterProvider() if os.getenv("OPENROUTER_API_KEY") else None
+    bot = Bot(room, on_shutdown=shutdown_event.set, llm=llm, memory=memory)
 
     await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
-    agent.setup()
+    bot.setup()
 
-    await agent.run()
+    await bot.run()
 
-    # Wait until shutdown (alone in room or leave command)
     await shutdown_event.wait()
-    await agent.shutdown()
+    await bot.shutdown()
     ctx.shutdown()
 
 
