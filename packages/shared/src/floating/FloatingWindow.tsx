@@ -8,9 +8,11 @@ interface Props {
   api: FloatingWindowApi;
   children: ReactNode;
   className?: string;
+  /** Extra content rendered in the title bar (e.g. action buttons) */
+  headerRight?: ReactNode;
 }
 
-export function FloatingWindow({ api, children, className = "" }: Props) {
+export function FloatingWindow({ api, children, className = "", headerRight }: Props) {
   const { state, dispatch } = useManager();
   const win = state.windows[api.id];
   if (!win || !win.isOpen) return null;
@@ -141,6 +143,7 @@ export function FloatingWindow({ api, children, className = "" }: Props) {
       >
         <span className="text-sm text-white/80 truncate">{title}</span>
         <div className="flex items-center gap-1">
+          {headerRight}
           <button
             className="w-5 h-5 flex items-center justify-center rounded text-white/50 hover:text-white hover:bg-white/10"
             onClick={() => (isMinimized ? api.restore() : api.minimize())}
