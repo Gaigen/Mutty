@@ -19,7 +19,6 @@ export function useFloatingWindow(config: WindowConfig): FloatingWindowApi {
     initialSize = DEFAULT_SIZE,
     minSize = DEFAULT_MIN,
     title = id,
-    isSingleton = true,
   } = config;
 
   const { register, unregister, update, bringToFront, getWindow } = useManagerActions();

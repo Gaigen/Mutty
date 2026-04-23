@@ -8,7 +8,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { ManagerState, ManagerAction, WindowState, Vec2, Size } from "./types";
+import type { ManagerState, ManagerAction, WindowState } from "./types";
 
 const BASE_Z = 1000;
 

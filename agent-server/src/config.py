@@ -61,8 +61,6 @@ AI_CHAT_RE = re.compile(r"^(?:!?\s*)?(?:ai|джарвис|jarvis|бот|bot)\s+(
 AI_PLAYLIST_RE = re.compile(r"^(?:!?\s*)?(?:playlist|плейлист|playlist|плэйлист)\s+(.+)$", re.IGNORECASE)
 
 AGENT_CONTROL_TOPIC = "agent-control"
-
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def is_url_safe_for_media(url: str) -> bool:
     """Block SSRF: file://, localhost, private IPs. Allow http(s) and ytsearch/scsearch."""

@@ -67,7 +67,7 @@ export function WhiteboardModule() {
     <FloatingWindow api={win}>
       <div className="w-full h-full relative">
         <Excalidraw
-          ref={excalidrawRef}
+          excalidrawAPI={(api) => { excalidrawRef.current = api; }}
           initialData={{ elements: [] }}
           onChange={handleChange}
           theme="dark"

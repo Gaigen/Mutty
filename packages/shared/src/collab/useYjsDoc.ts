@@ -6,12 +6,12 @@ import { useCollab } from './CollabProvider';
 
 export function useYjsDoc(moduleId: string): Y.Doc {
   const { sendUpdate, subscribe } = useCollab();
-  const docRef = React.useRef<Y.Doc>();
+  const docRef = React.useRef<Y.Doc | null>(null);
 
   if (!docRef.current) {
     docRef.current = new Y.Doc();
   }
-  const doc = docRef.current;
+  const doc = docRef.current!;
 
   // Send local updates
   React.useEffect(() => {

@@ -11,7 +11,7 @@ import os
 from livekit.agents import AgentServer, JobContext, JobRequest, cli
 from livekit.agents import AutoSubscribe
 
-from src.bot import Bot
+from src.core.agent import Agent
 from src.config import AGENT_NAME, BOT_IDENTITY, BOT_NAME, LIVEKIT_URL
 from src.llm import OpenRouterProvider
 from src.memory import MemoryStore
@@ -34,15 +34,15 @@ async def bot_session(ctx: JobContext) -> None:
 
     # Optional: add OPENROUTER_API_KEY env var to enable AI features
     llm = OpenRouterProvider() if os.getenv("OPENROUTER_API_KEY") else None
-    bot = Bot(room, on_shutdown=shutdown_event.set, llm=llm, memory=memory)
+    agent = Agent(room, on_shutdown=shutdown_event.set, llm=llm, memory=memory)
 
     await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
-    bot.setup()
+    agent.setup()
 
-    await bot.run()
+    await agent.run()
 
     await shutdown_event.wait()
-    await bot.shutdown()
+    await agent.shutdown()
     ctx.shutdown()
 
 

@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function FloatingWindow({ api, children, className = "", headerRight }: Props) {
-  const { state, dispatch } = useManager();
+  const { state } = useManager();
   const win = state.windows[api.id];
   if (!win || !win.isOpen) return null;
 
