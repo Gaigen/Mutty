@@ -12,11 +12,7 @@ export const WHITEBOARD_ID = 'whiteboard';
 
 const EMPTY_INITIAL_DATA = { elements: [] };
 const LOCAL_ORIGIN = 'wb-local';
-
-/** Excalidraw image elements contain base64 data >65KB — too large for LiveKit data channel. Filter them out. */
-function filterImages(elements: readonly any[]): any[] {
-  return elements.filter((el) => el.type !== 'image');
-}
+const MAX_FILE_BASE64 = 50_000; // ~37KB binary, safe for LiveKit data channel
 
 /** Convert Yjs Y.Map array to plain Excalidraw elements */
 function yElementsToPlain(yElements: Y.Array<Y.Map<any>>): Record<string, any>[] {
@@ -35,6 +31,47 @@ function deepClone<T>(obj: T): T {
 /** Deep-equal check for plain JSON values */
 function valueChanged(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) !== JSON.stringify(b);
+}
+
+/** Compress an image dataURL so it fits into LiveKit data channel limits */
+async function compressImageDataUrl(
+  dataURL: string,
+  maxDim: number = 1000,
+  quality: number = 0.8,
+  maxOutputBytes: number = MAX_FILE_BASE64
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(null); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const mime = dataURL.match(/^data:([^;]+);/)?.[1] ?? 'image/jpeg';
+      const targetMime = mime === 'image/png' ? 'image/jpeg' : mime;
+
+      const tryCompress = (q: number) => {
+        const out = canvas.toDataURL(targetMime, q);
+        if (out.length <= maxOutputBytes || q <= 0.3) {
+          resolve(out.length <= maxOutputBytes ? out : null);
+        } else {
+          tryCompress(q - 0.1);
+        }
+      };
+      tryCompress(quality);
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataURL;
+  });
 }
 
 /** Fingerprint for a single element — catches any visual change */
@@ -67,6 +104,9 @@ function elementFingerprint(el: any): string {
     el.endBinding?.elementId,
     el.locked,
     el.isDeleted,
+    el.fileId,
+    el.status,
+    el.scale,
   ]);
 }
 
@@ -86,6 +126,7 @@ export function WhiteboardModule() {
 
   const doc = useYjsDoc(WHITEBOARD_ID);
   const yElements = React.useMemo(() => doc.getArray<Y.Map<any>>('elements'), [doc]);
+  const yFiles = React.useMemo(() => doc.getMap<any>('files'), [doc]);
 
   const excalidrawRef = React.useRef<any>(null);
   const lastAppliedFp = React.useRef<string>('');   // what Excalidraw currently shows
@@ -95,18 +136,23 @@ export function WhiteboardModule() {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const isInteractingRef = React.useRef(false);
   const pendingRemoteRef = React.useRef(false);
+  const compressingRef = React.useRef<Set<string>>(new Set());
 
-  // Load elements from Yjs into Excalidraw (initialization + remote updates)
+  // Load elements + files from Yjs into Excalidraw
   const loadFromYjs = React.useCallback(() => {
     const api = excalidrawRef.current;
     if (!api) return;
-    const elements = filterImages(yElementsToPlain(yElements)).map((e) => deepClone(e));
+    const elements = yElementsToPlain(yElements).map((e) => deepClone(e));
     const fp = fingerprint(elements);
     if (fp === lastAppliedFp.current) return; // already up to date
     lastAppliedFp.current = fp;
-    api.updateScene({ elements, commitToHistory: false });
+
+    const files: Record<string, any> = {};
+    yFiles.forEach((file, id) => { files[id] = deepClone(file); });
+
+    api.updateScene({ elements, files, commitToHistory: false });
     prevElementsRef.current = elements;
-  }, [yElements]);
+  }, [yElements, yFiles]);
 
   const loadFromYjsRef = React.useRef(loadFromYjs);
   loadFromYjsRef.current = loadFromYjs;
@@ -120,7 +166,7 @@ export function WhiteboardModule() {
     []
   );
 
-  // Sync Yjs → Excalidraw via doc update events (catches map property changes too)
+  // Sync Yjs → Excalidraw via doc update events
   React.useEffect(() => {
     const onDocUpdate = (_update: Uint8Array, origin: any) => {
       if (origin === LOCAL_ORIGIN) return; // ignore our own changes
@@ -159,10 +205,10 @@ export function WhiteboardModule() {
   // Sync Excalidraw → Yjs (debounced diff — update properties when possible,
   // full rebuild only when z-order / add / delete)
   const handleChange = React.useCallback(
-    (elements: readonly any[]) => {
+    (elements: readonly any[], _appState: any, files?: Record<string, any>) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        const syncable = deepClone(filterImages(elements));
+        const syncable = deepClone(elements);
         const fp = fingerprint(syncable);
         if (fp === lastSyncedFp.current) return; // already synced this state
 
@@ -219,9 +265,49 @@ export function WhiteboardModule() {
         lastSyncedFp.current = fp;
         lastAppliedFp.current = fp; // Excalidraw already has this state
         prevElementsRef.current = syncable;
+
+        // ── Files sync ──────────────────────────────────────────────────────
+        if (files && Object.keys(files).length > 0) {
+          const smallFiles: Record<string, any> = {};
+
+          for (const [fileId, file] of Object.entries(files)) {
+            if (yFiles.has(fileId)) continue;           // already synced
+            if (compressingRef.current.has(fileId)) continue; // being compressed
+
+            const base64Len = file.dataURL?.length ?? 0;
+            if (base64Len > MAX_FILE_BASE64) {
+              compressingRef.current.add(fileId);
+              compressImageDataUrl(file.dataURL).then((compressed) => {
+                compressingRef.current.delete(fileId);
+                if (!compressed) {
+                  console.warn('[whiteboard] Image too large even after compression:', fileId);
+                  return;
+                }
+                const compressedFile = { ...file, dataURL: compressed };
+                const api = excalidrawRef.current;
+                if (api) {
+                  api.updateScene({ files: { [fileId]: compressedFile }, commitToHistory: false });
+                }
+                doc.transact(() => {
+                  yFiles.set(fileId, compressedFile);
+                }, LOCAL_ORIGIN);
+              });
+            } else {
+              smallFiles[fileId] = file;
+            }
+          }
+
+          if (Object.keys(smallFiles).length > 0) {
+            doc.transact(() => {
+              for (const [fileId, file] of Object.entries(smallFiles)) {
+                yFiles.set(fileId, file);
+              }
+            }, LOCAL_ORIGIN);
+          }
+        }
       }, 50);
     },
-    [doc, yElements]
+    [doc, yElements, yFiles]
   );
 
   useModuleToggle('whiteboard', win.toggle);

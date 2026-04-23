@@ -1,15 +1,35 @@
 // Hook for individual floating window control.
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useRef } from "react";
 import { useManagerActions } from "./FloatingWindowManager";
-import type { FloatingWindowApi, WindowConfig, Vec2, Size } from "./types";
+import type { FloatingWindowApi, WindowConfig, Vec2, Size, WindowState } from "./types";
 
 const DEFAULT_POS: Vec2 = { x: 100, y: 100 };
 const DEFAULT_SIZE: Size = { w: 640, h: 480 };
 const DEFAULT_MIN: Size = { w: 200, h: 150 };
+const STORAGE_KEY = "mutty:floating-layout";
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
+}
+
+function readAllLayouts(): Record<string, Partial<Pick<WindowState, "position" | "size">>> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeLayout(id: string, patch: Partial<Pick<WindowState, "position" | "size">>) {
+  try {
+    const all = readAllLayouts();
+    all[id] = { ...all[id], ...patch };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  } catch {
+    // ignore quota/storage errors
+  }
 }
 
 export function useFloatingWindow(config: WindowConfig): FloatingWindowApi {
@@ -19,21 +39,40 @@ export function useFloatingWindow(config: WindowConfig): FloatingWindowApi {
     initialSize = DEFAULT_SIZE,
     minSize = DEFAULT_MIN,
     title = id,
+    persistKey,
   } = config;
+
+  const persistId = persistKey ?? id;
+  const savedLayout = useMemo(() => readAllLayouts()[persistId], [persistId]);
+  const registerPosition = savedLayout?.position ?? initialPosition;
+  const registerSize = savedLayout?.size ?? initialSize;
 
   const { register, unregister, update, bringToFront, getWindow } = useManagerActions();
   const win = getWindow(id);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Register on mount
   useEffect(() => {
     register(id, {
-      position: initialPosition,
-      size: initialSize,
+      position: registerPosition,
+      size: registerSize,
       title,
       isOpen: false,
     });
     return () => unregister(id);
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist position/size changes (debounced)
+  useEffect(() => {
+    if (!win) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      writeLayout(persistId, { position: win.position, size: win.size });
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [persistId, win?.position.x, win?.position.y, win?.size.w, win?.size.h]);
 
   const isOpen = win?.isOpen ?? false;
   const isMinimized = win?.isMinimized ?? false;
