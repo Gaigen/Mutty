@@ -18,6 +18,10 @@ export function FloatingWindow({ api, children, className = "" }: Props) {
   const { position, size, zIndex, isMinimized, isMaximized, title } = win;
   const isVisible = !isMinimized;
 
+  // Stabilize api reference so drag/resize listeners don't re-register mid-gesture
+  const apiRef = useRef(api);
+  apiRef.current = api;
+
   const dragRef = useRef<{ ox: number; oy: number; dragging: boolean }>({
     ox: 0,
     oy: 0,
@@ -33,6 +37,24 @@ export function FloatingWindow({ api, children, className = "" }: Props) {
   }>({ ox: 0, oy: 0, ow: 0, oh: 0, resizing: false });
 
   // ── Drag ────────────────────────────────────────────────────────────────────
+  const onDragMove = useCallback(
+    (e: globalThis.MouseEvent) => {
+      const { ox, oy, dragging } = dragRef.current;
+      if (!dragging) return;
+      apiRef.current.setPosition({
+        x: e.clientX - ox,
+        y: e.clientY - oy,
+      });
+    },
+    []
+  );
+
+  const onDragUp = useCallback(() => {
+    dragRef.current.dragging = false;
+    window.removeEventListener("mousemove", onDragMove);
+    window.removeEventListener("mouseup", onDragUp);
+  }, [onDragMove]);
+
   const onHeaderMouseDown = useCallback(
     (e: MouseEvent) => {
       if (isMaximized) return;
@@ -45,28 +67,28 @@ export function FloatingWindow({ api, children, className = "" }: Props) {
       window.addEventListener("mousemove", onDragMove);
       window.addEventListener("mouseup", onDragUp);
     },
-    [position, isMaximized, api]
+    [position, isMaximized, api, onDragMove, onDragUp]
   );
-
-  const onDragMove = useCallback(
-    (e: globalThis.MouseEvent) => {
-      const { ox, oy, dragging } = dragRef.current;
-      if (!dragging) return;
-      api.setPosition({
-        x: e.clientX - ox,
-        y: e.clientY - oy,
-      });
-    },
-    [api]
-  );
-
-  const onDragUp = useCallback(() => {
-    dragRef.current.dragging = false;
-    window.removeEventListener("mousemove", onDragMove);
-    window.removeEventListener("mouseup", onDragUp);
-  }, [onDragMove]);
 
   // ── Resize ──────────────────────────────────────────────────────────────────
+  const onResizeMove = useCallback(
+    (e: globalThis.MouseEvent) => {
+      const { ox, oy, ow, oh, resizing } = resizeRef.current;
+      if (!resizing) return;
+      apiRef.current.setSize({
+        w: ow + (e.clientX - ox),
+        h: oh + (e.clientY - oy),
+      });
+    },
+    []
+  );
+
+  const onResizeUp = useCallback(() => {
+    resizeRef.current.resizing = false;
+    window.removeEventListener("mousemove", onResizeMove);
+    window.removeEventListener("mouseup", onResizeUp);
+  }, [onResizeMove]);
+
   const onResizeMouseDown = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
@@ -80,26 +102,8 @@ export function FloatingWindow({ api, children, className = "" }: Props) {
       window.addEventListener("mousemove", onResizeMove);
       window.addEventListener("mouseup", onResizeUp);
     },
-    [size]
+    [size, onResizeMove, onResizeUp]
   );
-
-  const onResizeMove = useCallback(
-    (e: globalThis.MouseEvent) => {
-      const { ox, oy, ow, oh, resizing } = resizeRef.current;
-      if (!resizing) return;
-      api.setSize({
-        w: ow + (e.clientX - ox),
-        h: oh + (e.clientY - oy),
-      });
-    },
-    [api]
-  );
-
-  const onResizeUp = useCallback(() => {
-    resizeRef.current.resizing = false;
-    window.removeEventListener("mousemove", onResizeMove);
-    window.removeEventListener("mouseup", onResizeUp);
-  }, [onResizeMove]);
 
   // ── Focus on click ──────────────────────────────────────────────────────────
   const onWindowMouseDown = useCallback(() => {
