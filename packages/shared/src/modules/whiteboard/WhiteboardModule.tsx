@@ -26,6 +26,13 @@ function yElementsToPlain(yElements: Y.Array<Y.Map<any>>): Record<string, any>[]
   });
 }
 
+/** Cheap fingerprint that catches ANY element change (drag, erase, edit) via versionNonce + position */
+function fingerprint(elements: readonly any[]): string {
+  return elements
+    .map((e) => `${e.id}:${e.versionNonce ?? 0}:${Math.round(e.x ?? 0)}:${Math.round(e.y ?? 0)}`)
+    .join('|');
+}
+
 export function WhiteboardModule() {
   const win = useFloatingWindow({
     id: WHITEBOARD_ID,
@@ -42,21 +49,29 @@ export function WhiteboardModule() {
   const excalidrawRef = React.useRef<any>(null);
   const lastRemoteRef = React.useRef<string>('');
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [dims, setDims] = React.useState({ w: 800, h: 564 });
 
-  // Serialize elements for cheap comparison
-  const serializeElements = React.useCallback(
-    (elements: readonly any[]) => JSON.stringify(elements.map((e) => e.id).sort()),
-    []
-  );
+  // Measure container via ResizeObserver so Excalidraw gets exact pixel dims
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0].contentRect;
+      setDims({ w: cr.width, h: cr.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Load elements from Yjs into Excalidraw (initialization + remote updates)
   const loadFromYjs = React.useCallback(() => {
     const api = excalidrawRef.current;
     if (!api) return;
     const elements = filterImages(yElementsToPlain(yElements));
-    const fingerprint = JSON.stringify(elements.map((e) => e.id).sort());
-    if (fingerprint === lastRemoteRef.current) return; // already up to date
-    lastRemoteRef.current = fingerprint;
+    const fp = fingerprint(elements);
+    if (fp === lastRemoteRef.current) return; // already up to date
+    lastRemoteRef.current = fp;
     api.updateScene({ elements, commitToHistory: false });
   }, [yElements]);
 
@@ -78,15 +93,15 @@ export function WhiteboardModule() {
     return () => { yElements.unobserve(observer); };
   }, [yElements, loadFromYjs]);
 
-  // Sync Excalidraw → Yjs (debounced so we don't write 60fps)
+  // Sync Excalidraw → Yjs (debounced)
   const handleChange = React.useCallback(
     (elements: readonly any[]) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         const syncable = filterImages(elements);
-        const fingerprint = serializeElements(syncable);
-        if (fingerprint === lastRemoteRef.current) return; // came from Yjs, don't echo
-        lastRemoteRef.current = fingerprint;
+        const fp = fingerprint(syncable);
+        if (fp === lastRemoteRef.current) return; // came from Yjs, don't echo
+        lastRemoteRef.current = fp;
         doc.transact(() => {
           yElements.delete(0, yElements.length);
           for (const el of syncable) {
@@ -97,9 +112,9 @@ export function WhiteboardModule() {
             yElements.push([ymap]);
           }
         });
-      }, 150);
+      }, 50);
     },
-    [doc, yElements, serializeElements]
+    [doc, yElements]
   );
 
   useModuleToggle('whiteboard', win.toggle);
@@ -108,12 +123,14 @@ export function WhiteboardModule() {
 
   return (
     <FloatingWindow api={win}>
-      <div className="w-full h-full relative">
+      <div ref={containerRef} className="w-full h-full">
         <Excalidraw
           excalidrawAPI={setExcalidrawApi}
           initialData={EMPTY_INITIAL_DATA}
           onChange={handleChange}
           theme="dark"
+          width={dims.w}
+          height={dims.h}
           UIOptions={{
             welcomeScreen: false,
             canvasActions: {
