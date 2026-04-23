@@ -10,6 +10,8 @@ import { useModuleToggle } from '../../hooks';
 
 export const WHITEBOARD_ID = 'whiteboard';
 
+const EMPTY_INITIAL_DATA = { elements: [] };
+
 export function WhiteboardModule() {
   const win = useFloatingWindow({
     id: WHITEBOARD_ID,
@@ -41,7 +43,8 @@ export function WhiteboardModule() {
       });
       isRemoteRef.current = true;
       excalidrawRef.current?.updateScene({ elements });
-      isRemoteRef.current = false;
+      // Reset after current microtask queue clears (Excalidraw may fire onChange async)
+      window.setTimeout(() => { isRemoteRef.current = false; }, 0);
     };
     yElements.observe(observer);
     return () => { yElements.unobserve(observer); };
@@ -74,7 +77,7 @@ export function WhiteboardModule() {
       <div className="w-full h-full relative">
         <Excalidraw
           excalidrawAPI={setExcalidrawApi}
-          initialData={{ elements: [] }}
+          initialData={EMPTY_INITIAL_DATA}
           onChange={handleChange}
           theme="dark"
           UIOptions={{
