@@ -57,6 +57,18 @@ export function WhiteboardModule() {
     [doc, yElements]
   );
 
+  // Toggle hotkey Ctrl+B
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        win.toggle();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [win]);
+
   if (!win.isOpen) return null;
 
   return (
