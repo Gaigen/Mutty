@@ -71,12 +71,37 @@ export function NotesModule() {
 
   useModuleToggle('notes', win.toggle);
 
-  const saveToTxt = React.useCallback(() => {
-    const blob = new Blob([state.text], { type: 'text/plain;charset=utf-8' });
+  const saveToTxt = React.useCallback(async () => {
+    const suggestedName = `notes-${new Date().toISOString().slice(0, 10)}.txt`;
+    const text = state.text || '';
+
+    // Try native "Save As" dialog (File System Access API)
+    try {
+      const showPicker = (window as any).showSaveFilePicker;
+      if (showPicker) {
+        const handle = await showPicker({
+          suggestedName,
+          types: [{
+            description: 'Text Files',
+            accept: { 'text/plain': ['.txt'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(text);
+        await writable.close();
+        return;
+      }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return; // user cancelled
+      console.warn('[Notes] showSaveFilePicker failed:', err);
+    }
+
+    // Fallback: silent download
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `notes-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = suggestedName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
