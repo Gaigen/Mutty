@@ -97,11 +97,12 @@ export function useFileAttachments(enableAttachments: boolean) {
 
   // ── File classification ─────────────────────────────────────────────────
 
-  const MAX_CHAT_FILE = 5 * 1024 * 1024; // 5MB
+  /** Max file size for base64 chat send (45KB raw → ~60KB base64, fits in LiveKit 64KB limit) */
+  const MAX_CHAT_FILE = 45 * 1024;
 
   const classifyFile = React.useCallback((file: File): PendingFile['kind'] => {
-    if (file.size > MAX_CHAT_FILE) return 'file'; // data channel
-    return 'image'; // chat (reuse base64 path)
+    if (file.size > MAX_CHAT_FILE) return 'file'; // chunked data channel
+    return 'image'; // small file via chat base64
   }, []);
 
   // ── Add files ───────────────────────────────────────────────────────────
