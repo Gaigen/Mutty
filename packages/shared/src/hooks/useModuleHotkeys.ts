@@ -1,7 +1,7 @@
 // Configurable hotkeys for floating modules (whiteboard, notes, etc).
 // Stored in localStorage so they persist across sessions.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { LS_KEYS } from '../config';
 
 export interface ModuleHotkeySettings {

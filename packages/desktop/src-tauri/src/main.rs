@@ -26,6 +26,8 @@ mod global_hotkey {
     pub struct HotkeyState {
         pub mic_key: String,
         pub full_mute_key: String,
+        pub whiteboard_key: String,
+        pub notes_key: String,
     }
 
     pub struct ParsedHotkey {
@@ -182,10 +184,17 @@ mod global_hotkey {
         std::thread::spawn(move || {
             let mut mic_down = false;
             let mut fm_down = false;
+            let mut wb_down = false;
+            let mut notes_down = false;
             loop {
-                let (mic_hk, fm_hk) = {
+                let (mic_hk, fm_hk, wb_hk, notes_hk) = {
                     let s = state.lock().unwrap();
-                    (parse_hotkey(&s.mic_key), parse_hotkey(&s.full_mute_key))
+                    (
+                        parse_hotkey(&s.mic_key),
+                        parse_hotkey(&s.full_mute_key),
+                        parse_hotkey(&s.whiteboard_key),
+                        parse_hotkey(&s.notes_key),
+                    )
                 };
 
                 if let Some(ref hk) = mic_hk {
@@ -204,6 +213,22 @@ mod global_hotkey {
                     fm_down = is_down;
                 }
 
+                if let Some(ref hk) = wb_hk {
+                    let is_down = hotkey_pressed(hk);
+                    if is_down && !wb_down {
+                        let _ = app.emit("global-hotkey-whiteboard", ());
+                    }
+                    wb_down = is_down;
+                }
+
+                if let Some(ref hk) = notes_hk {
+                    let is_down = hotkey_pressed(hk);
+                    if is_down && !notes_down {
+                        let _ = app.emit("global-hotkey-notes", ());
+                    }
+                    notes_down = is_down;
+                }
+
                 std::thread::sleep(Duration::from_millis(50));
             }
         });
@@ -214,12 +239,20 @@ mod global_hotkey {
 use global_hotkey::HotkeyState;
 
 #[tauri::command]
-fn update_global_hotkeys(app: AppHandle, mic_hotkey: String, full_mute_hotkey: String) {
+fn update_global_hotkeys(
+    app: AppHandle,
+    mic_hotkey: String,
+    full_mute_hotkey: String,
+    whiteboard_hotkey: String,
+    notes_hotkey: String,
+) {
     #[cfg(target_os = "windows")]
     {
         if let Ok(mut state) = app.state::<Arc<Mutex<HotkeyState>>>().lock() {
             state.mic_key = mic_hotkey;
             state.full_mute_key = full_mute_hotkey;
+            state.whiteboard_key = whiteboard_hotkey;
+            state.notes_key = notes_hotkey;
         }
     }
 }
@@ -361,6 +394,8 @@ fn main() {
                 let hotkey_state = Arc::new(Mutex::new(HotkeyState {
                     mic_key: String::from("Ctrl+KeyM"),
                     full_mute_key: String::from("Ctrl+KeyF"),
+                    whiteboard_key: String::from("Ctrl+KeyB"),
+                    notes_key: String::from("Ctrl+KeyN"),
                 }));
                 app.manage(hotkey_state.clone());
                 global_hotkey::start_poller(hotkey_state, app.handle().clone());

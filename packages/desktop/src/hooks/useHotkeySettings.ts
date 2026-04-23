@@ -5,11 +5,15 @@ import { storeGet, storeSet } from '../lib/store';
 export interface HotkeySettings {
   toggleMicrophone: string;
   toggleFullMute: string;
+  toggleWhiteboard: string;
+  toggleNotes: string;
 }
 
 export const DEFAULT_HOTKEYS: HotkeySettings = {
   toggleMicrophone: 'Ctrl+KeyM',
   toggleFullMute: 'Ctrl+KeyF',
+  toggleWhiteboard: 'Ctrl+KeyB',
+  toggleNotes: 'Ctrl+KeyN',
 };
 
 async function loadSettings(): Promise<HotkeySettings> {
@@ -36,7 +40,7 @@ const listeners = new Set<(settings: HotkeySettings) => void>();
 export function useHotkeySettings() {
   const [settings, setSettingsState] = useState<HotkeySettings>(currentSettings);
 
-  useEffect(() => {
+    useEffect(() => {
     loadSettings().then((s) => {
       currentSettings = s;
       setSettingsState(s);
@@ -46,6 +50,8 @@ export function useHotkeySettings() {
           invoke('update_global_hotkeys', {
             micHotkey: s.toggleMicrophone,
             fullMuteHotkey: s.toggleFullMute,
+            whiteboardHotkey: s.toggleWhiteboard,
+            notesHotkey: s.toggleNotes,
           });
         });
       } catch {
@@ -72,6 +78,8 @@ export function useHotkeySettings() {
       await invoke('update_global_hotkeys', {
         micHotkey: currentSettings.toggleMicrophone,
         fullMuteHotkey: currentSettings.toggleFullMute,
+        whiteboardHotkey: currentSettings.toggleWhiteboard,
+        notesHotkey: currentSettings.toggleNotes,
       });
     } catch {
       // Tauri not available (dev mode in browser), ignore

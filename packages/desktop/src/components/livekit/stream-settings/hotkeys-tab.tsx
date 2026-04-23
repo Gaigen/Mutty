@@ -9,6 +9,8 @@ interface HotkeysTabProps {
 const HOTKEY_ACTIONS: { key: keyof HotkeySettings; label: string; description: string }[] = [
   { key: 'toggleMicrophone', label: 'Toggle Microphone', description: 'Mute/unmute your mic' },
   { key: 'toggleFullMute', label: 'Toggle Full Mute', description: 'Mute/unmute all incoming audio' },
+  { key: 'toggleWhiteboard', label: 'Toggle Whiteboard', description: 'Open/close collaborative whiteboard' },
+  { key: 'toggleNotes', label: 'Toggle Notes', description: 'Open/close shared notepad' },
 ];
 
 const MODIFIER_KEYS = new Set(['ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'ShiftLeft', 'ShiftRight', 'MetaLeft', 'MetaRight']);

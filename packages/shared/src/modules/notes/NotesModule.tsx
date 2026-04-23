@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useFloatingWindow, FloatingWindow } from '../../floating';
 import { useCollabState } from '../../collab';
-import { matchHotkey, useModuleHotkeys } from '../../hooks';
+import { useModuleToggle } from '../../hooks';
 
 export const NOTES_ID = 'notes';
 
@@ -43,7 +43,6 @@ export function NotesModule() {
     INITIAL_STATE
   );
 
-  const { settings } = useModuleHotkeys();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const isTypingRef = React.useRef(false);
 
@@ -70,17 +69,7 @@ export function NotesModule() {
     [broadcast]
   );
 
-  // Toggle hotkey
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (matchHotkey(e, settings.toggleNotes)) {
-        e.preventDefault();
-        win.toggle();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [win, settings.toggleNotes]);
+  useModuleToggle('notes', win.toggle);
 
   if (!win.isOpen) return null;
 

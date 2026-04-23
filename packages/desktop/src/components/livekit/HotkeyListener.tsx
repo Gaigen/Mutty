@@ -52,6 +52,8 @@ export function HotkeyListener() {
   useEffect(() => {
     let unlistenMic: (() => void) | undefined;
     let unlistenFullMute: (() => void) | undefined;
+    let unlistenWhiteboard: (() => void) | undefined;
+    let unlistenNotes: (() => void) | undefined;
     let cleanup = false;
 
     (async () => {
@@ -69,6 +71,14 @@ export function HotkeyListener() {
           if (cleanup) return;
           toggleAudioMutedRef.current();
         });
+        unlistenWhiteboard = await listen('global-hotkey-whiteboard', () => {
+          if (cleanup) return;
+          window.dispatchEvent(new Event('toggle-whiteboard'));
+        });
+        unlistenNotes = await listen('global-hotkey-notes', () => {
+          if (cleanup) return;
+          window.dispatchEvent(new Event('toggle-notes'));
+        });
         console.log('[HotkeyListener] Tauri global hotkeys active');
       } catch {
         // Tauri not available — browser fallback for keyboard
@@ -80,6 +90,8 @@ export function HotkeyListener() {
       cleanup = true;
       unlistenMic?.();
       unlistenFullMute?.();
+      unlistenWhiteboard?.();
+      unlistenNotes?.();
     };
   }, []);
 
@@ -106,6 +118,10 @@ export function HotkeyListener() {
           else playMicUnmuteSound();
         } else if (matchesHotkey(e, settings.toggleFullMute)) {
           toggleAudioMutedRef.current();
+        } else if (matchesHotkey(e, settings.toggleWhiteboard)) {
+          window.dispatchEvent(new Event('toggle-whiteboard'));
+        } else if (matchesHotkey(e, settings.toggleNotes)) {
+          window.dispatchEvent(new Event('toggle-notes'));
         }
       };
 

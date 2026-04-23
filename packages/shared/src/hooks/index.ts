@@ -17,6 +17,9 @@ export type { ScreenShareSettings, VideoCodec, ContentHint } from './useScreenSh
 export { useStatsPolling } from './useStatsPolling';
 export { useUnreadMessages } from './useUnreadMessages';
 export {
+  useModuleToggle,
+} from './useModuleToggle';
+export {
   useModuleHotkeys,
   matchHotkey,
   getModuleHotkeys,
