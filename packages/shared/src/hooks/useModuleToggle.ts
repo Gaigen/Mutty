@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 const DEFAULT_HOTKEYS = {
   whiteboard: 'ctrl+b',
-  notes: 'ctrl+shift+x',
+  notes: 'ctrl+m',
 } as const;
 
 /** Detect Tauri desktop environment */
@@ -61,7 +61,6 @@ export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => 
     const combo = DEFAULT_HOTKEYS[id];
     const handler = (e: KeyboardEvent) => {
       if (matchHotkey(e, combo)) {
-        console.log(`[useModuleToggle] Hotkey matched for "${id}", calling toggle`);
         e.preventDefault();
         e.stopPropagation();
         safeToggle.current();
