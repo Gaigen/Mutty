@@ -76,6 +76,7 @@ export function WhiteboardModule() {
       <div className="w-full h-full relative">
         <Excalidraw
           ref={excalidrawRef}
+          initialData={{ elements: [] }}
           onChange={handleChange}
           theme="dark"
           UIOptions={{
