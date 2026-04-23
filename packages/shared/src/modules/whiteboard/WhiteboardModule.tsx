@@ -26,6 +26,10 @@ export function WhiteboardModule() {
   const excalidrawRef = React.useRef<any>(null);
   const isRemoteRef = React.useRef(false);
 
+  const setExcalidrawApi = React.useCallback((api: any) => {
+    excalidrawRef.current = api;
+  }, []);
+
   // Sync Yjs → Excalidraw
   React.useEffect(() => {
     const observer = () => {
@@ -35,7 +39,9 @@ export function WhiteboardModule() {
         ymap.forEach((val, key) => { obj[key] = val; });
         return obj;
       });
+      isRemoteRef.current = true;
       excalidrawRef.current?.updateScene({ elements });
+      isRemoteRef.current = false;
     };
     yElements.observe(observer);
     return () => { yElements.unobserve(observer); };
@@ -67,7 +73,7 @@ export function WhiteboardModule() {
     <FloatingWindow api={win}>
       <div className="w-full h-full relative">
         <Excalidraw
-          excalidrawAPI={(api) => { excalidrawRef.current = api; }}
+          excalidrawAPI={setExcalidrawApi}
           initialData={{ elements: [] }}
           onChange={handleChange}
           theme="dark"
