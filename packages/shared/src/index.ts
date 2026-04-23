@@ -26,6 +26,9 @@ export * from './floating';
 // Collab sync
 export * from './collab';
 
+// Modules
+export { WhiteboardModule } from './modules/whiteboard/WhiteboardModule';
+
 // Store
 export * from './store';
 

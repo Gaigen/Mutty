@@ -26,7 +26,7 @@ frontend/
 **/dist/
 
 # Legacy standalone app (migrated to packages/)
-mutty-app/
+# mutty-app/
 
 # Dev binaries
 livekit/livekit-server.exe
