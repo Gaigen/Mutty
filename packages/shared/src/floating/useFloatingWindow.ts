@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useCallback, useRef } from "react";
 import { useManagerActions } from "./FloatingWindowManager";
 import { usePlatform } from "../platform";
+import { LS_KEYS } from "../config";
 import type { FloatingWindowApi, WindowConfig, Vec2, Size, WindowState } from "./types";
 
 const DEFAULT_POS: Vec2 = { x: 100, y: 100 };
 const DEFAULT_SIZE: Size = { w: 640, h: 480 };
 const DEFAULT_MIN: Size = { w: 200, h: 150 };
-const STORAGE_KEY = "mutty:floating-layout";
+const STORAGE_KEY = LS_KEYS.floatingLayout;
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
