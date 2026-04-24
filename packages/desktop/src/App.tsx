@@ -10,6 +10,7 @@ import { HotkeysTab } from './components/livekit/stream-settings/hotkeys-tab';
 import { AppSettingsTab } from './components/livekit/stream-settings/app-tab';
 import { useHotkeySettings } from './hooks/useHotkeySettings';
 import { useAppSettings } from './hooks/useAppSettings';
+import { TauriDownloadProvider } from './context/TauriDownloadProvider';
 
 function DesktopRoomPage() {
   const { settings: hotkeySettings, setSettings: setHotkeySettings } = useHotkeySettings();
@@ -58,20 +59,22 @@ export default function App() {
 
   return (
     <FloatingWindowManagerProvider>
-      <div className="min-h-screen w-full">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <HomePage
-                serverUrlSection={<ServerUrlSection onConfigured={handleConfigured} />}
-                hideForm={!serverConfigured}
-              />
-            }
-          />
-          <Route path="/room/:roomName" element={<DesktopRoomPage />} />
-        </Routes>
-      </div>
+      <TauriDownloadProvider>
+        <div className="min-h-screen w-full">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <HomePage
+                  serverUrlSection={<ServerUrlSection onConfigured={handleConfigured} />}
+                  hideForm={!serverConfigured}
+                />
+              }
+            />
+            <Route path="/room/:roomName" element={<DesktopRoomPage />} />
+          </Routes>
+        </div>
+      </TauriDownloadProvider>
     </FloatingWindowManagerProvider>
   );
 }

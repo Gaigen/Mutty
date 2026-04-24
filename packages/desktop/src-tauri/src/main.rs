@@ -356,6 +356,11 @@ fn set_tray_state(app: AppHandle, state: TrayStateUpdate) {
     }
 }
 
+#[tauri::command]
+fn save_file(path: String, contents: Vec<u8>) -> Result<(), String> {
+    std::fs::write(&path, contents).map_err(|e| e.to_string())
+}
+
 fn main() {
     std::env::set_var(
         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
@@ -365,6 +370,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
@@ -479,6 +485,7 @@ fn main() {
             set_tray_state,
             set_minimize_to_tray,
             get_minimize_to_tray,
+            save_file,
         ])
         .on_window_event(|window, event| {
             // Throttle window-state saves during move/resize to avoid excessive disk writes

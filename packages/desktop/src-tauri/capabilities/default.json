@@ -17,6 +17,7 @@
     "notification:default",
     "window-state:default",
     "store:default",
-    "autostart:default"
+    "autostart:default",
+    "dialog:default"
   ]
 }

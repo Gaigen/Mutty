@@ -8,6 +8,7 @@ import { useChatNotifications } from '../../../hooks/useChatNotifications';
 import { useChatScroll } from '../../../hooks/useChatScroll';
 import { useUnreadMessages } from '../../../hooks/useUnreadMessages';
 import { useFileAttachments } from '../../../hooks/useImageAttachments';
+import { useDownloadFile } from '../../../context/DownloadFileContext';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatDragOverlay } from './ChatDragOverlay';
@@ -56,8 +57,14 @@ export function ChatWithAttachments({
   const openFullscreen = React.useCallback((src: string) => setFullscreenImage(src), []);
   const closeFullscreen = React.useCallback(() => setFullscreenImage(null), []);
 
+  const customDownload = useDownloadFile();
+
   // Download received files
   const handleDownloadFile = React.useCallback((blob: Blob, name: string) => {
+    if (customDownload) {
+      customDownload(blob, name);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -66,7 +73,7 @@ export function ChatWithAttachments({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, []);
+  }, [customDownload]);
 
   return (
     <div

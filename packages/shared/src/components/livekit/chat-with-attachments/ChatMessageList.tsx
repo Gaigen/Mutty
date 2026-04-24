@@ -7,6 +7,7 @@ import { findFirstUrl, hasMultipleUrls } from './link-preview/helpers';
 import { MarkdownMessage } from './markdown-message';
 import { LinkPreview } from './link-preview';
 import { getFileIcon, formatFileSize, isImage, isVideo, isAudio } from '../../../lib/file-transfer';
+import { useDownloadFile } from '../../../context/DownloadFileContext';
 import type { ReceivedFile } from '../../../hooks/useImageAttachments';
 
 const FT_MARKER = '__FT__';
@@ -25,6 +26,7 @@ function parseDataUrl(dataUrl: string): { mime: string; data: Uint8Array } | nul
 /** File card for data URL messages (non-image files sent via chat) */
 function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
   const parsed = React.useMemo(() => parseDataUrl(dataUrl), [dataUrl]);
+  const customDownload = useDownloadFile();
   if (!parsed) return <span style={{ color: '#f88' }}>Invalid file data</span>;
 
   const { mime, data } = parsed;
@@ -34,6 +36,10 @@ function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
 
   const handleDownload = () => {
     const blob = new Blob([data.buffer as ArrayBuffer], { type: mime });
+    if (customDownload) {
+      customDownload(blob, fileName);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -106,6 +112,7 @@ function FileCardInline({
   onDownload?: (blob: Blob, name: string) => void;
 }) {
   const [objectUrl, setObjectUrl] = React.useState<string | null>(null);
+  const customDownload = useDownloadFile();
 
   React.useEffect(() => {
     if (receivedFile && (isImage(receivedFile.mimeType) || isVideo(receivedFile.mimeType) || isAudio(receivedFile.mimeType))) {
@@ -116,6 +123,24 @@ function FileCardInline({
   }, [receivedFile]);
 
   const ready = !!receivedFile;
+
+  const handleDownload = React.useCallback(() => {
+    if (!receivedFile) return;
+    const downloader = onDownload || customDownload;
+    if (downloader) {
+      downloader(receivedFile.blob, receivedFile.name);
+      return;
+    }
+    // fallback
+    const url = URL.createObjectURL(receivedFile.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = receivedFile.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [receivedFile, onDownload, customDownload]);
 
   return (
     <div
@@ -182,7 +207,7 @@ function FileCardInline({
         {ready && onDownload && receivedFile && (
           <button
             type="button"
-            onClick={() => onDownload(receivedFile.blob, receivedFile.name)}
+            onClick={handleDownload}
             style={{
               padding: '4px 12px',
               borderRadius: 4,
