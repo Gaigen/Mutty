@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useCallback, useRef } from "react";
 import { useManagerActions } from "./FloatingWindowManager";
+import { usePlatform } from "../platform";
 import type { FloatingWindowApi, WindowConfig, Vec2, Size, WindowState } from "./types";
 
 const DEFAULT_POS: Vec2 = { x: 100, y: 100 };
@@ -11,25 +12,6 @@ const STORAGE_KEY = "mutty:floating-layout";
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
-}
-
-function readAllLayouts(): Record<string, Partial<Pick<WindowState, "position" | "size">>> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeLayout(id: string, patch: Partial<Pick<WindowState, "position" | "size">>) {
-  try {
-    const all = readAllLayouts();
-    all[id] = { ...all[id], ...patch };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-  } catch {
-    // ignore quota/storage errors
-  }
 }
 
 export function useFloatingWindow(config: WindowConfig): FloatingWindowApi {
@@ -42,8 +24,12 @@ export function useFloatingWindow(config: WindowConfig): FloatingWindowApi {
     persistKey,
   } = config;
 
+  const { storage } = usePlatform();
   const persistId = persistKey ?? id;
-  const savedLayout = useMemo(() => readAllLayouts()[persistId], [persistId]);
+  const savedLayout = useMemo(() => {
+    const raw = storage.get<Record<string, Partial<Pick<WindowState, "position" | "size">>>>(STORAGE_KEY);
+    return raw?.[persistId] ?? null;
+  }, [storage, persistId]);
   const registerPosition = savedLayout?.position ?? initialPosition;
   const registerSize = savedLayout?.size ?? initialSize;
 
@@ -67,12 +53,14 @@ export function useFloatingWindow(config: WindowConfig): FloatingWindowApi {
     if (!win) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      writeLayout(persistId, { position: win.position, size: win.size });
+      const all = storage.get<Record<string, Partial<Pick<WindowState, "position" | "size">>>>(STORAGE_KEY) ?? {};
+      all[persistId] = { position: win.position, size: win.size };
+      storage.set(STORAGE_KEY, all);
     }, 300);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [persistId, win?.position.x, win?.position.y, win?.size.w, win?.size.h]);
+  }, [storage, persistId, win?.position.x, win?.position.y, win?.size.w, win?.size.h]);
 
   const isOpen = win?.isOpen ?? false;
   const isMinimized = win?.isMinimized ?? false;
