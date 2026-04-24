@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mutty (Voice App) Architecture Diagram</title>
+  <title>Mutty Architecture Diagram</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,39 +18,30 @@
     .header { margin-bottom: 2rem; }
     .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
     .pulse-dot {
-      width: 12px; height: 12px;
-      background: #22d3ee;
-      border-radius: 50%;
+      width: 12px; height: 12px; background: #22d3ee; border-radius: 50%;
       animation: pulse 2s infinite;
     }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
     .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
     .diagram-container {
-      background: rgba(15, 23, 42, 0.5);
-      border-radius: 1rem;
-      border: 1px solid #1e293b;
-      padding: 1.5rem;
-      overflow-x: auto;
+      background: rgba(15, 23, 42, 0.5); border-radius: 1rem;
+      border: 1px solid #1e293b; padding: 1.5rem; overflow-x: auto;
     }
-    svg { width: 100%; min-width: 960px; display: block; }
+    svg { width: 100%; min-width: 900px; display: block; }
     .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
-      margin-top: 2rem;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem; margin-top: 2rem;
     }
     .card {
-      background: rgba(15, 23, 42, 0.5);
-      border-radius: 0.75rem;
-      border: 1px solid #1e293b;
-      padding: 1.25rem;
+      background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem;
+      border: 1px solid #1e293b; padding: 1.25rem;
     }
     .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
     .card-dot { width: 8px; height: 8px; border-radius: 50%; }
     .card-dot.cyan { background: #22d3ee; }
     .card-dot.emerald { background: #34d399; }
-    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
     .card h3 { font-size: 0.875rem; font-weight: 600; }
     .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
     .card li { margin-bottom: 0.375rem; }
@@ -62,166 +53,135 @@
     <div class="header">
       <div class="header-row">
         <div class="pulse-dot"></div>
-        <h1>Mutty (Voice App) Architecture</h1>
+        <h1>Mutty Architecture</h1>
       </div>
-      <p class="subtitle">pnpm monorepo — Real-time voice platform on LiveKit + Tauri</p>
+      <p class="subtitle">Real-time voice collaboration platform — meety.smetrix.ru</p>
     </div>
 
     <div class="diagram-container">
-      <svg viewBox="0 0 960 620">
+      <svg viewBox="0 0 1000 620">
         <defs>
-          <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          <marker id="arrowhead-slate" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+          </marker>
+          <marker id="arrowhead-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+          </marker>
+          <marker id="arrowhead-emerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
           </marker>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
           </pattern>
         </defs>
+
+        <!-- Background Grid -->
         <rect width="100%" height="100%" fill="url(#grid)" />
 
-        <!-- ===== DOCKER BOUNDARY ===== -->
-        <rect x="190" y="45" width="660" height="420" rx="12" fill="rgba(251,191,36,0.04)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
-        <text x="202" y="63" fill="#fbbf24" font-size="10" font-weight="600">Docker Compose</text>
+        <!-- Coolify VPS Boundary -->
+        <rect x="180" y="40" width="700" height="400" rx="12" fill="rgba(251, 191, 36, 0.05)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="192" y="58" fill="#fbbf24" font-size="10" font-weight="600">Coolify VPS — meety.smetrix.ru</text>
 
-        <!-- ===== ROW 1: CLIENTS (left) → FRONTEND (middle) → LIVEKIT (right) ===== -->
+        <!-- ARROWS (drawn before components so they appear behind) -->
+        <!-- Browser -> Web App -->
+        <line x1="150" y1="110" x2="278" y2="110" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead-slate)"/>
+        <text x="214" y="104" fill="#94a3b8" font-size="9" text-anchor="middle">HTTPS</text>
 
+        <!-- Web App -> Token Server -->
+        <line x1="420" y1="120" x2="478" y2="120" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead-cyan)"/>
+        <text x="449" y="114" fill="#94a3b8" font-size="9" text-anchor="middle">/api/token</text>
+
+        <!-- Token Server -> LiveKit -->
+        <line x1="550" y1="160" x2="550" y2="258" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead-emerald)"/>
+        <text x="565" y="215" fill="#94a3b8" font-size="9">HTTP API</text>
+
+        <!-- Agent Server -> LiveKit -->
+        <path d="M 750 160 L 750 220 L 620 220 L 620 258" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead-emerald)"/>
+        <text x="700" y="214" fill="#94a3b8" font-size="9">WS</text>
+
+        <!-- Agent Server -> OpenRouter -->
+        <line x1="820" y1="120" x2="898" y2="120" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead-emerald)"/>
+        <text x="859" y="114" fill="#94a3b8" font-size="9" text-anchor="middle">LLM API</text>
+
+        <!-- Browser -> LiveKit -->
+        <path d="M 150 110 L 150 290 L 478 290" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead-slate)"/>
+        <text x="314" y="285" fill="#94a3b8" font-size="9" text-anchor="middle">WSS</text>
+
+        <!-- Desktop -> LiveKit -->
+        <path d="M 150 350 L 400 350 L 400 310 L 478 310" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead-slate)"/>
+        <text x="275" y="346" fill="#94a3b8" font-size="9" text-anchor="middle">WSS</text>
+
+        <!-- Desktop -> Token Server -->
+        <path d="M 150 350 L 540 350 L 540 162" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead-slate)"/>
+        <text x="345" y="346" fill="#94a3b8" font-size="9" text-anchor="middle">HTTP API</text>
+
+        <!-- Web App -> LiveKit -->
+        <path d="M 350 160 L 350 220 L 478 220 L 478 258" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead-cyan)"/>
+        <text x="414" y="216" fill="#94a3b8" font-size="9" text-anchor="middle">WSS</text>
+
+        <!-- COMPONENTS -->
         <!-- Browser -->
-        <rect x="20" y="110" width="110" height="55" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-        <text x="75" y="132" fill="white" font-size="11" font-weight="600" text-anchor="middle">Browser</text>
-        <text x="75" y="148" fill="#94a3b8" font-size="8" text-anchor="middle">Chrome / Firefox</text>
+        <rect x="40" y="80" width="110" height="60" rx="6" fill="#0f172a"/>
+        <rect x="40" y="80" width="110" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="95" y="100" fill="white" font-size="11" font-weight="600" text-anchor="middle">Browser</text>
+        <text x="95" y="116" fill="#94a3b8" font-size="9" text-anchor="middle">Chrome / Firefox</text>
 
-        <!-- Desktop -->
-        <rect x="20" y="200" width="110" height="55" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-        <text x="75" y="222" fill="white" font-size="11" font-weight="600" text-anchor="middle">Desktop</text>
-        <text x="75" y="238" fill="#94a3b8" font-size="8" text-anchor="middle">Tauri + Rust</text>
+        <!-- Desktop App -->
+        <rect x="40" y="320" width="110" height="60" rx="6" fill="#0f172a"/>
+        <rect x="40" y="320" width="110" height="60" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="95" y="340" fill="white" font-size="11" font-weight="600" text-anchor="middle">Desktop App</text>
+        <text x="95" y="356" fill="#94a3b8" font-size="9" text-anchor="middle">Tauri v2</text>
 
-        <!-- packages/web -->
-        <rect x="220" y="100" width="150" height="65" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-        <text x="295" y="122" fill="white" font-size="11" font-weight="600" text-anchor="middle">packages/web</text>
-        <text x="295" y="138" fill="#94a3b8" font-size="9" text-anchor="middle">Vite + React</text>
-        <text x="295" y="153" fill="#22d3ee" font-size="8" text-anchor="middle">:1420</text>
-
-        <!-- packages/desktop -->
-        <rect x="220" y="195" width="150" height="65" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-        <text x="295" y="217" fill="white" font-size="11" font-weight="600" text-anchor="middle">packages/desktop</text>
-        <text x="295" y="233" fill="#94a3b8" font-size="9" text-anchor="middle">Tauri + Vite + React</text>
-        <text x="295" y="248" fill="#22d3ee" font-size="8" text-anchor="middle">:1421</text>
-
-        <!-- packages/shared (between web and desktop, offset right) -->
-        <rect x="395" y="145" width="140" height="65" rx="6" fill="rgba(8,51,68,0.25)" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,4"/>
-        <text x="465" y="167" fill="#22d3ee" font-size="10" font-weight="500" text-anchor="middle">packages/shared</text>
-        <text x="465" y="183" fill="#94a3b8" font-size="8" text-anchor="middle">101 файл — компоненты, хуки</text>
-        <text x="465" y="197" fill="#94a3b8" font-size="8" text-anchor="middle">import @shared/*</text>
-
-        <!-- LiveKit Server -->
-        <rect x="600" y="100" width="140" height="75" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <rect x="600" y="100" width="140" height="75" rx="6" fill="#0f172a" opacity="0"/>
-        <rect x="600" y="100" width="140" height="75" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="670" y="123" fill="white" font-size="12" font-weight="600" text-anchor="middle">LiveKit Server</text>
-        <text x="670" y="140" fill="#94a3b8" font-size="9" text-anchor="middle">WebRTC SFU</text>
-        <text x="670" y="157" fill="#34d399" font-size="8" text-anchor="middle">:7880 WS · :7881 TCP</text>
-
-        <!-- ===== ROW 2: TOKEN SERVER + AGENT SERVER ===== -->
+        <!-- Web App -->
+        <rect x="280" y="80" width="140" height="80" rx="6" fill="#0f172a"/>
+        <rect x="280" y="80" width="140" height="80" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="350" y="102" fill="white" font-size="12" font-weight="600" text-anchor="middle">Web App</text>
+        <text x="350" y="120" fill="#94a3b8" font-size="9" text-anchor="middle">React + Vite + TS</text>
+        <text x="350" y="134" fill="#94a3b8" font-size="9" text-anchor="middle">Tailwind + shadcn/ui</text>
+        <text x="350" y="150" fill="#22d3ee" font-size="8" text-anchor="middle">packages/web</text>
 
         <!-- Token Server -->
-        <rect x="400" y="310" width="140" height="65" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <rect x="400" y="310" width="140" height="65" rx="6" fill="#0f172a" opacity="0"/>
-        <rect x="400" y="310" width="140" height="65" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="470" y="333" fill="white" font-size="11" font-weight="600" text-anchor="middle">Token Server</text>
-        <text x="470" y="349" fill="#94a3b8" font-size="9" text-anchor="middle">Node.js · :4000</text>
+        <rect x="480" y="80" width="140" height="80" rx="6" fill="#0f172a"/>
+        <rect x="480" y="80" width="140" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="550" y="102" fill="white" font-size="12" font-weight="600" text-anchor="middle">Token Server</text>
+        <text x="550" y="120" fill="#94a3b8" font-size="9" text-anchor="middle">Node.js</text>
+        <text x="550" y="134" fill="#94a3b8" font-size="9" text-anchor="middle">livekit-server-sdk</text>
+        <text x="550" y="150" fill="#34d399" font-size="8" text-anchor="middle">:4000</text>
 
         <!-- Agent Server -->
-        <rect x="600" y="310" width="140" height="65" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <rect x="600" y="310" width="140" height="65" rx="6" fill="#0f172a" opacity="0"/>
-        <rect x="600" y="310" width="140" height="65" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="670" y="333" fill="white" font-size="11" font-weight="600" text-anchor="middle">Agent Server</text>
-        <text x="670" y="349" fill="#94a3b8" font-size="9" text-anchor="middle">Python · :8081</text>
+        <rect x="680" y="80" width="140" height="80" rx="6" fill="#0f172a"/>
+        <rect x="680" y="80" width="140" height="80" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="750" y="102" fill="white" font-size="12" font-weight="600" text-anchor="middle">Agent Server</text>
+        <text x="750" y="120" fill="#94a3b8" font-size="9" text-anchor="middle">Python + LiveKit Agent</text>
+        <text x="750" y="134" fill="#94a3b8" font-size="9" text-anchor="middle">OpenRouter LLM</text>
+        <text x="750" y="150" fill="#34d399" font-size="8" text-anchor="middle">youtube-bot :8081</text>
 
-        <!-- ===== EXTERNAL ===== -->
+        <!-- LiveKit Server -->
+        <rect x="480" y="260" width="140" height="80" rx="6" fill="#0f172a"/>
+        <rect x="480" y="260" width="140" height="80" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="550" y="282" fill="white" font-size="12" font-weight="600" text-anchor="middle">LiveKit Server</text>
+        <text x="550" y="300" fill="#94a3b8" font-size="9" text-anchor="middle">WebRTC SFU</text>
+        <text x="550" y="314" fill="#94a3b8" font-size="9" text-anchor="middle">Data Channels</text>
+        <text x="550" y="330" fill="#fb923c" font-size="8" text-anchor="middle">:7880 :7881 :7882</text>
 
-        <!-- YouTube / Twitch -->
-        <rect x="830" y="310" width="110" height="65" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-        <text x="885" y="333" fill="white" font-size="10" font-weight="600" text-anchor="middle">YouTube</text>
-        <text x="885" y="349" fill="#94a3b8" font-size="8" text-anchor="middle">Twitch · SoundCloud</text>
+        <!-- OpenRouter -->
+        <rect x="900" y="95" width="100" height="50" rx="6" fill="#0f172a"/>
+        <rect x="900" y="95" width="100" height="50" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="950" y="115" fill="white" font-size="11" font-weight="600" text-anchor="middle">OpenRouter</text>
+        <text x="950" y="131" fill="#94a3b8" font-size="9" text-anchor="middle">LLM API</text>
 
-        <!-- ===== ARROWS ===== -->
-
-        <!-- Browser → packages/web -->
-        <line x1="130" y1="137" x2="218" y2="137" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <text x="174" y="130" fill="#94a3b8" font-size="8" text-anchor="middle">:1420</text>
-
-        <!-- Desktop → packages/desktop -->
-        <line x1="130" y1="227" x2="218" y2="227" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <text x="174" y="220" fill="#94a3b8" font-size="8" text-anchor="middle">:1421</text>
-
-        <!-- packages/shared → packages/web (dashed) -->
-        <line x1="395" y1="168" x2="372" y2="140" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3"/>
-
-        <!-- packages/shared → packages/desktop (dashed) -->
-        <line x1="395" y1="192" x2="372" y2="220" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3"/>
-
-        <!-- packages/web → Token Server (REST) -->
-        <path d="M 295 165 L 295 280 Q 295 295 310 295 L 398 295" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <text x="310" y="288" fill="#94a3b8" font-size="8">REST /api/token</text>
-
-        <!-- packages/web → LiveKit (WebSocket) -->
-        <line x1="370" y1="132" x2="598" y2="132" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <text x="485" y="125" fill="#94a3b8" font-size="8" text-anchor="middle">WebSocket ws://localhost:7880</text>
-
-        <!-- Token Server → LiveKit (API key) -->
-        <path d="M 470 310 L 470 200 Q 470 185 485 185 L 598 185" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrow)"/>
-        <text x="530" y="178" fill="#a78bfa" font-size="8" text-anchor="middle">API key / secret</text>
-
-        <!-- Token Server → Agent Server (dispatch) -->
-        <line x1="540" y1="342" x2="598" y2="342" stroke="#fb923c" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <text x="569" y="335" fill="#fb923c" font-size="8" text-anchor="middle">dispatch</text>
-
-        <!-- Agent Server → YouTube (yt-dlp) -->
-        <line x1="740" y1="342" x2="828" y2="342" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
-        <text x="784" y="335" fill="#94a3b8" font-size="8" text-anchor="middle">yt-dlp</text>
-
-        <!-- ===== LEGEND ===== -->
-        <text x="780" y="430" fill="white" font-size="10" font-weight="600">Legend</text>
-
-        <rect x="780" y="442" width="14" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
-        <text x="800" y="450" fill="#94a3b8" font-size="8">Frontend</text>
-
-        <rect x="780" y="458" width="14" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
-        <text x="800" y="466" fill="#94a3b8" font-size="8">Backend / LiveKit</text>
-
-        <rect x="780" y="474" width="14" height="10" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
-        <text x="800" y="482" fill="#94a3b8" font-size="8">External / Client</text>
-
-        <rect x="780" y="490" width="14" height="10" rx="2" fill="transparent" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3,3"/>
-        <text x="800" y="498" fill="#94a3b8" font-size="8">Docker boundary</text>
-
-        <line x1="780" y1="510" x2="794" y2="510" stroke="#22d3ee" stroke-width="1" stroke-dasharray="2,2"/>
-        <text x="800" y="513" fill="#94a3b8" font-size="8">pnpm workspace link</text>
-
-        <line x1="780" y1="524" x2="794" y2="524" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,3"/>
-        <text x="800" y="527" fill="#94a3b8" font-size="8">API auth flow</text>
-
-        <line x1="780" y1="538" x2="794" y2="538" stroke="#fb923c" stroke-width="1.5"/>
-        <text x="800" y="541" fill="#94a3b8" font-size="8">Agent dispatch</text>
-
-        <!-- ===== PORTS ===== -->
-        <text x="30" y="430" fill="white" font-size="10" font-weight="600">Ports</text>
-        <text x="30" y="448" fill="#94a3b8" font-size="8">:1420  Frontend (Vite dev / nginx prod)</text>
-        <text x="30" y="462" fill="#94a3b8" font-size="8">:1421  Desktop (Tauri dev)</text>
-        <text x="30" y="476" fill="#94a3b8" font-size="8">:4000  Token Server</text>
-        <text x="30" y="490" fill="#94a3b8" font-size="8">:7880  LiveKit WebSocket</text>
-        <text x="30" y="504" fill="#94a3b8" font-size="8">:7881  LiveKit TCP</text>
-        <text x="30" y="518" fill="#94a3b8" font-size="8">:8081  Agent Server</text>
-
-        <!-- ===== DATA FLOW ===== -->
-        <text x="30" y="555" fill="#64748b" font-size="7">1. Browser/Desktop → Frontend loads React SPA</text>
-        <text x="30" y="569" fill="#64748b" font-size="7">2. Frontend → Token Server — получить LiveKit JWT</text>
-        <text x="30" y="583" fill="#64748b" font-size="7">3. Frontend ↔ LiveKit — WebRTC аудио/видео/чат</text>
-        <text x="30" y="597" fill="#64748b" font-size="7">4. Agent Server ↔ LiveKit — бот заходит в комнату</text>
-        <text x="30" y="611" fill="#64748b" font-size="7">5. Agent Server → YouTube — yt-dlp стримит аудио</text>
-        <text x="500" y="555" fill="#64748b" font-size="7">6. packages/shared — общий код, consumed by web & desktop</text>
-        <text x="500" y="569" fill="#64748b" font-size="7">7. Token Server → LiveKit — API key для валидации токенов</text>
-        <text x="500" y="583" fill="#64748b" font-size="7">8. Docker Compose — оркестрация всех сервисов</text>
+        <!-- LEGEND (outside boundary) -->
+        <text x="720" y="470" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="720" y="482" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="742" y="490" fill="#94a3b8" font-size="8">Frontend</text>
+        <rect x="720" y="498" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="742" y="506" fill="#94a3b8" font-size="8">Backend</text>
+        <rect x="720" y="514" width="16" height="10" rx="2" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/>
+        <text x="742" y="522" fill="#94a3b8" font-size="8">Message Bus</text>
+        <rect x="720" y="530" width="16" height="10" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="742" y="538" fill="#94a3b8" font-size="8">External</text>
+        <line x1="720" y1="550" x2="736" y2="550" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="742" y="553" fill="#94a3b8" font-size="8">Host Boundary</text>
       </svg>
     </div>
 
@@ -229,44 +189,52 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>pnpm Monorepo</h3>
+          <h3>Frontend Stack</h3>
         </div>
         <ul>
-          <li>• packages/shared — 101 файл (компоненты, хуки, утилиты)</li>
-          <li>• packages/web — Vite + React, порт 1420</li>
-          <li>• packages/desktop — Tauri + Rust, порт 1421</li>
-          <li>• workspace:* зависимости, @shared/* алиасы</li>
+          <li>• Web App (packages/web) — React 19 + Vite + TS</li>
+          <li>• Desktop App (packages/desktop) — Tauri v2</li>
+          <li>• Shared packages for types, utils, and UI primitives</li>
+          <li>• Tailwind CSS + shadcn/ui component system</li>
+          <li>• LiveKit React SDK for WebRTC media & data channels</li>
+          <li>• Theme system with light/dark mode support</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Backend & LiveKit</h3>
+          <h3>Backend & AI</h3>
         </div>
         <ul>
-          <li>• Token Server — Node.js, выдаёт JWT для LiveKit</li>
-          <li>• Agent Server — Python, стримит YouTube/Twitch</li>
-          <li>• LiveKit — WebRTC SFU, аудио/видео/скриншаринг</li>
-          <li>• Docker Compose — 4 сервиса, healthchecks</li>
+          <li>• Token Server — Node.js + livekit-server-sdk</li>
+          <li>• JWT token issuance (/api/token) with avatar validation</li>
+          <li>• Agent dispatch endpoint (/api/agent/dispatch)</li>
+          <li>• Agent Server — Python LiveKit Agent SDK</li>
+          <li>• OpenRouter LLM integration (GPT-4o-mini)</li>
+          <li>• youtube-bot voice agent participant</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-dot violet"></div>
-          <h3>Platform Abstraction</h3>
+          <div class="card-dot amber"></div>
+          <h3>Infrastructure</h3>
         </div>
         <ul>
-          <li>• StorageAdapter — localStorage (web) / Tauri Store</li>
-          <li>• ConfigAdapter — env vars (web) / dynamic URL</li>
-          <li>• NotificationAdapter — browser API / Tauri</li>
-          <li>• PlatformProvider + usePlatform() hook</li>
+          <li>• LiveKit Server — WebRTC SFU + data channels</li>
+          <li>• Docker Compose stack with healthchecks</li>
+          <li>• Coolify VPS deployment at meety.smetrix.ru</li>
+          <li>• pnpm workspace monorepo (web + desktop + shared)</li>
+          <li>• Stateless architecture — no persistent database</li>
+          <li>• Branch: share</li>
         </ul>
       </div>
     </div>
 
-    <p class="footer">Mutty (Voice App) • pnpm monorepo • LiveKit + Tauri + React • Generated by Hermes Agent</p>
+    <p class="footer">
+      Mutty Voice App • Branch: share • Deployed at meety.smetrix.ru
+    </p>
   </div>
 </body>
 </html>

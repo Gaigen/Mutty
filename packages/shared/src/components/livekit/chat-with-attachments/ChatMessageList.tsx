@@ -106,10 +106,12 @@ function FileCardInline({
   meta,
   receivedFile,
   onDownload,
+  onOpenFullscreen,
 }: {
   meta: { name: string; size: number; mime: string };
   receivedFile?: ReceivedFile;
   onDownload?: (blob: Blob, name: string) => void;
+  onOpenFullscreen?: (src: string) => void;
 }) {
   const [objectUrl, setObjectUrl] = React.useState<string | null>(null);
   const customDownload = useDownloadFile();
@@ -157,7 +159,7 @@ function FileCardInline({
         <img
           src={objectUrl}
           alt={meta.name}
-          onClick={() => window.open(objectUrl, '_blank')?.focus()}
+          onClick={() => onOpenFullscreen?.(objectUrl)}
           style={{
             display: 'block',
             width: '100%',
@@ -280,6 +282,7 @@ export const ChatMessageList = React.memo(function ChatMessageList({
               meta={meta}
               receivedFile={receivedFile}
               onDownload={onDownloadFile}
+              onOpenFullscreen={onOpenFullscreen}
             />
           );
         } catch {
