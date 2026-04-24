@@ -60,9 +60,9 @@ export function ChatFilePreview({
 }
 
 function PendingFileRow({ file, onRemove }: { file: PendingFile; onRemove: () => void }) {
-  const isImage = file.kind === 'image';
+  const isImageFile = file.file.type.startsWith('image/');
 
-  if (isImage) {
+  if (isImageFile) {
     return <FileThumbnail file={file.file} onRemove={onRemove} />;
   }
 
@@ -82,7 +82,7 @@ function PendingFileRow({ file, onRemove }: { file: PendingFile; onRemove: () =>
       }}>
         {file.file.name}
       </span>
-      <span style={{ color: 'var(--mutty-fg-3)', flexShrink: 0, fontSize: 10 }}>
+      <span style={{ color: 'var(--mutty-fg-1)', flexShrink: 0, fontSize: 10 }}>
         {formatFileSize(file.file.size)}
       </span>
       <button

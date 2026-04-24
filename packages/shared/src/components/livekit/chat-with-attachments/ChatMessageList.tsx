@@ -66,7 +66,7 @@ function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
           }}>
             {fileName}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--mutty-fg-3)' }}>
+          <div style={{ fontSize: 10, color: 'var(--mutty-fg-1)' }}>
             {formatFileSize(size)} · {mime}
           </div>
         </div>
@@ -199,9 +199,9 @@ function FileCardInline({
           }}>
             {meta.name}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--mutty-fg-3)' }}>
+          <div style={{ fontSize: 10, color: 'var(--mutty-fg-1)' }}>
             {formatFileSize(meta.size)}
-            {!ready && ' · receiving…'}
+            {!ready && <span style={{ color: 'var(--mutty-fg-3)' }}> · receiving…</span>}
           </div>
         </div>
         {ready && onDownload && receivedFile && (

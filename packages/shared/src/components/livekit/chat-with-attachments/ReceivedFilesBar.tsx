@@ -135,8 +135,8 @@ function FileCard({
           >
             {file.name}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--mutty-fg-3)' }}>
-            {formatFileSize(file.size)} · from {file.from}
+          <div style={{ fontSize: 10, color: 'var(--mutty-fg-1)' }}>
+            {formatFileSize(file.size)} · <span style={{ color: 'var(--mutty-fg-3)' }}>from {file.from}</span>
           </div>
         </div>
         <button
