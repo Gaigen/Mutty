@@ -511,11 +511,11 @@ fn main() {
                 _ => {}
             }
         })
-        .on_run_event(|app_handle, event| {
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
             if let tauri::RunEvent::ExitRequested { .. } = event {
                 let _ = app_handle.save_window_state(StateFlags::all());
             }
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        });
 }
