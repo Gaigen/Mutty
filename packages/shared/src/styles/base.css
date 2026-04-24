@@ -1,204 +1,205 @@
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="dark"] {
+  /* shadcn semantic tokens */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.45 0.2 264);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(0.23 0 0);
+  --ring: oklch(0.556 0 0);
+  --radius: 0.625rem;
+
+  /* Mutty custom surface tokens */
+  --mutty-surface-1: rgba(255, 255, 255, 0.08);
+  --mutty-surface-2: rgba(255, 255, 255, 0.05);
+  --mutty-surface-3: rgba(255, 255, 255, 0.14);
+  --mutty-surface-4: rgba(255, 255, 255, 0.10);
+  --mutty-surface-5: rgba(255, 255, 255, 0.18);
+  --mutty-surface-6: rgba(255, 255, 255, 0.06);
+
+  --mutty-border-1: rgba(255, 255, 255, 0.08);
+  --mutty-border-2: rgba(255, 255, 255, 0.12);
+  --mutty-border-3: rgba(255, 255, 255, 0.06);
+  --mutty-border-4: rgba(255, 255, 255, 0.14);
+
+  --mutty-fg-1: #e2e8f0;
+  --mutty-fg-2: #94a3b8;
+  --mutty-fg-3: #64748b;
+  --mutty-fg-4: rgba(255, 255, 255, 0.85);
+  --mutty-fg-5: rgba(255, 255, 255, 0.7);
+  --mutty-fg-6: rgba(255, 255, 255, 0.6);
+  --mutty-fg-7: rgba(255, 255, 255, 0.4);
+  --mutty-fg-8: rgba(255, 255, 255, 0.25);
+  --mutty-fg-9: rgba(255, 255, 255, 0.38);
+  --mutty-fg-10: #fff;
+
+  --mutty-accent-1: #6366f1;
+  --mutty-accent-2: #a5b4fc;
+  --mutty-accent-3: #0ea5e9;
+  --mutty-accent-4: rgba(14, 165, 233, 0.6);
+  --mutty-accent-5: rgba(14, 165, 233, 0.85);
+
+  --mutty-danger: #ef4444;
+  --mutty-danger-hover: #dc2626;
+  --mutty-danger-soft: rgba(239, 68, 68, 0.12);
+
+  --mutty-chat-local-bg: #6366f1;
+  --mutty-chat-local-bg-flash: #4f46e5;
+  --mutty-chat-remote-bg: rgba(48, 49, 54, 0.9);
+  --mutty-chat-remote-border: rgba(255, 255, 255, 0.06);
+  --mutty-chat-name: #a5b4fc;
+
+  --mutty-link-preview-bg: rgba(48, 49, 54, 0.6);
+  --mutty-link-preview-bg-hover: rgba(48, 49, 54, 0.9);
+  --mutty-link-preview-border: rgba(255, 255, 255, 0.06);
+  --mutty-link-preview-domain: #b9bbbe;
+  --mutty-link-preview-url: #72767d;
+  --mutty-link-preview-github: #58a6ff;
+
+  --mutty-stream-shell: #0a0a0a;
+  --mutty-fullscreen-bg: #000;
+  --mutty-tile-controls-bg: rgba(0, 0, 0, 0.5);
+  --mutty-tile-controls-bg-hover: rgba(0, 0, 0, 0.75);
+
+  --mutty-slider-track: rgba(255, 255, 255, 0.15);
+  --mutty-slider-thumb-border: rgba(0, 0, 0, 0.3);
+  --mutty-slider-thumb-shadow: rgba(0, 0, 0, 0.3);
+  --mutty-slider-thumb-shadow-hover: rgba(0, 0, 0, 0.4);
+
+  --mutty-burger-dropdown-bg: var(--lk-bg2, #1e1e1e);
+  --mutty-burger-dropdown-border: rgba(255, 255, 255, 0.08);
+  --mutty-burger-dropdown-shadow: rgba(0, 0, 0, 0.5);
+
+  --mutty-hidden-overlay-bg: rgba(0, 0, 0, 0.55);
+  --mutty-hidden-overlay-fg: rgba(255, 255, 255, 0.7);
+
+  --mutty-code-bg: rgba(255, 255, 255, 0.1);
+  --mutty-code-block-bg: rgba(0, 0, 0, 0.45);
+  --mutty-table-header: rgba(255, 255, 255, 0.07);
+
+  --mutty-copied-green: #86efac;
+  --mutty-copied-bg-local: #4f46e5;
+  --mutty-copied-bg-remote: rgba(134, 239, 172, 0.08);
+  --mutty-copied-border-remote: rgba(134, 239, 172, 0.3);
+  --mutty-copied-shadow: rgba(134, 239, 172, 0.4);
+
+  --mutty-mobile-header-border: rgba(255, 255, 255, 0.08);
+  --mutty-twitter-hover: rgba(29, 155, 240, 0.1);
+}
+
+[data-theme="light"] {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+
+  --mutty-surface-1: rgba(0, 0, 0, 0.06);
+  --mutty-surface-2: rgba(0, 0, 0, 0.04);
+  --mutty-surface-3: rgba(0, 0, 0, 0.10);
+  --mutty-surface-4: rgba(0, 0, 0, 0.08);
+  --mutty-surface-5: rgba(0, 0, 0, 0.14);
+  --mutty-surface-6: rgba(0, 0, 0, 0.05);
+
+  --mutty-border-1: rgba(0, 0, 0, 0.08);
+  --mutty-border-2: rgba(0, 0, 0, 0.12);
+  --mutty-border-3: rgba(0, 0, 0, 0.06);
+  --mutty-border-4: rgba(0, 0, 0, 0.14);
+
+  --mutty-fg-1: #1e293b;
+  --mutty-fg-2: #475569;
+  --mutty-fg-3: #64748b;
+  --mutty-fg-4: rgba(0, 0, 0, 0.80);
+  --mutty-fg-5: rgba(0, 0, 0, 0.60);
+  --mutty-fg-6: rgba(0, 0, 0, 0.50);
+  --mutty-fg-7: rgba(0, 0, 0, 0.35);
+  --mutty-fg-8: rgba(0, 0, 0, 0.20);
+  --mutty-fg-9: rgba(0, 0, 0, 0.35);
+  --mutty-fg-10: #0f172a;
+
+  --mutty-accent-1: #4f46e5;
+  --mutty-accent-2: #4338ca;
+  --mutty-accent-3: #0284c7;
+  --mutty-accent-4: rgba(2, 132, 199, 0.5);
+  --mutty-accent-5: rgba(2, 132, 199, 0.75);
+
+  --mutty-danger: #dc2626;
+  --mutty-danger-hover: #b91c1c;
+  --mutty-danger-soft: rgba(220, 38, 38, 0.10);
+
+  --mutty-chat-local-bg: #4f46e5;
+  --mutty-chat-local-bg-flash: #4338ca;
+  --mutty-chat-remote-bg: rgba(241, 245, 249, 0.9);
+  --mutty-chat-remote-border: rgba(0, 0, 0, 0.06);
+  --mutty-chat-name: #4338ca;
+
+  --mutty-link-preview-bg: rgba(241, 245, 249, 0.6);
+  --mutty-link-preview-bg-hover: rgba(241, 245, 249, 0.9);
+  --mutty-link-preview-border: rgba(0, 0, 0, 0.06);
+  --mutty-link-preview-domain: #475569;
+  --mutty-link-preview-url: #64748b;
+  --mutty-link-preview-github: #0366d6;
+
+  --mutty-stream-shell: #f8fafc;
+  --mutty-fullscreen-bg: #000;
+  --mutty-tile-controls-bg: rgba(0, 0, 0, 0.45);
+  --mutty-tile-controls-bg-hover: rgba(0, 0, 0, 0.65);
+
+  --mutty-slider-track: rgba(0, 0, 0, 0.15);
+  --mutty-slider-thumb-border: rgba(255, 255, 255, 0.4);
+  --mutty-slider-thumb-shadow: rgba(0, 0, 0, 0.2);
+  --mutty-slider-thumb-shadow-hover: rgba(0, 0, 0, 0.3);
+
+  --mutty-burger-dropdown-bg: #fff;
+  --mutty-burger-dropdown-border: rgba(0, 0, 0, 0.08);
+  --mutty-burger-dropdown-shadow: rgba(0, 0, 0, 0.15);
+
+  --mutty-hidden-overlay-bg: rgba(0, 0, 0, 0.45);
+  --mutty-hidden-overlay-fg: rgba(255, 255, 255, 0.8);
+
+  --mutty-code-bg: rgba(0, 0, 0, 0.06);
+  --mutty-code-block-bg: rgba(0, 0, 0, 0.04);
+  --mutty-table-header: rgba(0, 0, 0, 0.04);
+
+  --mutty-copied-green: #16a34a;
+  --mutty-copied-bg-local: #4338ca;
+  --mutty-copied-bg-remote: rgba(22, 163, 74, 0.08);
+  --mutty-copied-border-remote: rgba(22, 163, 74, 0.3);
+  --mutty-copied-shadow: rgba(22, 163, 74, 0.4);
+
+  --mutty-mobile-header-border: rgba(0, 0, 0, 0.08);
+  --mutty-twitter-hover: rgba(29, 155, 240, 0.08);
+}
+
 @layer base {
-  /* ── Theme tokens ─────────────────────────────────────────────────────────── */
-  :root,
-  [data-theme="dark"] {
-    /* shadcn semantic tokens (already defined in index.css, kept here for clarity) */
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.45 0.2 264);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(0.23 0 0);
-    --ring: oklch(0.556 0 0);
-    --radius: 0.625rem;
-
-    /* Mutty custom surface tokens */
-    --mutty-surface-1: rgba(255, 255, 255, 0.08);
-    --mutty-surface-2: rgba(255, 255, 255, 0.05);
-    --mutty-surface-3: rgba(255, 255, 255, 0.14);
-    --mutty-surface-4: rgba(255, 255, 255, 0.10);
-    --mutty-surface-5: rgba(255, 255, 255, 0.18);
-    --mutty-surface-6: rgba(255, 255, 255, 0.06);
-
-    --mutty-border-1: rgba(255, 255, 255, 0.08);
-    --mutty-border-2: rgba(255, 255, 255, 0.12);
-    --mutty-border-3: rgba(255, 255, 255, 0.06);
-    --mutty-border-4: rgba(255, 255, 255, 0.14);
-
-    --mutty-fg-1: #e2e8f0;
-    --mutty-fg-2: #94a3b8;
-    --mutty-fg-3: #64748b;
-    --mutty-fg-4: rgba(255, 255, 255, 0.85);
-    --mutty-fg-5: rgba(255, 255, 255, 0.7);
-    --mutty-fg-6: rgba(255, 255, 255, 0.6);
-    --mutty-fg-7: rgba(255, 255, 255, 0.4);
-    --mutty-fg-8: rgba(255, 255, 255, 0.25);
-    --mutty-fg-9: rgba(255, 255, 255, 0.38);
-    --mutty-fg-10: #fff;
-
-    --mutty-accent-1: #6366f1;
-    --mutty-accent-2: #a5b4fc;
-    --mutty-accent-3: #0ea5e9;
-    --mutty-accent-4: rgba(14, 165, 233, 0.6);
-    --mutty-accent-5: rgba(14, 165, 233, 0.85);
-
-    --mutty-danger: #ef4444;
-    --mutty-danger-hover: #dc2626;
-    --mutty-danger-soft: rgba(239, 68, 68, 0.12);
-
-    --mutty-chat-local-bg: #6366f1;
-    --mutty-chat-local-bg-flash: #4f46e5;
-    --mutty-chat-remote-bg: rgba(48, 49, 54, 0.9);
-    --mutty-chat-remote-border: rgba(255, 255, 255, 0.06);
-    --mutty-chat-name: #a5b4fc;
-
-    --mutty-link-preview-bg: rgba(48, 49, 54, 0.6);
-    --mutty-link-preview-bg-hover: rgba(48, 49, 54, 0.9);
-    --mutty-link-preview-border: rgba(255, 255, 255, 0.06);
-    --mutty-link-preview-domain: #b9bbbe;
-    --mutty-link-preview-url: #72767d;
-    --mutty-link-preview-github: #58a6ff;
-
-    --mutty-stream-shell: #0a0a0a;
-    --mutty-fullscreen-bg: #000;
-    --mutty-tile-controls-bg: rgba(0, 0, 0, 0.5);
-    --mutty-tile-controls-bg-hover: rgba(0, 0, 0, 0.75);
-
-    --mutty-slider-track: rgba(255, 255, 255, 0.15);
-    --mutty-slider-thumb-border: rgba(0, 0, 0, 0.3);
-    --mutty-slider-thumb-shadow: rgba(0, 0, 0, 0.3);
-    --mutty-slider-thumb-shadow-hover: rgba(0, 0, 0, 0.4);
-
-    --mutty-burger-dropdown-bg: var(--lk-bg2, #1e1e1e);
-    --mutty-burger-dropdown-border: rgba(255, 255, 255, 0.08);
-    --mutty-burger-dropdown-shadow: rgba(0, 0, 0, 0.5);
-
-    --mutty-hidden-overlay-bg: rgba(0, 0, 0, 0.55);
-    --mutty-hidden-overlay-fg: rgba(255, 255, 255, 0.7);
-
-    --mutty-code-bg: rgba(255, 255, 255, 0.1);
-    --mutty-code-block-bg: rgba(0, 0, 0, 0.45);
-    --mutty-table-header: rgba(255, 255, 255, 0.07);
-
-    --mutty-copied-green: #86efac;
-    --mutty-copied-bg-local: #4f46e5;
-    --mutty-copied-bg-remote: rgba(134, 239, 172, 0.08);
-    --mutty-copied-border-remote: rgba(134, 239, 172, 0.3);
-    --mutty-copied-shadow: rgba(134, 239, 172, 0.4);
-
-    --mutty-mobile-header-border: rgba(255, 255, 255, 0.08);
-    --mutty-twitter-hover: rgba(29, 155, 240, 0.1);
-  }
-
-  [data-theme="light"] {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --radius: 0.625rem;
-
-    --mutty-surface-1: rgba(0, 0, 0, 0.06);
-    --mutty-surface-2: rgba(0, 0, 0, 0.04);
-    --mutty-surface-3: rgba(0, 0, 0, 0.10);
-    --mutty-surface-4: rgba(0, 0, 0, 0.08);
-    --mutty-surface-5: rgba(0, 0, 0, 0.14);
-    --mutty-surface-6: rgba(0, 0, 0, 0.05);
-
-    --mutty-border-1: rgba(0, 0, 0, 0.08);
-    --mutty-border-2: rgba(0, 0, 0, 0.12);
-    --mutty-border-3: rgba(0, 0, 0, 0.06);
-    --mutty-border-4: rgba(0, 0, 0, 0.14);
-
-    --mutty-fg-1: #1e293b;
-    --mutty-fg-2: #475569;
-    --mutty-fg-3: #64748b;
-    --mutty-fg-4: rgba(0, 0, 0, 0.80);
-    --mutty-fg-5: rgba(0, 0, 0, 0.60);
-    --mutty-fg-6: rgba(0, 0, 0, 0.50);
-    --mutty-fg-7: rgba(0, 0, 0, 0.35);
-    --mutty-fg-8: rgba(0, 0, 0, 0.20);
-    --mutty-fg-9: rgba(0, 0, 0, 0.35);
-    --mutty-fg-10: #0f172a;
-
-    --mutty-accent-1: #4f46e5;
-    --mutty-accent-2: #4338ca;
-    --mutty-accent-3: #0284c7;
-    --mutty-accent-4: rgba(2, 132, 199, 0.5);
-    --mutty-accent-5: rgba(2, 132, 199, 0.75);
-
-    --mutty-danger: #dc2626;
-    --mutty-danger-hover: #b91c1c;
-    --mutty-danger-soft: rgba(220, 38, 38, 0.10);
-
-    --mutty-chat-local-bg: #4f46e5;
-    --mutty-chat-local-bg-flash: #4338ca;
-    --mutty-chat-remote-bg: rgba(241, 245, 249, 0.9);
-    --mutty-chat-remote-border: rgba(0, 0, 0, 0.06);
-    --mutty-chat-name: #4338ca;
-
-    --mutty-link-preview-bg: rgba(241, 245, 249, 0.6);
-    --mutty-link-preview-bg-hover: rgba(241, 245, 249, 0.9);
-    --mutty-link-preview-border: rgba(0, 0, 0, 0.06);
-    --mutty-link-preview-domain: #475569;
-    --mutty-link-preview-url: #64748b;
-    --mutty-link-preview-github: #0366d6;
-
-    --mutty-stream-shell: #f8fafc;
-    --mutty-fullscreen-bg: #000;
-    --mutty-tile-controls-bg: rgba(0, 0, 0, 0.45);
-    --mutty-tile-controls-bg-hover: rgba(0, 0, 0, 0.65);
-
-    --mutty-slider-track: rgba(0, 0, 0, 0.15);
-    --mutty-slider-thumb-border: rgba(255, 255, 255, 0.4);
-    --mutty-slider-thumb-shadow: rgba(0, 0, 0, 0.2);
-    --mutty-slider-thumb-shadow-hover: rgba(0, 0, 0, 0.3);
-
-    --mutty-burger-dropdown-bg: #fff;
-    --mutty-burger-dropdown-border: rgba(0, 0, 0, 0.08);
-    --mutty-burger-dropdown-shadow: rgba(0, 0, 0, 0.15);
-
-    --mutty-hidden-overlay-bg: rgba(0, 0, 0, 0.45);
-    --mutty-hidden-overlay-fg: rgba(255, 255, 255, 0.8);
-
-    --mutty-code-bg: rgba(0, 0, 0, 0.06);
-    --mutty-code-block-bg: rgba(0, 0, 0, 0.04);
-    --mutty-table-header: rgba(0, 0, 0, 0.04);
-
-    --mutty-copied-green: #16a34a;
-    --mutty-copied-bg-local: #4338ca;
-    --mutty-copied-bg-remote: rgba(22, 163, 74, 0.08);
-    --mutty-copied-border-remote: rgba(22, 163, 74, 0.3);
-    --mutty-copied-shadow: rgba(22, 163, 74, 0.4);
-
-    --mutty-mobile-header-border: rgba(0, 0, 0, 0.08);
-    --mutty-twitter-hover: rgba(29, 155, 240, 0.08);
-  }
-
   .theme {
     --font-sans: 'Geist Variable', sans-serif;
   }
