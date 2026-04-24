@@ -132,7 +132,7 @@ function HotkeyRecorder({
         className={`px-3 py-1.5 text-xs font-mono rounded-md border transition-colors min-w-[100px] text-center ${
           recording
             ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 animate-pulse'
-            : 'border-[#3a3a3a] bg-[#222] text-gray-300 hover:border-[#555]'
+            : 'border-[var(--mutty-border-3)] bg-[var(--mutty-surface-1)] text-[var(--mutty-fg-2)] hover:border-[var(--mutty-border-4)]'
         }`}
         title="Click to record, Escape to cancel"
       >
@@ -147,21 +147,21 @@ export function HotkeysTab({ settings, setSettings }: HotkeysTabProps) {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-white mb-3">Global Hotkeys</h3>
-      <p className="text-xs text-gray-400 mb-4">
+      <h3 className="text-sm font-semibold text-[var(--mutty-fg-1)] mb-3">Global Hotkeys</h3>
+      <p className="text-xs text-[var(--mutty-fg-3)] mb-4">
         Works even when the app is not in focus. Does not block input — keys still work in other apps.
         <br />
-        <span className="text-gray-500">Click to record · Escape to cancel</span>
+        <span className="text-[var(--mutty-fg-3)]">Click to record · Escape to cancel</span>
       </p>
       <div className="space-y-1">
         {HOTKEY_ACTIONS.map(({ key, label, description }) => (
           <div
             key={key}
-            className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[#222] transition-colors"
+            className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--mutty-surface-1)] transition-colors"
           >
             <div className="flex flex-col">
-              <span className="text-sm text-gray-300">{label}</span>
-              <span className="text-xs text-gray-500">{description}</span>
+              <span className="text-sm text-[var(--mutty-fg-2)]">{label}</span>
+              <span className="text-xs text-[var(--mutty-fg-3)]">{description}</span>
             </div>
             <HotkeyRecorder
               value={settings[key]}
