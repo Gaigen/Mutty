@@ -75,3 +75,8 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
+/* Participant metadata badge (name/quality) — theme-aware overlay bg */
+.lk-participant-metadata-item {
+  background-color: var(--mutty-surface-3) !important;
+}
