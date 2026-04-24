@@ -73,7 +73,7 @@ export default function StreamSettings({ isOpen, onClose, extraTabs }: StreamSet
   const activeExtraTab = extraTabs?.find((t) => t.id === activeTab);
 
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[var(--mutty-dropdown-bg)] border border-[var(--mutty-border-2)] rounded-xl shadow-2xl z-50 w-[92vw] max-w-[460px]">
+    <div className="stream-settings-panel bg-[var(--mutty-dropdown-bg)] border border-[var(--mutty-border-2)] rounded-xl shadow-2xl">
       <div className="flex items-center justify-between border-b border-[var(--mutty-border-2)] px-4 py-2.5">
         <div className="flex gap-0.5 flex-wrap">
           {allTabs.map(({ id, label }) => (

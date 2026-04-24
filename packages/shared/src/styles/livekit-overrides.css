@@ -80,3 +80,20 @@
 .lk-participant-metadata-item {
   background-color: var(--mutty-surface-3) !important;
 }
+
+/* Stream Settings panel — centers over viewport, shrinks+shifts when chat is open */
+.stream-settings-panel {
+  position: fixed;
+  bottom: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92vw;
+  max-width: 460px;
+  z-index: 50;
+}
+
+/* When chat panel is open, nudge left and cap width to the remaining space */
+html[data-chat-open="true"] .stream-settings-panel {
+  left: calc(50% - (var(--chat-panel-width, 0px) / 2));
+  width: min(calc(100vw - var(--chat-panel-width, 0px) - 2rem), 460px);
+}

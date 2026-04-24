@@ -104,6 +104,12 @@ export function VideoConferenceWithVolume({
   chatWidthRef.current = chatWidth;
   const lastAutoFocusedScreenShareTrack = React.useRef<TrackReferenceOrPlaceholder | null>(null);
 
+  // Sync chat-open state to <html> so CSS can adapt StreamSettings and other fixed UI
+  React.useEffect(() => {
+    document.documentElement.dataset.chatOpen = String(widgetState.showChat);
+    document.documentElement.style.setProperty('--chat-panel-width', widgetState.showChat ? `${chatWidth}px` : '0px');
+  }, [widgetState.showChat, chatWidth]);
+
   // Load chat width from storage on mount
   React.useEffect(() => {
     (async () => {

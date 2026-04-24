@@ -29,6 +29,12 @@
   object-fit: contain;
 }
 
+/* Default avatar placeholder — theme-aware fill so it’s visible on light backgrounds */
+.lk-participant-placeholder svg path {
+  fill: var(--mutty-fg-1) !important;
+  fill-opacity: 0.25 !important;
+}
+
 /* Fullscreen exit button inside stream shell */
 .lk-stream-fs-exit {
   position: absolute;
