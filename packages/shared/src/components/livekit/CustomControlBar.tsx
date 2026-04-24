@@ -9,6 +9,7 @@ import {
   useLocalParticipantPermissions,
   useRoomContext,
   useLocalParticipant,
+  useMaybeLayoutContext,
 } from '@livekit/components-react';
 import {
   Mic, MicOff,
@@ -60,6 +61,7 @@ const CONTROL_DEFS: ControlDef[] = [
 export function CustomControlBar({ controls, rightControls, style, ...props }: CustomControlBarProps) {
   const visibleControls: CustomControlBarControls = { leave: true, ...controls };
   const room = useRoomContext();
+  const layoutContext = useMaybeLayoutContext();
   const { isAudioMuted, toggleAudioMuted } = useAudioMute();
   const { isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
   const micEnabledBeforeFullMute = React.useRef<boolean | null>(null);
@@ -302,8 +304,7 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
               icon={<MessageSquare size={16} />}
               label="Chat"
               onClick={() => {
-                const toggle = containerRef.current?.querySelector<HTMLButtonElement>('[data-control-id="chat"] .lk-button');
-                toggle?.click();
+                layoutContext?.widget.dispatch?.({ msg: 'toggle_chat' });
               }}
             />
           )}
