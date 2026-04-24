@@ -61,9 +61,9 @@ export function AgentMenuDropdown({
         transform: 'translateX(-50%)',
         width: '92vw',
         maxWidth: 320,
-        background: 'var(--lk-bg2, #1e1e1e)',
+        background: 'var(--mutty-surface-6)',
         borderRadius: 10,
-        boxShadow: '0 6px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)',
+        boxShadow: '0 6px 24px var(--mutty-slider-thumb-shadow), 0 0 0 1px var(--mutty-border-1)',
         zIndex: 999,
         overflow: 'hidden',
       }}

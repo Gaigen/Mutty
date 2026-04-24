@@ -22,7 +22,7 @@ export function VolumeSection({ volumes, setParticipantVolume }: Props) {
       </div>
       <div style={{ marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', width: 48 }}>Voice</span>
+          <span style={{ fontSize: 10, color: 'var(--mutty-fg-6)', width: 48 }}>Voice</span>
           <input
             type="range"
             min="0"
@@ -32,14 +32,14 @@ export function VolumeSection({ volumes, setParticipantVolume }: Props) {
             onChange={(e) =>
               setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value), Track.Source.Microphone)
             }
-            style={{ flex: 1, height: 4, '--thumb-color': 'var(--lk-accent, #0ea5e9)' } as React.CSSProperties}
+            style={{ flex: 1, height: 4, '--thumb-color': 'var(--mutty-accent-3)' } as React.CSSProperties}
           />
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
+          <span style={{ fontSize: 10, color: 'var(--mutty-fg-7)', width: 28 }}>
             {Math.round(botVoiceVolume * botVoiceVolume * 100)}%
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', width: 48 }}>Screen</span>
+          <span style={{ fontSize: 10, color: 'var(--mutty-fg-6)', width: 48 }}>Screen</span>
           <input
             type="range"
             min="0"
@@ -49,9 +49,9 @@ export function VolumeSection({ volumes, setParticipantVolume }: Props) {
             onChange={(e) =>
               setParticipantVolume(BOT_IDENTITY, parseFloat(e.target.value), Track.Source.ScreenShareAudio)
             }
-            style={{ flex: 1, height: 4, '--thumb-color': 'var(--lk-accent, #0ea5e9)' } as React.CSSProperties}
+            style={{ flex: 1, height: 4, '--thumb-color': 'var(--mutty-accent-3)' } as React.CSSProperties}
           />
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', width: 28 }}>
+          <span style={{ fontSize: 10, color: 'var(--mutty-fg-7)', width: 28 }}>
             {Math.round(botScreenVolume * botScreenVolume * 100)}%
           </span>
         </div>

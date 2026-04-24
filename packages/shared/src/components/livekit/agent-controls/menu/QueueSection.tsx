@@ -59,10 +59,10 @@ export function QueueSection({ queueLength, queueDisplay, onShuffle, onClear, on
             flex: 1,
             padding: '0.35rem 0.5rem',
             fontSize: 11,
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.15)',
+            background: 'var(--mutty-surface-1)',
+            border: '1px solid var(--mutty-border-2)',
             borderRadius: 5,
-            color: '#fff',
+            color: 'var(--mutty-fg-1)',
             outline: 'none',
           }}
         />
@@ -104,12 +104,12 @@ export function QueueSection({ queueLength, queueDisplay, onShuffle, onClear, on
                   gap: 4,
                   padding: '3px 4px',
                   borderRadius: 4,
-                  background: 'rgba(255,255,255,0.04)',
+                  background: 'var(--mutty-surface-2)',
                   fontSize: 11,
-                  color: 'rgba(255,255,255,0.7)',
+                  color: 'var(--mutty-fg-5)',
                 }}
               >
-                <span style={{ color: 'rgba(255,255,255,0.3)', minWidth: 16, textAlign: 'right' }}>
+                <span style={{ color: 'var(--mutty-fg-8)', minWidth: 16, textAlign: 'right' }}>
                   {i + 1}.
                 </span>
                 <span
@@ -138,7 +138,7 @@ export function QueueSection({ queueLength, queueDisplay, onShuffle, onClear, on
             );
           })}
           {queueLength > 8 && (
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', padding: '2px 4px' }}>
+            <div style={{ fontSize: 10, color: 'var(--mutty-fg-7)', padding: '2px 4px' }}>
               +{queueLength - 8} more in queue
             </div>
           )}
@@ -146,7 +146,7 @@ export function QueueSection({ queueLength, queueDisplay, onShuffle, onClear, on
       )}
 
       {queueLength === 0 && (
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+        <div style={{ fontSize: 10, color: 'var(--mutty-fg-8)', fontStyle: 'italic' }}>
           Queue is empty
         </div>
       )}

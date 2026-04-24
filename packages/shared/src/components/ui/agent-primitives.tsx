@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 export function Divider() {
-  return <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '0.4rem 0' }} />;
+  return <div style={{ height: 1, background: 'var(--mutty-border-1)', margin: '0.4rem 0' }} />;
 }
 
 export function SectionLabel({ children }: { children: ReactNode }) {
@@ -9,7 +9,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
     <div
       style={{
         fontSize: 10,
-        color: 'rgba(255,255,255,0.4)',
+        color: 'var(--mutty-fg-7)',
         marginBottom: 5,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
@@ -43,9 +43,10 @@ export function ToggleButton({
         padding: '0.3rem 0.4rem',
         borderRadius: 5,
         background: active
-          ? 'var(--lk-control-active-bg, rgba(255,255,255,0.2))'
-          : 'rgba(255,255,255,0.06)',
-        border: active ? '1px solid rgba(255,255,255,0.25)' : '1px solid transparent',
+          ? 'var(--mutty-surface-3)'
+          : 'var(--mutty-surface-2)',
+        border: active ? '1px solid var(--mutty-border-2)' : '1px solid transparent',
+        color: 'var(--mutty-fg-1)',
         transition: 'background 0.15s, border 0.15s',
       }}
     >
@@ -85,16 +86,16 @@ export function IconButton({
         fontSize: 11,
         borderRadius: 5,
         background: active
-          ? 'var(--lk-control-active-bg, rgba(255,255,255,0.2))'
+          ? 'var(--mutty-surface-3)'
           : danger
-            ? 'rgba(239,68,68,0.15)'
-            : 'rgba(255,255,255,0.06)',
+            ? 'var(--mutty-danger-soft)'
+            : 'var(--mutty-surface-2)',
         border: active
-          ? '1px solid rgba(255,255,255,0.25)'
+          ? '1px solid var(--mutty-border-2)'
           : danger
-            ? '1px solid rgba(239,68,68,0.3)'
+            ? '1px solid var(--mutty-danger-soft)'
             : '1px solid transparent',
-        color: danger ? '#f87171' : 'inherit',
+        color: danger ? 'var(--mutty-danger)' : 'var(--mutty-fg-1)',
         opacity: disabled ? 0.35 : 1,
         transition: 'background 0.15s, opacity 0.15s',
         cursor: disabled ? 'not-allowed' : 'pointer',
@@ -131,7 +132,7 @@ export function FullWidthButton({
         padding: '0.45rem 0.75rem',
         fontSize: 12,
         borderRadius: 0,
-        color: danger ? '#f87171' : 'inherit',
+        color: danger ? 'var(--mutty-danger)' : 'var(--mutty-fg-1)',
         background: 'transparent',
         transition: 'background 0.1s',
       }}

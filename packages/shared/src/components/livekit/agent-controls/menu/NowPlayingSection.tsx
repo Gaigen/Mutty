@@ -16,13 +16,13 @@ export function NowPlayingSection({ isPlaying, isPaused, title, url }: Props) {
           {isPlaying ? (
             <PlayingBars />
           ) : isPaused ? (
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>⏸</span>
+            <span style={{ fontSize: 11, color: 'var(--mutty-fg-7)' }}>⏸</span>
           ) : null}
           <span
             style={{
               fontSize: 12,
               fontWeight: 500,
-              color: '#fff',
+              color: 'var(--mutty-fg-1)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -40,7 +40,7 @@ export function NowPlayingSection({ isPlaying, isPaused, title, url }: Props) {
             rel="noopener noreferrer"
             style={{
               fontSize: 10,
-              color: 'var(--lk-accent, #0ea5e9)',
+              color: 'var(--mutty-accent-3)',
               display: 'flex',
               alignItems: 'center',
               gap: 3,
