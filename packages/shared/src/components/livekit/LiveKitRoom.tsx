@@ -11,6 +11,7 @@ import { getScreenShareSettings } from '../../hooks/useScreenShareSettings';
 import { AudioMuteProvider } from '../../context/AudioMuteContext';
 import { UserChoicesProvider } from '../../context/UserChoicesContext';
 import { ParticipantVolumesProvider } from '../../context/ParticipantVolumesContext';
+import { useTheme } from '../../context/ThemeContext';
 import AgentControls from './AgentControls';
 import { InviteRoomButton } from './invite-room-button';
 import AudioHandler from './AudioHandler';
@@ -89,6 +90,7 @@ export default function LiveKitRoomComponent({
   extraSettingsTabs,
 }: LiveKitRoomProps) {
   const { config } = usePlatform();
+  const { resolvedTheme } = useTheme();
   const tokenEndpoint = config.getTokenEndpoint();
 
   // Desktop may not have a server configured yet
@@ -270,7 +272,7 @@ export default function LiveKitRoomComponent({
       audio={appConfig.showAudio}
       token={connection.token}
       serverUrl={connection.serverUrl}
-      data-lk-theme="default"
+      data-lk-theme={resolvedTheme === 'dark' ? 'default-dark' : 'default'}
       style={{ height: '100vh' }}
       onDisconnected={handleDisconnected}
       options={roomOptions}

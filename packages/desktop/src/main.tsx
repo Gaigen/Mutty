@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { PlatformProvider } from '@shared/platform';
+import { ThemeProvider } from '@shared/context';
 import type { Platform } from '@shared/platform';
 import { createDesktopPlatform } from './platform';
 import App from './App';
@@ -44,11 +45,13 @@ function Root() {
 
   return (
     <React.StrictMode>
-      <PlatformProvider value={platform}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </PlatformProvider>
+      <ThemeProvider>
+        <PlatformProvider value={platform}>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </PlatformProvider>
+      </ThemeProvider>
     </React.StrictMode>
   );
 }

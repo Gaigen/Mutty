@@ -7,6 +7,7 @@ import '@excalidraw/excalidraw/index.css';
 import { useFloatingWindow, FloatingWindow } from '../../floating';
 import { useYjsDoc } from '../../collab/useYjsDoc';
 import { useModuleToggle } from '../../hooks';
+import { useTheme } from '../../context/ThemeContext';
 
 export const WHITEBOARD_ID = 'whiteboard';
 
@@ -115,6 +116,7 @@ function fingerprint(elements: readonly any[]): string {
 }
 
 export function WhiteboardModule() {
+  const { resolvedTheme } = useTheme();
   const win = useFloatingWindow({
     id: WHITEBOARD_ID,
     initialPosition: { x: 120, y: 80 },
@@ -348,7 +350,7 @@ export function WhiteboardModule() {
           excalidrawAPI={setExcalidrawApi}
           initialData={EMPTY_INITIAL_DATA}
           onChange={handleChange}
-          theme="dark"
+          theme={resolvedTheme}
           UIOptions={{
             welcomeScreen: false,
             canvasActions: {
