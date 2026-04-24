@@ -97,3 +97,18 @@ html[data-chat-open="true"] .stream-settings-panel {
   left: calc(50% - (var(--chat-panel-width, 0px) / 2));
   width: min(calc(100vw - var(--chat-panel-width, 0px) - 2rem), 460px);
 }
+
+/* Agent dropdown — same adaptive centering as StreamSettings */
+.mutty-agent-dropdown {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92vw;
+  max-width: 320px;
+  z-index: 999;
+}
+
+html[data-chat-open="true"] .mutty-agent-dropdown {
+  left: calc(50% - (var(--chat-panel-width, 0px) / 2));
+  width: min(calc(100vw - var(--chat-panel-width, 0px) - 2rem), 320px);
+}

@@ -1,6 +1,8 @@
 import { useRoomContext, useRemoteParticipants } from '@livekit/components-react';
 import { useParticipantVolumes } from '../../context/ParticipantVolumesContext';
 import { useState } from 'react';
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import { useAudioSettings } from '../../hooks/useAudioSettings';
 import { useCameraSettings } from '../../hooks/useCameraSettings';
 import { useScreenShareSettings } from '../../hooks/useScreenShareSettings';
@@ -32,6 +34,7 @@ interface StreamSettingsProps {
 
 export default function StreamSettings({ isOpen, onClose, extraTabs }: StreamSettingsProps) {
   const room = useRoomContext();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const { settings: screenSettings, setSettings: setScreenSettings } = useScreenShareSettings();
   const { settings: camSettings, setSettings: setCamSettings } = useCameraSettings();
   const { settings: audioSettings, setSettings: setAudioSettings } = useAudioSettings();
@@ -91,9 +94,18 @@ export default function StreamSettings({ isOpen, onClose, extraTabs }: StreamSet
           ))}
         </div>
         <button
+          onClick={toggleTheme}
+          className="text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-1)] transition-colors p-1 rounded hover:bg-[var(--mutty-surface-2)]"
+          aria-label={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          title={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+        <button
           onClick={onClose}
-          className="text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-1)] transition-colors p-1 ml-2 rounded hover:bg-[var(--mutty-surface-2)]"
+          className="text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-1)] transition-colors p-1 ml-1 rounded hover:bg-[var(--mutty-surface-2)]"
           aria-label="Close"
+          title="Close"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

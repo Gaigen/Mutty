@@ -55,16 +55,10 @@ export function AgentMenuDropdown({
       className="mutty-agent-dropdown"
       onClick={(e) => e.stopPropagation()}
       style={{
-        position: 'fixed',
         bottom: dropdownBottom,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '92vw',
-        maxWidth: 320,
         background: 'var(--mutty-dropdown-bg)',
         borderRadius: 10,
         boxShadow: '0 6px 24px var(--mutty-slider-thumb-shadow), 0 0 0 1px var(--mutty-border-1)',
-        zIndex: 999,
         overflow: 'hidden',
       }}
     >

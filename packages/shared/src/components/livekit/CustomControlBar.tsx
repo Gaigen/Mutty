@@ -18,11 +18,9 @@ import {
   ScreenShare, ScreenShareOff,
   MessageSquare,
   LogOut,
-  Sun, Moon,
 } from 'lucide-react';
 import { useUserChoicesContext } from '../../context/UserChoicesContext';
 import { useAudioMute } from '../../context/AudioMuteContext';
-import { useTheme } from '../../context/ThemeContext';
 import { playMicMuteSound, playMicUnmuteSound } from '../../utils/sounds';
 import { supportsScreenSharing } from '@livekit/components-core';
 import { useOverflowControls, type ControlDef } from '../../hooks/useOverflowControls';
@@ -55,7 +53,6 @@ const CONTROL_DEFS: ControlDef[] = [
   { id: 'camera',        priority: 0, estimatedWidth: 80 },
   { id: 'headphones',    priority: 0, estimatedWidth: 42 },
   { id: 'leave',         priority: 0, estimatedWidth: 42 },
-  { id: 'theme',         priority: 0, estimatedWidth: 42 },
   { id: 'screenShare',   priority: 1, estimatedWidth: 42 },
   { id: 'chat',          priority: 2, estimatedWidth: 42 },
   { id: 'rightControls', priority: 3, estimatedWidth: 120 },
@@ -160,7 +157,6 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
         case 'microphone':  return visibleControls.microphone;
         case 'camera':      return visibleControls.camera;
         case 'headphones':  return visibleControls.microphone;
-        case 'theme':       return true;
         case 'screenShare': return visibleControls.screenShare && browserSupportsScreenSharing;
         case 'chat':        return visibleControls.chat;
         case 'rightControls': return !!rightControls;
@@ -172,15 +168,12 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { visibleIds, burgerIds, showBurger } = useOverflowControls(containerRef, activeDefs);
-  const { resolvedTheme, toggleTheme } = useTheme();
 
   const hasBurgerContent = (
     burgerIds.has('screenShare') ||
     burgerIds.has('chat') ||
     burgerIds.has('rightControls')
   );
-
-  const showThemeToggle = true; // always show
 
   return (
     <div
@@ -270,21 +263,6 @@ export function CustomControlBar({ controls, rightControls, style, ...props }: C
           >
             <MessageSquare size={18} aria-hidden />
           </ChatToggle>
-        </div>
-      )}
-
-      {/* Theme toggle */}
-      {showThemeToggle && (
-        <div data-control-id="theme">
-          <button
-            type="button"
-            className="lk-button"
-            aria-label={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            title={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-            onClick={toggleTheme}
-          >
-            {resolvedTheme === 'dark' ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
-          </button>
         </div>
       )}
 
