@@ -2,7 +2,7 @@ import { PING_HISTORY_SIZE } from '../../../lib/stream-stats';
 
 export function SectionHeader({ emoji, label }: { emoji: string; label: string }) {
   return (
-    <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2.5">
+    <h3 className="text-xs font-semibold text-[var(--mutty-fg-3)] mb-3 uppercase tracking-wide flex items-center gap-2.5">
       <span
         className="inline-flex h-6 w-7 shrink-0 items-center justify-center text-base leading-none"
         aria-hidden
@@ -30,10 +30,10 @@ export function MicLevelBar({
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-gray-400">Input level</span>
-        <span className="text-[10px] text-gray-500">{pct}%</span>
+        <span className="text-xs text-[var(--mutty-fg-3)]">Input level</span>
+        <span className="text-[10px] text-[var(--mutty-fg-3)]">{pct}%</span>
       </div>
-      <div className="relative h-2 bg-[#252525] rounded-full overflow-hidden border border-[#2a2a2a]">
+      <div className="relative h-2 bg-[var(--mutty-surface-1)] rounded-full overflow-hidden border border-[var(--mutty-border-2)]">
         <div
           className="h-full rounded-full transition-[width] duration-75"
           style={{ width: `${pct}%`, background: color }}
@@ -91,7 +91,7 @@ export function PingChart({ history }: { history: (number | null)[] }) {
   const valid = history.filter((v): v is number => v !== null);
   if (valid.length < 2) {
     return (
-      <div className="flex min-h-[72px] items-center justify-center rounded-md border border-[#2a2a2a] bg-[#1a1a1a] px-3 text-xs text-gray-500">
+      <div className="flex min-h-[72px] items-center justify-center rounded-md border border-[var(--mutty-border-2)] bg-[var(--mutty-surface-1)] px-3 text-xs text-[var(--mutty-fg-3)]">
         Collecting samples…
       </div>
     );

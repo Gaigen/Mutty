@@ -20,8 +20,8 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
               onClick={() => setScreenSettings({ resolution: { width: preset.width, height: preset.height } })}
               className={`px-2 py-2 rounded text-xs font-medium transition-all border ${
                 currentResolutionPreset === key
-                  ? 'bg-[#3a3a3a] text-white border-[#4a4a4a]'
-                  : 'bg-[#252525] text-gray-300 hover:bg-[#2a2a2a] hover:text-white border-[#2a2a2a]'
+                  ? 'bg-[var(--mutty-surface-3)] text-[var(--mutty-fg-1)] border-[var(--mutty-border-4)]'
+                  : 'bg-[var(--mutty-surface-1)] text-[var(--mutty-fg-2)] hover:bg-[var(--mutty-surface-2)] hover:text-[var(--mutty-fg-1)] border-[var(--mutty-border-2)]'
               }`}
             >
               {key}
@@ -39,8 +39,8 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
               onClick={() => setScreenSettings({ frameRate: fps })}
               className={`px-3 py-2 rounded text-xs font-medium transition-all border ${
                 screenSettings.frameRate === fps
-                  ? 'bg-[#3a3a3a] text-white border-[#4a4a4a]'
-                  : 'bg-[#252525] text-gray-300 hover:bg-[#2a2a2a] hover:text-white border-[#2a2a2a]'
+                  ? 'bg-[var(--mutty-surface-3)] text-[var(--mutty-fg-1)] border-[var(--mutty-border-4)]'
+                  : 'bg-[var(--mutty-surface-1)] text-[var(--mutty-fg-2)] hover:bg-[var(--mutty-surface-2)] hover:text-[var(--mutty-fg-1)] border-[var(--mutty-border-2)]'
               }`}
             >
               {fps} FPS
@@ -61,8 +61,8 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
                 className="mt-0.5 accent-blue-500 shrink-0"
               />
               <div>
-                <span className="text-xs text-white font-medium">{label}</span>
-                <span className="block text-[10px] text-gray-500">{desc}</span>
+                <span className="text-xs text-[var(--mutty-fg-1)] font-medium">{label}</span>
+                <span className="block text-[10px] text-[var(--mutty-fg-3)]">{desc}</span>
               </div>
             </label>
           ))}
@@ -81,8 +81,8 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
                 className="mt-0.5 accent-blue-500 shrink-0"
               />
               <div>
-                <span className="text-xs text-white font-medium">{label}</span>
-                <span className="block text-[10px] text-gray-500">{desc}</span>
+                <span className="text-xs text-[var(--mutty-fg-1)] font-medium">{label}</span>
+                <span className="block text-[10px] text-[var(--mutty-fg-3)]">{desc}</span>
               </div>
             </label>
           ))}
@@ -96,9 +96,9 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
             type="range" min="1000000" max="20000000" step="500000"
             value={screenSettings.maxBitrate}
             onChange={(e) => setScreenSettings({ maxBitrate: parseInt(e.target.value) })}
-            className="flex-1 h-2 bg-[#252525] rounded-lg appearance-none cursor-pointer accent-blue-500"
+            className="flex-1 h-2 bg-[var(--mutty-surface-1)] rounded-lg appearance-none cursor-pointer accent-blue-500"
           />
-          <span className="text-xs text-white w-16 text-right shrink-0">
+          <span className="text-xs text-[var(--mutty-fg-1)] w-16 text-right shrink-0">
             {(screenSettings.maxBitrate / 1_000_000).toFixed(1)} Mbps
           </span>
         </div>
@@ -108,13 +108,13 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
       </div>
 
       <details className="group">
-        <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 select-none py-2 flex items-center gap-2">
+        <summary className="cursor-pointer text-xs text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-2)] select-none py-2 flex items-center gap-2">
           <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           Custom Resolution
         </summary>
-        <div className="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-[#2a2a2a]">
+        <div className="mt-3 grid grid-cols-3 gap-2 pt-3 border-t border-[var(--mutty-border-2)]">
           {(
             [
               { label: 'Width',  key: 'width'     as const, def: 1920, min: 160, max: 3840 },
@@ -123,7 +123,7 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
             ] as const
           ).map(({ label, key, def, min, max }) => (
             <div key={key}>
-              <label className="block text-xs text-gray-400 mb-1">{label}</label>
+              <label className="block text-xs text-[var(--mutty-fg-3)] mb-1">{label}</label>
               <input
                 type="number" min={min} max={max}
                 value={key === 'frameRate' ? screenSettings.frameRate : screenSettings.resolution[key as 'width' | 'height']}
@@ -132,7 +132,7 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
                   if (key === 'frameRate') setScreenSettings({ frameRate: v });
                   else setScreenSettings({ resolution: { ...screenSettings.resolution, [key]: v } });
                 }}
-                className="w-full bg-[#252525] border border-[#2a2a2a] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#3a3a3a]"
+                className="w-full bg-[var(--mutty-surface-1)] border border-[var(--mutty-border-2)] rounded px-2 py-1.5 text-xs text-[var(--mutty-fg-1)] focus:outline-none focus:border-[var(--mutty-border-3)]"
               />
             </div>
           ))}

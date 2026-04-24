@@ -99,6 +99,7 @@
 
   --mutty-mobile-header-border: rgba(255, 255, 255, 0.08);
   --mutty-twitter-hover: rgba(29, 155, 240, 0.1);
+  --mutty-dropdown-bg: #1e1e1e;
 }
 
 [data-theme="light"] {
@@ -197,6 +198,7 @@
 
   --mutty-mobile-header-border: rgba(0, 0, 0, 0.08);
   --mutty-twitter-hover: rgba(29, 155, 240, 0.08);
+  --mutty-dropdown-bg: #ffffff;
 
   /* LiveKit light overrides */
   [data-lk-theme] {

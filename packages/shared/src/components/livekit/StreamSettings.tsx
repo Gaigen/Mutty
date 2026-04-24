@@ -73,8 +73,8 @@ export default function StreamSettings({ isOpen, onClose, extraTabs }: StreamSet
   const activeExtraTab = extraTabs?.find((t) => t.id === activeTab);
 
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-2xl z-50 w-[92vw] max-w-[460px]">
-      <div className="flex items-center justify-between border-b border-[#2a2a2a] px-4 py-2.5">
+    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[var(--mutty-surface-1)] border border-[var(--mutty-border-2)] rounded-xl shadow-2xl z-50 w-[92vw] max-w-[460px]">
+      <div className="flex items-center justify-between border-b border-[var(--mutty-border-2)] px-4 py-2.5">
         <div className="flex gap-0.5 flex-wrap">
           {allTabs.map(({ id, label }) => (
             <button
@@ -82,8 +82,8 @@ export default function StreamSettings({ isOpen, onClose, extraTabs }: StreamSet
               onClick={() => setActiveTab(id)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 activeTab === id
-                  ? 'bg-[#2a2a2a] text-white'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-[#222]'
+                  ? 'bg-[var(--mutty-surface-2)] text-[var(--mutty-fg-1)]'
+                  : 'text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-2)] hover:bg-[var(--mutty-surface-1)]'
               }`}
             >
               {label}
@@ -92,7 +92,7 @@ export default function StreamSettings({ isOpen, onClose, extraTabs }: StreamSet
         </div>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-white transition-colors p-1 ml-2 rounded hover:bg-[#2a2a2a]"
+          className="text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-1)] transition-colors p-1 ml-2 rounded hover:bg-[var(--mutty-surface-2)]"
           aria-label="Close"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
