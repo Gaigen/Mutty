@@ -272,7 +272,9 @@ export default function LiveKitRoomComponent({
       audio={appConfig.showAudio}
       token={connection.token}
       serverUrl={connection.serverUrl}
-      data-lk-theme={resolvedTheme === 'dark' ? 'default-dark' : 'default'}
+      // LiveKit only ships "default" (dark) and "huddle" themes.
+      // "default-dark" does not exist and breaks layout variables.
+      data-lk-theme={resolvedTheme === 'dark' ? 'default' : 'default'}
       style={{ height: '100vh' }}
       onDisconnected={handleDisconnected}
       options={roomOptions}
