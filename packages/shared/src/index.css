@@ -1,9 +1,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* ── Mutty design-system modules ──────────────────────────────────────────── */
 @import "./styles/base.css";
@@ -17,3 +14,7 @@
 @import "./styles/chat-panel.css";
 @import "./styles/link-preview.css";
 @import "./styles/agent.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
