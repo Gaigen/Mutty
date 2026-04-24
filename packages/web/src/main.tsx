@@ -10,12 +10,12 @@ import '@fontsource-variable/geist';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <PlatformProvider value={webPlatform}>
+    <PlatformProvider value={webPlatform}>
+      <ThemeProvider storage={webPlatform.storage}>
         <BrowserRouter>
           <App />
         </BrowserRouter>
-      </PlatformProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </PlatformProvider>
   </React.StrictMode>,
 );

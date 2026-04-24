@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { StorageAdapter } from '../platform';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -21,10 +22,15 @@ function resolveTheme(theme: Theme): 'dark' | 'light' {
   return theme === 'system' ? getSystemTheme() : theme;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  storage?: StorageAdapter;
+}
+
+export function ThemeProvider({ children, storage }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+      const stored = storage?.get<string>(STORAGE_KEY) ?? localStorage.getItem(STORAGE_KEY);
       if (stored === 'dark' || stored === 'light' || stored === 'system') return stored;
     } catch { /* ignore */ }
     return 'dark';
@@ -36,9 +42,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     root.setAttribute('data-theme', resolvedTheme);
     try {
+      storage?.set(STORAGE_KEY, theme);
       localStorage.setItem(STORAGE_KEY, theme);
     } catch { /* ignore */ }
-  }, [theme, resolvedTheme]);
+  }, [theme, resolvedTheme, storage]);
 
   // Listen to system preference changes when in 'system' mode
   React.useEffect(() => {

@@ -45,7 +45,7 @@ function Root() {
 
   return (
     <React.StrictMode>
-      <ThemeProvider>
+      <ThemeProvider storage={platform.storage}>
         <PlatformProvider value={platform}>
           <BrowserRouter>
             <App />

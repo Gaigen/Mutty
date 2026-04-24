@@ -77,8 +77,8 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
-      <div className="p-8 bg-gray-900 rounded-lg border border-gray-800 shadow-xl w-full max-w-md">
+    <div className="flex flex-col items-center justify-center h-screen bg-[var(--mutty-stream-shell)]">
+      <div className="p-8 bg-[var(--mutty-dropdown-bg)] rounded-lg border border-[var(--mutty-border-1)] shadow-xl w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
           Mutty
         </h1>
@@ -90,7 +90,7 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
           <form onSubmit={joinRoom} className="flex flex-col gap-4">
             {/* Room name */}
             <div>
-              <label htmlFor="room" className="block text-sm font-medium text-gray-400 mb-1">
+              <label htmlFor="room" className="block text-sm font-medium text-[var(--mutty-fg-2)] mb-1">
                 Room Name
               </label>
               <input
@@ -98,7 +98,7 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
                 id="room"
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none text-white placeholder-gray-500"
+                className="w-full px-4 py-2 bg-[var(--mutty-surface-1)] border border-[var(--mutty-border-2)] rounded focus:ring-2 focus:ring-[var(--mutty-accent-1)] focus:outline-none text-[var(--mutty-fg-1)] placeholder-[var(--mutty-fg-3)]"
                 placeholder="Enter room name"
                 required
               />
@@ -110,7 +110,7 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
                       key={room}
                       type="button"
                       onClick={() => selectRecentRoom(room)}
-                      className="px-2.5 py-0.5 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 rounded-full text-gray-300 hover:text-white transition-colors"
+                      className="px-2.5 py-0.5 text-xs bg-[var(--mutty-surface-1)] hover:bg-[var(--mutty-surface-3)] border border-[var(--mutty-border-2)] hover:border-[var(--mutty-border-4)] rounded-full text-[var(--mutty-fg-2)] hover:text-[var(--mutty-fg-1)] transition-colors"
                     >
                       {room}
                     </button>
@@ -121,7 +121,7 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
 
             {/* Display name */}
             <div>
-              <label htmlFor="display-name" className="block text-sm font-medium text-gray-400 mb-1">
+              <label htmlFor="display-name" className="block text-sm font-medium text-[var(--mutty-fg-2)] mb-1">
                 Display Name
               </label>
               <div className="flex gap-2">
@@ -130,20 +130,20 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
                   id="display-name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none text-white placeholder-gray-500"
+                  className="flex-1 px-4 py-2 bg-[var(--mutty-surface-1)] border border-[var(--mutty-border-2)] rounded focus:ring-2 focus:ring-[var(--mutty-accent-1)] focus:outline-none text-[var(--mutty-fg-1)] placeholder-[var(--mutty-fg-3)]"
                   placeholder="Leave empty for random nickname"
                 />
                 <button
                   type="button"
                   onClick={handleRandomNick}
-                  className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded text-gray-400 hover:text-white transition-colors text-lg"
+                  className="px-3 py-2 bg-[var(--mutty-surface-1)] hover:bg-[var(--mutty-surface-3)] border border-[var(--mutty-border-2)] rounded text-[var(--mutty-fg-2)] hover:text-[var(--mutty-fg-1)] transition-colors text-lg"
                   title="Random nickname"
                 >
                   🎲
                 </button>
               </div>
               {!displayName && (
-                <p className="mt-1 text-[11px] text-gray-600">
+                <p className="mt-1 text-[11px] text-[var(--mutty-fg-3)]">
                   Empty = random nickname on join
                 </p>
               )}
@@ -151,7 +151,7 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
 
             {/* Avatar picker */}
             <div>
-              <span className="block text-sm font-medium text-gray-400 mb-2">Avatar</span>
+              <span className="block text-sm font-medium text-[var(--mutty-fg-2)] mb-2">Avatar</span>
               <div className="flex flex-wrap gap-2">
                 {AVATAR_IDS.map((id) => (
                   <button
@@ -161,8 +161,8 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
                     title={id}
                     className={`w-10 h-10 rounded-lg border-2 transition flex items-center justify-center overflow-hidden ${
                       avatar === id
-                        ? 'border-purple-500 bg-purple-500/20'
-                        : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                        ? 'border-[var(--mutty-accent-1)] bg-[color-mix(in_oklch,var(--mutty-accent-1)_20%,transparent)]'
+                        : 'border-[var(--mutty-border-2)] bg-[var(--mutty-surface-1)] hover:border-[var(--mutty-border-4)]'
                     }`}
                     aria-pressed={avatar === id}
                     aria-label={`Select ${id} avatar`}
@@ -179,7 +179,7 @@ export default function HomePage({ serverUrlSection, hideForm = false }: HomePag
 
             <button
               type="submit"
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded transition-colors"
+              className="w-full py-2 bg-[var(--mutty-accent-1)] hover:bg-[var(--mutty-accent-2)] text-[var(--mutty-fg-10)] font-semibold rounded transition-colors"
             >
               Join Room
             </button>
