@@ -78,7 +78,6 @@ async function compressImageDataUrl(
 function elementFingerprint(el: any): string {
   return JSON.stringify([
     el.id,
-    el.version,
     el.versionNonce,
     el.x,
     el.y,
@@ -140,7 +139,7 @@ export function WhiteboardModule() {
   const compressingRef = React.useRef<Set<string>>(new Set());
   const pendingChangeRef = React.useRef<{ elements: readonly any[]; files?: Record<string, any> } | null>(null);
 
-  // ── Core sync logic (elements + files) ─────────────────────────────────────
+  // ── Core sync: write current elements into Yjs ────────────────────────────
   const syncToYjs = React.useCallback(
     (elements: readonly any[], files?: Record<string, any>) => {
       const syncable = deepClone(elements);
@@ -152,29 +151,16 @@ export function WhiteboardModule() {
       const nextMap = new Map(syncable.map((e) => [e.id, e]));
 
       doc.transact(() => {
-        // Build index of existing Yjs elements by id
-        const yMapById = new Map<string, Y.Map<any>>();
-        for (let i = 0; i < yElements.length; i++) {
+        // 1. Remove deleted elements (iterate backwards to keep indices valid)
+        for (let i = yElements.length - 1; i >= 0; i--) {
           const ymap = yElements.get(i);
-          yMapById.set(ymap.get('id'), ymap);
-        }
-
-        // 1. Update properties for elements that exist locally
-        for (const [id, el] of nextMap) {
-          const ymap = yMapById.get(id);
-          if (ymap) {
-            const prevEl = prevMap.get(id);
-            if (prevEl) {
-              for (const [k, v] of Object.entries(el)) {
-                if (valueChanged(prevEl[k], v)) {
-                  ymap.set(k, v);
-                }
-              }
-            }
+          const id = ymap.get('id');
+          if (!nextMap.has(id)) {
+            yElements.delete(i, 1);
           }
         }
 
-        // 2. Check if z-order changed or new elements were added locally
+        // 2. Check if z-order changed (add / delete / reorder)
         const currentIds = Array.from({ length: yElements.length }, (_, i) =>
           yElements.get(i).get('id')
         );
@@ -184,30 +170,28 @@ export function WhiteboardModule() {
           currentIds.some((id, i) => id !== newIds[i]);
 
         if (orderChanged) {
-          // Rebuild Y.Array: local order first, then remote elements appended at the end
-          // so we never accidentally wipe another user's strokes.
-          const newOrder: Y.Map<any>[] = [];
-          for (const el of syncable) {
-            const ymap = yMapById.get(el.id);
-            if (ymap) {
-              newOrder.push(ymap);
-              yMapById.delete(el.id);
-            } else {
-              const newYmap = new Y.Map<any>();
-              for (const [k, v] of Object.entries(el)) {
-                newYmap.set(k, v);
-              }
-              newOrder.push(newYmap);
-            }
-          }
-          // Preserve remote strokes not present in local state
-          for (const ymap of yMapById.values()) {
-            newOrder.push(ymap);
-          }
-
+          // Full rebuild only for structural changes
           yElements.delete(0, yElements.length);
-          for (const ymap of newOrder) {
+          for (const el of syncable) {
+            const ymap = new Y.Map<any>();
+            for (const [k, v] of Object.entries(el)) {
+              ymap.set(k, v);
+            }
             yElements.push([ymap]);
+          }
+        } else {
+          // Property-level diff — update only changed fields
+          for (let i = 0; i < yElements.length; i++) {
+            const ymap = yElements.get(i);
+            const id = ymap.get('id');
+            const el = nextMap.get(id)!;
+            const prevEl = prevMap.get(id);
+            if (!prevEl) continue;
+            for (const [k, v] of Object.entries(el)) {
+              if (valueChanged(prevEl[k], v)) {
+                ymap.set(k, v);
+              }
+            }
           }
         }
       }, LOCAL_ORIGIN);
@@ -266,20 +250,6 @@ export function WhiteboardModule() {
   const loadFromYjs = React.useCallback(() => {
     const api = excalidrawRef.current;
     if (!api) return;
-
-    // Flush only pending local changes (do NOT sync current scene when there is
-    // no pending change — getSceneElements() may be stale and would wipe remote
-    // strokes that haven't been rendered yet).
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
-    if (pendingChangeRef.current) {
-      syncToYjsRef.current(pendingChangeRef.current.elements, pendingChangeRef.current.files);
-      pendingChangeRef.current = null;
-    }
-
-    // Now yElements already contains our flushed local + remote changes
     const elements = yElementsToPlain(yElements).map((e) => deepClone(e));
     const fp = fingerprint(elements);
     if (fp === lastAppliedFp.current) return; // already up to date
@@ -288,9 +258,7 @@ export function WhiteboardModule() {
     const files: Record<string, any> = {};
     yFiles.forEach((file, id) => { files[id] = deepClone(file); });
 
-    // replaceAll: true ensures Excalidraw fully replaces its scene rather than
-    // merging, which prevents ghost elements from remaining on canvas.
-    api.updateScene({ elements, files, commitToHistory: false, replaceAll: true });
+    api.updateScene({ elements, files, commitToHistory: false });
     prevElementsRef.current = elements;
   }, [yElements, yFiles]);
 
@@ -327,6 +295,17 @@ export function WhiteboardModule() {
     const onDown = () => { isInteractingRef.current = true; };
     const onUp = () => {
       isInteractingRef.current = false;
+      // Flush any pending local change BEFORE applying a buffered remote update.
+      // Otherwise the remote updateScene would overwrite the local stroke that
+      // hasn't been synced to Yjs yet (debounce is still pending).
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      if (pendingChangeRef.current) {
+        syncToYjsRef.current(pendingChangeRef.current.elements, pendingChangeRef.current.files);
+        pendingChangeRef.current = null;
+      }
       if (pendingRemoteRef.current) {
         pendingRemoteRef.current = false;
         loadFromYjsRef.current();
@@ -342,7 +321,8 @@ export function WhiteboardModule() {
     };
   }, []);
 
-  // Sync Excalidraw → Yjs (debounced — only fires 50ms after last onChange)
+  // Sync Excalidraw → Yjs (debounced diff — update properties when possible,
+  // full rebuild only when z-order / add / delete)
   const handleChange = React.useCallback(
     (elements: readonly any[], _appState: any, files?: Record<string, any>) => {
       pendingChangeRef.current = { elements, files };
