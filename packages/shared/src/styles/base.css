@@ -197,6 +197,44 @@
 
   --mutty-mobile-header-border: rgba(0, 0, 0, 0.08);
   --mutty-twitter-hover: rgba(29, 155, 240, 0.08);
+
+  /* LiveKit light overrides */
+  [data-lk-theme] {
+    color-scheme: light;
+    --lk-bg: #f8fafc;
+    --lk-bg2: #f1f5f9;
+    --lk-bg3: #e2e8f0;
+    --lk-bg4: #cbd5e1;
+    --lk-bg5: #94a3b8;
+    --lk-fg: #0f172a;
+    --lk-fg2: #1e293b;
+    --lk-fg3: #334155;
+    --lk-fg4: #475569;
+    --lk-fg5: #64748b;
+    --lk-border-color: rgba(0, 0, 0, 0.1);
+    --lk-accent-fg: #fff;
+    --lk-accent-bg: #2563eb;
+    --lk-accent2: #3b82f6;
+    --lk-accent3: #60a5fa;
+    --lk-accent4: #93c5fd;
+    --lk-danger-fg: #fff;
+    --lk-danger: #dc2626;
+    --lk-danger2: #ef4444;
+    --lk-danger3: #f87171;
+    --lk-danger4: #fca5a5;
+    --lk-success-fg: #fff;
+    --lk-success: #16a34a;
+    --lk-success2: #22c55e;
+    --lk-success3: #4ade80;
+    --lk-success4: #86efac;
+    --lk-control-fg: var(--lk-fg);
+    --lk-control-bg: var(--lk-bg2);
+    --lk-control-hover-bg: var(--lk-bg3);
+    --lk-control-active-bg: var(--lk-bg4);
+    --lk-control-active-hover-bg: var(--lk-bg5);
+    --lk-box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+    --lk-drop-shadow: rgba(0, 0, 0, 0.1) 0px 0px 24px;
+  }
 }
 
 @layer base {
