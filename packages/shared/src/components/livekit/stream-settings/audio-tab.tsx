@@ -31,7 +31,7 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
             gateThreshold={audioSettings.noiseGateThreshold}
             gateEnabled={audioSettings.noiseGateEnabled}
           />
-          <p className="mt-2 text-[10px] text-gray-600">
+          <p className="mt-2 text-[10px] text-[var(--mutty-fg-3)]">
             Device: use the Microphone dropdown in the control bar
           </p>
         </div>
@@ -74,11 +74,11 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
         </label>
 
         {audioSettings.noiseGateEnabled && (
-          <div className="mt-2 space-y-3 rounded-lg border border-[var(--mutty-border-2)] bg-[#1e1e1e]/90 p-3">
+          <div className="mt-2 space-y-3 rounded-lg border border-[var(--mutty-border-2)] bg-[var(--mutty-dropdown-bg)]/90 p-3">
             <div>
               <label className="block text-xs text-[var(--mutty-fg-3)] mb-1.5">
                 Threshold: <span className="text-[var(--mutty-fg-1)]">{audioSettings.noiseGateThreshold} dB</span>
-                <span className="text-[10px] text-gray-600 ml-1">(lower = more aggressive)</span>
+                <span className="text-[10px] text-[var(--mutty-fg-3)] ml-1">(lower = more aggressive)</span>
               </label>
               <input
                 type="range" min="-60" max="0" step="1"
@@ -86,7 +86,7 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
                 onChange={(e) => setAudioSettings({ noiseGateThreshold: parseInt(e.target.value) })}
                 className="w-full h-2 bg-[var(--mutty-surface-1)] rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
-              <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+              <div className="flex justify-between text-[9px] text-[var(--mutty-fg-3)] mt-0.5">
                 <span>-60 dB</span><span>-30 dB</span><span>0 dB</span>
               </div>
             </div>
@@ -102,7 +102,7 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
                 <div>
                   <label className="block text-xs text-[var(--mutty-fg-3)] mb-1.5">
                     Attack: <span className="text-[var(--mutty-fg-1)]">{audioSettings.noiseGateAttack} ms</span>
-                    <span className="text-[10px] text-gray-600 ml-1">(how fast gate opens)</span>
+                    <span className="text-[10px] text-[var(--mutty-fg-3)] ml-1">(how fast gate opens)</span>
                   </label>
                   <input
                     type="range" min="1" max="100" step="1"
@@ -110,14 +110,14 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
                     onChange={(e) => setAudioSettings({ noiseGateAttack: parseInt(e.target.value) })}
                     className="w-full h-2 bg-[var(--mutty-surface-1)] rounded-lg appearance-none cursor-pointer accent-blue-500"
                   />
-                  <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                  <div className="flex justify-between text-[9px] text-[var(--mutty-fg-3)] mt-0.5">
                     <span>1 ms</span><span>100 ms</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs text-[var(--mutty-fg-3)] mb-1.5">
                     Release: <span className="text-[var(--mutty-fg-1)]">{audioSettings.noiseGateRelease} ms</span>
-                    <span className="text-[10px] text-gray-600 ml-1">(how fast gate closes)</span>
+                    <span className="text-[10px] text-[var(--mutty-fg-3)] ml-1">(how fast gate closes)</span>
                   </label>
                   <input
                     type="range" min="20" max="500" step="10"
@@ -125,7 +125,7 @@ export function AudioTab({ micLevel, audioSettings, setAudioSettings, audioOutpu
                     onChange={(e) => setAudioSettings({ noiseGateRelease: parseInt(e.target.value) })}
                     className="w-full h-2 bg-[var(--mutty-surface-1)] rounded-lg appearance-none cursor-pointer accent-blue-500"
                   />
-                  <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+                  <div className="flex justify-between text-[9px] text-[var(--mutty-fg-3)] mt-0.5">
                     <span>20 ms</span><span>500 ms</span>
                   </div>
                 </div>

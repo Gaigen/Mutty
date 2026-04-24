@@ -15,7 +15,7 @@ interface StatsTabProps {
 }
 
 function pingColor(ms: number | null) {
-  if (ms === null) return 'text-gray-600';
+  if (ms === null) return 'text-[var(--mutty-fg-3)]';
   if (ms < 100) return 'text-green-400';
   if (ms < 250) return 'text-yellow-400';
   return 'text-red-400';
@@ -55,7 +55,7 @@ export function StatsTab({
             <span className={`font-medium ${connClass}`}>{connLabel}</span>
             {headcount && (
               <>
-                <span className="text-gray-600"> · </span>
+                <span className="text-[var(--mutty-fg-3)]"> · </span>
                 <span className="text-[var(--mutty-fg-3)]">{headcount}</span>
               </>
             )}
@@ -146,7 +146,7 @@ export function StatsTab({
             📊
           </div>
           <div className="text-xs text-[var(--mutty-fg-3)]">No screen-share stats yet</div>
-          <div className="mt-0.5 text-[10px] text-gray-600">Share your screen to see bitrate and codec</div>
+          <div className="mt-0.5 text-[10px] text-[var(--mutty-fg-3)]">Share your screen to see bitrate and codec</div>
         </div>
       )}
     </>

@@ -102,7 +102,7 @@ export function ScreenTab({ screenSettings, setScreenSettings, currentResolution
             {(screenSettings.maxBitrate / 1_000_000).toFixed(1)} Mbps
           </span>
         </div>
-        <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+        <div className="flex justify-between text-[9px] text-[var(--mutty-fg-3)] mt-0.5">
           <span>1 Mbps</span><span>20 Mbps</span>
         </div>
       </div>

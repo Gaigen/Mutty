@@ -80,7 +80,7 @@ export function CameraTab({ camSettings, setCamSettings, currentCamPreset }: Cam
             {(camSettings.maxBitrate / 1_000_000).toFixed(2)} Mbps
           </span>
         </div>
-        <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
+        <div className="flex justify-between text-[9px] text-[var(--mutty-fg-3)] mt-0.5">
           <span>0.5 Mbps</span><span>8 Mbps</span>
         </div>
       </div>

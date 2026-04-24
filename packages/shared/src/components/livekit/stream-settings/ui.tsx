@@ -47,7 +47,7 @@ export function MicLevelBar({
         )}
       </div>
       <div className="flex justify-between mt-0.5">
-        <p className="text-[10px] text-gray-600">
+        <p className="text-[10px] text-[var(--mutty-fg-3)]">
           {pct === 0 ? 'Silent / gated' : pct < 8 ? 'Very quiet' : 'Active'}
         </p>
         {gateEnabled && (

@@ -27,7 +27,7 @@ export function PeopleTab({
         <div className="text-center py-10">
           <div className="text-2xl mb-2">👥</div>
           <div className="text-sm text-[var(--mutty-fg-3)] mb-1">No other participants</div>
-          <div className="text-xs text-gray-600">People will appear here when they join</div>
+          <div className="text-xs text-[var(--mutty-fg-3)]">People will appear here when they join</div>
         </div>
       </>
     );
