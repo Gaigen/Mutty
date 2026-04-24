@@ -11,7 +11,7 @@ const COLLAPSE_HEIGHT = 120; // px
 function InlineCode({ children }: { children: React.ReactNode }) {
   return (
     <code style={{
-      background: 'rgba(255,255,255,0.08)',
+      background: 'var(--mutty-code-bg)',
       padding: '1px 5px',
       borderRadius: 3,
       fontSize: '0.9em',

@@ -41,7 +41,7 @@ export function TwitterPreview({ url }: { url: string }) {
   }, [url]);
 
   if (loading) {
-    return <div style={{ padding: 16, color: '#888' }}>Loading tweet...</div>;
+    return <div style={{ padding: 16, color: 'var(--mutty-fg-3)' }}>Loading tweet...</div>;
   }
 
   if (error || !data) {
@@ -80,7 +80,7 @@ function TwitterCardFallback({ url }: { url: string }) {
       </svg>
       <div>
         <div style={{ fontWeight: 600, fontSize: 14 }}>@{info.username}</div>
-        <div style={{ fontSize: 12, color: '#888' }}>View on X</div>
+        <div style={{ fontSize: 12, color: 'var(--mutty-fg-3)' }}>View on X</div>
       </div>
     </a>
   );

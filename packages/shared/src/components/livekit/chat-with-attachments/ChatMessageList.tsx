@@ -27,7 +27,7 @@ function parseDataUrl(dataUrl: string): { mime: string; data: Uint8Array } | nul
 function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
   const parsed = React.useMemo(() => parseDataUrl(dataUrl), [dataUrl]);
   const customDownload = useDownloadFile();
-  if (!parsed) return <span style={{ color: '#f88' }}>Invalid file data</span>;
+  if (!parsed) return <span style={{ color: 'var(--mutty-danger)' }}>Invalid file data</span>;
 
   const { mime, data } = parsed;
   const size = data.length;
@@ -53,8 +53,8 @@ function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
   return (
     <div style={{
       borderRadius: 8,
-      border: '1px solid rgba(255,255,255,0.12)',
-      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid var(--mutty-border-2)',
+      background: 'var(--mutty-surface-2)',
       minWidth: 180,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px' }}>
@@ -66,7 +66,7 @@ function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
           }}>
             {fileName}
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+          <div style={{ fontSize: 10, color: 'var(--mutty-fg-3)' }}>
             {formatFileSize(size)} · {mime}
           </div>
         </div>
@@ -75,9 +75,9 @@ function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
           onClick={handleDownload}
           style={{
             padding: '5px 14px', borderRadius: 4,
-            border: '1px solid rgba(255,255,255,0.25)',
-            background: 'rgba(255,255,255,0.1)',
-            color: 'rgba(255,255,255,0.95)', fontSize: 12,
+            border: '1px solid var(--mutty-border-4)',
+            background: 'var(--mutty-surface-3)',
+            color: 'var(--mutty-fg-1)', fontSize: 12,
             fontWeight: 500, cursor: 'pointer', flexShrink: 0,
           }}
         >
@@ -146,8 +146,8 @@ function FileCardInline({
     <div
       style={{
         borderRadius: 8,
-        border: '1px solid rgba(255,255,255,0.12)',
-        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid var(--mutty-border-2)',
+        background: 'var(--mutty-surface-2)',
         overflow: 'hidden',
         minWidth: 200,
       }}
@@ -199,7 +199,7 @@ function FileCardInline({
           }}>
             {meta.name}
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+          <div style={{ fontSize: 10, color: 'var(--mutty-fg-3)' }}>
             {formatFileSize(meta.size)}
             {!ready && ' · receiving…'}
           </div>
@@ -211,9 +211,9 @@ function FileCardInline({
             style={{
               padding: '4px 12px',
               borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.9)',
+              border: '1px solid var(--mutty-border-3)',
+              background: 'var(--mutty-surface-1)',
+              color: 'var(--mutty-fg-1)',
               fontSize: 11,
               fontWeight: 500,
               cursor: 'pointer',

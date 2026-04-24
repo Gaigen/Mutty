@@ -20,9 +20,9 @@ export function ScrollToBottomButton({ onClick, newMsgCount, pendingFileCount }:
         right: 10,
         zIndex: 10,
         background: 'rgba(20,20,20,0.92)',
-        border: '1px solid rgba(255,255,255,0.18)',
+        border: '1px solid var(--mutty-border-2)',
         borderRadius: 14,
-        color: 'rgba(255,255,255,0.9)',
+        color: 'var(--mutty-fg-1)',
         fontSize: 12,
         fontWeight: 500,
         padding: '4px 11px',
@@ -31,7 +31,7 @@ export function ScrollToBottomButton({ onClick, newMsgCount, pendingFileCount }:
         alignItems: 'center',
         gap: 4,
         backdropFilter: 'blur(6px)',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+        boxShadow: '0 2px 8px var(--mutty-burger-dropdown-shadow)',
       }}
       aria-label="Scroll to latest message"
     >

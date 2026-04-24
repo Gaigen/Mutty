@@ -27,7 +27,7 @@ export function ChatFilePreview({
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
-        borderTop: '1px solid rgba(255,255,255,0.08)',
+        borderTop: '1px solid var(--mutty-border-1)',
       }}
     >
       {/* Pending files to send */}
@@ -69,9 +69,9 @@ function PendingFileRow({ file, onRemove }: { file: PendingFile; onRemove: () =>
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
-      padding: '4px 8px', background: 'rgba(255,255,255,0.06)',
-      borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)',
-      fontSize: 12, color: 'rgba(255,255,255,0.85)', maxWidth: 220,
+      padding: '4px 8px', background: 'var(--mutty-surface-1)',
+      borderRadius: 6, border: '1px solid var(--mutty-border-2)',
+      fontSize: 12, color: 'var(--mutty-fg-1)', maxWidth: 220,
     }}>
       <span style={{ fontSize: 16, flexShrink: 0 }}>
         {getFileIcon(file.file.type)}
@@ -82,7 +82,7 @@ function PendingFileRow({ file, onRemove }: { file: PendingFile; onRemove: () =>
       }}>
         {file.file.name}
       </span>
-      <span style={{ color: 'rgba(255,255,255,0.4)', flexShrink: 0, fontSize: 10 }}>
+      <span style={{ color: 'var(--mutty-fg-3)', flexShrink: 0, fontSize: 10 }}>
         {formatFileSize(file.file.size)}
       </span>
       <button
@@ -91,8 +91,8 @@ function PendingFileRow({ file, onRemove }: { file: PendingFile; onRemove: () =>
         aria-label="Remove"
         style={{
           width: 16, height: 16, borderRadius: '50%',
-          background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)',
-          color: 'white', fontSize: 10, lineHeight: 1, cursor: 'pointer',
+          background: 'var(--mutty-tile-controls-bg)', border: '1px solid var(--mutty-border-2)',
+          color: 'var(--mutty-fg-1)', fontSize: 10, lineHeight: 1, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: 0, flexShrink: 0,
         }}
@@ -117,16 +117,16 @@ function TransferProgressBar({ transfer }: { transfer: TransferStatus }) {
         flexDirection: 'column',
         justifyContent: 'center',
         padding: '4px 8px',
-        background: 'rgba(255,255,255,0.04)',
+        background: 'var(--mutty-surface-2)',
         borderRadius: 6,
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--mutty-border-1)',
         opacity: isDone ? 0 : 1,
         transition: 'opacity 0.4s ease',
       }}
     >
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 4,
+        fontSize: 11, color: 'var(--mutty-fg-2)', marginBottom: 4,
       }}>
         <span>{dir}</span>
         <span style={{
@@ -140,7 +140,7 @@ function TransferProgressBar({ transfer }: { transfer: TransferStatus }) {
       </div>
       <div style={{
         height: 3, borderRadius: 2,
-        background: 'rgba(255,255,255,0.1)',
+        background: 'var(--mutty-surface-3)',
         overflow: 'hidden',
       }}>
         <div style={{

@@ -132,7 +132,7 @@ export function ChatInput({
               bottom: 3,
               right: 6,
               fontSize: 10,
-              color: overLimit ? '#ef4444' : 'rgba(255,255,255,0.35)',
+              color: overLimit ? 'var(--mutty-danger)' : 'var(--mutty-fg-3)',
               pointerEvents: 'none',
               lineHeight: 1,
             }}

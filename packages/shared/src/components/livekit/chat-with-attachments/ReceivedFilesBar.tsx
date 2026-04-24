@@ -34,8 +34,8 @@ function FileCard({
     <div
       style={{
         borderRadius: 8,
-        border: '1px solid rgba(255,255,255,0.12)',
-        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid var(--mutty-border-2)',
+        background: 'var(--mutty-surface-2)',
         overflow: 'hidden',
         position: 'relative',
       }}
@@ -52,8 +52,8 @@ function FileCard({
           width: 18,
           height: 18,
           borderRadius: '50%',
-          background: 'rgba(0,0,0,0.7)',
-          border: '1px solid rgba(255,255,255,0.3)',
+          background: 'var(--mutty-tile-controls-bg-hover)',
+          border: '1px solid var(--mutty-border-4)',
           color: 'white',
           fontSize: 11,
           cursor: 'pointer',
@@ -135,7 +135,7 @@ function FileCard({
           >
             {file.name}
           </div>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+          <div style={{ fontSize: 10, color: 'var(--mutty-fg-3)' }}>
             {formatFileSize(file.size)} · from {file.from}
           </div>
         </div>
@@ -145,9 +145,9 @@ function FileCard({
           style={{
             padding: '3px 10px',
             borderRadius: 4,
-            border: '1px solid rgba(255,255,255,0.2)',
-            background: 'rgba(255,255,255,0.08)',
-            color: 'rgba(255,255,255,0.85)',
+            border: '1px solid var(--mutty-border-3)',
+            background: 'var(--mutty-surface-1)',
+            color: 'var(--mutty-fg-1)',
             fontSize: 11,
             cursor: 'pointer',
             flexShrink: 0,
@@ -175,12 +175,12 @@ export function ReceivedFilesBar({
         display: 'flex',
         flexDirection: 'column',
         gap: 6,
-        borderTop: '1px solid rgba(255,255,255,0.08)',
+        borderTop: '1px solid var(--mutty-border-1)',
         maxHeight: 320,
         overflowY: 'auto',
       }}
     >
-      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: 1 }}>
+      <div style={{ fontSize: 10, color: 'var(--mutty-fg-3)', textTransform: 'uppercase', letterSpacing: 1 }}>
         Received files ({files.length})
       </div>
       {files.map((f) => (
