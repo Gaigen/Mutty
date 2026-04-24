@@ -48,32 +48,32 @@ function ChatToastItem({ toast, onDismiss }: { toast: ChatToastData; onDismiss: 
 
   return (
     <div
-      className="flex items-start gap-2 p-3 rounded-lg bg-[#1e1e1e] border border-[#333] shadow-lg animate-slide-in-right"
+      className="flex items-start gap-2 p-3 rounded-lg bg-[var(--mutty-dropdown-bg)] border border-[var(--mutty-border-2)] shadow-lg animate-slide-in-right"
       style={{ maxWidth: 320 }}
     >
       {toast.avatar ? (
         <img
           src={`/avatars/${toast.avatar}.svg`}
           alt=""
-          className="w-8 h-8 rounded-full flex-shrink-0 object-contain bg-[#2a2a2a]"
+          className="w-8 h-8 rounded-full flex-shrink-0 object-contain bg-[var(--mutty-surface-1)]"
         />
       ) : (
-        <div className="w-8 h-8 rounded-full flex-shrink-0 bg-indigo-600/30 flex items-center justify-center text-xs text-indigo-300 font-medium">
+        <div className="w-8 h-8 rounded-full flex-shrink-0 bg-[var(--mutty-accent-4)] flex items-center justify-center text-xs text-[var(--mutty-accent-2)] font-medium">
           {toast.sender.charAt(0).toUpperCase()}
         </div>
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-white truncate">{toast.sender}</span>
+          <span className="text-xs font-semibold text-[var(--mutty-fg-1)] truncate">{toast.sender}</span>
           <button
             type="button"
             onClick={onDismiss}
-            className="text-gray-500 hover:text-white transition-colors flex-shrink-0"
+            className="text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-1)] transition-colors flex-shrink-0"
           >
             <X size={12} />
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-0.5 break-words">{preview}</p>
+        <p className="text-xs text-[var(--mutty-fg-2)] mt-0.5 break-words">{preview}</p>
       </div>
     </div>
   );

@@ -131,7 +131,7 @@ function HotkeyRecorder({
         onClick={() => setRecording(!recording)}
         className={`px-3 py-1.5 text-xs font-mono rounded-md border transition-colors min-w-[100px] text-center ${
           recording
-            ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 animate-pulse'
+            ? 'border-[var(--mutty-accent-1)] bg-[var(--mutty-accent-4)] text-[var(--mutty-accent-2)] animate-pulse'
             : 'border-[var(--mutty-border-3)] bg-[var(--mutty-surface-1)] text-[var(--mutty-fg-2)] hover:border-[var(--mutty-border-4)]'
         }`}
         title="Click to record, Escape to cancel"
@@ -171,7 +171,7 @@ export function HotkeysTab({ settings, setSettings }: HotkeysTabProps) {
         ))}
       </div>
       {hasConflict && (
-        <p className="text-xs text-red-400 mt-2 px-3">
+        <p className="text-xs text-[var(--mutty-danger)] mt-2 px-3">
           Warning: Both hotkeys are the same.
         </p>
       )}
