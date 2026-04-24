@@ -146,8 +146,8 @@
   --mutty-fg-9: rgba(0, 0, 0, 0.35);
   --mutty-fg-10: #0f172a;
 
-  --mutty-accent-1: #4f46e5;
-  --mutty-accent-2: #4338ca;
+  --mutty-accent-1: #2563eb;
+  --mutty-accent-2: #1d4ed8;
   --mutty-accent-3: #0284c7;
   --mutty-accent-4: rgba(2, 132, 199, 0.5);
   --mutty-accent-5: rgba(2, 132, 199, 0.75);
@@ -156,11 +156,11 @@
   --mutty-danger-hover: #b91c1c;
   --mutty-danger-soft: rgba(220, 38, 38, 0.10);
 
-  --mutty-chat-local-bg: #4f46e5;
-  --mutty-chat-local-bg-flash: #4338ca;
+  --mutty-chat-local-bg: #2563eb;
+  --mutty-chat-local-bg-flash: #1d4ed8;
   --mutty-chat-remote-bg: rgba(241, 245, 249, 0.9);
   --mutty-chat-remote-border: rgba(0, 0, 0, 0.06);
-  --mutty-chat-name: #4338ca;
+  --mutty-chat-name: #1d4ed8;
 
   --mutty-link-preview-bg: rgba(241, 245, 249, 0.6);
   --mutty-link-preview-bg-hover: rgba(241, 245, 249, 0.9);
@@ -191,7 +191,7 @@
   --mutty-table-header: rgba(0, 0, 0, 0.04);
 
   --mutty-copied-green: #16a34a;
-  --mutty-copied-bg-local: #4338ca;
+  --mutty-copied-bg-local: #1d4ed8;
   --mutty-copied-bg-remote: rgba(22, 163, 74, 0.08);
   --mutty-copied-border-remote: rgba(22, 163, 74, 0.3);
   --mutty-copied-shadow: rgba(22, 163, 74, 0.4);

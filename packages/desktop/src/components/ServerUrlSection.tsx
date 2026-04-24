@@ -50,11 +50,11 @@ export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps
   if (!configured && !showInput) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-gray-500 text-center">
+        <p className="text-sm text-[var(--mutty-fg-3)] text-center">
           Enter your server URL to get started
         </p>
         <div>
-          <label htmlFor="server-url" className="block text-sm font-medium text-gray-400 mb-1">
+          <label htmlFor="server-url" className="block text-sm font-medium text-[var(--mutty-fg-2)] mb-1">
             Server URL
           </label>
           <input
@@ -63,22 +63,22 @@ export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps
             value={serverUrl}
             onChange={(e) => { setServerUrl(e.target.value); setServerError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none text-white placeholder-gray-500"
+            className="w-full px-4 py-2 bg-[var(--mutty-surface-1)] border border-[var(--mutty-border-2)] rounded focus:ring-2 focus:ring-[var(--mutty-accent-1)] focus:outline-none text-[var(--mutty-fg-1)] placeholder-[var(--mutty-fg-3)]"
             placeholder="https://your-server.com"
             autoFocus
           />
           {serverError && (
-            <p className="mt-1 text-xs text-red-400">{serverError}</p>
+            <p className="mt-1 text-xs text-[var(--mutty-danger)]">{serverError}</p>
           )}
         </div>
         <button
           type="button"
           onClick={handleSave}
-          className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded transition-colors"
+          className="w-full py-2 bg-[var(--mutty-accent-1)] hover:bg-[var(--mutty-accent-2)] text-[var(--mutty-fg-10)] font-semibold rounded transition-colors"
         >
           Connect
         </button>
-        <p className="text-xs text-gray-600 text-center">
+        <p className="text-xs text-[var(--mutty-fg-3)] text-center">
           This should be the URL of your LiveKit token server
         </p>
       </div>
@@ -92,7 +92,7 @@ export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps
         <button
           type="button"
           onClick={handleChange}
-          className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors rounded hover:bg-gray-800"
+          className="p-1.5 text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-1)] transition-colors rounded hover:bg-[var(--mutty-surface-1)]"
           title="Change server"
         >
           <Settings size={16} />
@@ -100,15 +100,15 @@ export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps
       </div>
 
       {showInput && (
-        <div className="mb-4 p-3 bg-gray-800 rounded border border-gray-700">
+        <div className="mb-4 p-3 bg-[var(--mutty-surface-1)] rounded border border-[var(--mutty-border-2)]">
           <div className="flex items-center justify-between mb-2">
-            <label htmlFor="server-url" className="text-sm font-medium text-gray-400">
+            <label htmlFor="server-url" className="text-sm font-medium text-[var(--mutty-fg-2)]">
               Server URL
             </label>
             <button
               type="button"
               onClick={() => { setShowInput(false); setServerError(''); }}
-              className="text-gray-500 hover:text-gray-300"
+              className="text-[var(--mutty-fg-3)] hover:text-[var(--mutty-fg-1)]"
             >
               <X size={14} />
             </button>
@@ -119,17 +119,17 @@ export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps
             value={serverUrl}
             onChange={(e) => { setServerUrl(e.target.value); setServerError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-            className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none text-white placeholder-gray-500 text-sm"
+            className="w-full px-3 py-1.5 bg-[var(--mutty-surface-2)] border border-[var(--mutty-border-2)] rounded focus:ring-2 focus:ring-[var(--mutty-accent-1)] focus:outline-none text-[var(--mutty-fg-1)] placeholder-[var(--mutty-fg-3)] text-sm"
             placeholder="https://your-server.com"
             autoFocus
           />
           {serverError && (
-            <p className="mt-1 text-xs text-red-400">{serverError}</p>
+            <p className="mt-1 text-xs text-[var(--mutty-danger)]">{serverError}</p>
           )}
           <button
             type="button"
             onClick={handleSave}
-            className="mt-2 w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded transition-colors"
+            className="mt-2 w-full py-1.5 bg-[var(--mutty-accent-1)] hover:bg-[var(--mutty-accent-2)] text-[var(--mutty-fg-10)] text-sm font-semibold rounded transition-colors"
           >
             Save
           </button>
