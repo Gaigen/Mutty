@@ -144,6 +144,20 @@ function FileCardInline({
     URL.revokeObjectURL(url);
   }, [receivedFile, onDownload, customDownload]);
 
+  // Images render inline just like base64 chat images (no file card wrapper)
+  if (ready && isImage(meta.mime) && objectUrl) {
+    return (
+      <button
+        type="button"
+        className="chat-shared-image-trigger"
+        onClick={() => onOpenFullscreen?.(objectUrl)}
+        aria-label="Open image fullscreen"
+      >
+        <img src={objectUrl} alt={meta.name} className="chat-shared-image-thumb" />
+      </button>
+    );
+  }
+
   return (
     <div
       style={{
@@ -154,23 +168,6 @@ function FileCardInline({
         minWidth: 200,
       }}
     >
-      {/* Image preview */}
-      {ready && isImage(meta.mime) && objectUrl && (
-        <img
-          src={objectUrl}
-          alt={meta.name}
-          onClick={() => onOpenFullscreen?.(objectUrl)}
-          style={{
-            display: 'block',
-            width: '100%',
-            maxHeight: 200,
-            objectFit: 'cover',
-            cursor: 'pointer',
-          }}
-          title="Click to enlarge"
-        />
-      )}
-
       {/* Video preview */}
       {ready && isVideo(meta.mime) && objectUrl && (
         <video
