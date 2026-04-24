@@ -1,0 +1,167 @@
+/* ── Participant tile: stream shell, controls, hidden overlay ──────────────── */
+
+/* Stream shell — only the video goes browser-fullscreen */
+.lk-participant-stream-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+  background: var(--mutty-stream-shell);
+}
+
+.lk-participant-stream-shell video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lk-participant-stream-shell:fullscreen {
+  width: 100%;
+  height: 100%;
+  background: var(--mutty-fullscreen-bg);
+}
+
+.lk-participant-stream-shell:fullscreen video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Fullscreen exit button inside stream shell */
+.lk-stream-fs-exit {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 30;
+  padding: 0.25rem !important;
+  line-height: 0;
+  background-color: var(--mutty-tile-controls-bg) !important;
+}
+
+/* Tile controls cluster */
+.lk-tile-controls-cluster {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Container for hide + focus buttons (top-right of tile) */
+.lk-tile-controls {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  transition-delay: 0.2s;
+}
+
+.lk-participant-tile:hover .lk-tile-controls,
+.lk-participant-tile:focus-within .lk-tile-controls {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+/* Unified tile control button style */
+.lk-tile-controls button,
+.lk-tile-controls .lk-focus-toggle-button {
+  position: static !important;
+  opacity: 1 !important;
+  transition: none !important;
+  padding: 0.25rem !important;
+  background-color: var(--mutty-tile-controls-bg) !important;
+  border-radius: calc(var(--lk-border-radius) / 2) !important;
+  line-height: 0;
+  color: var(--mutty-fg-4);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lk-tile-controls button:hover,
+.lk-tile-controls .lk-focus-toggle-button:hover {
+  background-color: var(--mutty-tile-controls-bg-hover) !important;
+}
+
+/* Active / pressed state — accent highlight */
+.lk-tile-controls button[aria-pressed='true'],
+.lk-tile-controls button.lk-active,
+.lk-tile-controls .lk-focus-toggle-button[aria-pressed='true'] {
+  background-color: var(--mutty-accent-4) !important;
+  color: var(--mutty-fg-10);
+}
+
+.lk-tile-controls button[aria-pressed='true']:hover,
+.lk-tile-controls button.lk-active:hover,
+.lk-tile-controls .lk-focus-toggle-button[aria-pressed='true']:hover {
+  background-color: var(--mutty-accent-5) !important;
+}
+
+/* Hidden-video overlay */
+.lk-hidden-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--mutty-hidden-overlay-bg);
+  color: var(--mutty-hidden-overlay-fg);
+  font-size: 0.75rem;
+  pointer-events: none;
+  border-radius: var(--lk-border-radius);
+  z-index: 2;
+}
+
+.lk-hidden-video-overlay svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0.7;
+}
+
+/* Expand to tab (theater mode per-stream) */
+.lk-focus-layout [data-expanded="true"] {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 10 !important;
+  flex: 1 1 100% !important;
+}
+
+.lk-focus-layout [data-expanded="true"] .lk-participant-stream-shell {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.lk-focus-layout [data-expanded="true"] video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Hide carousel when a stream is expanded */
+.lk-focus-layout-wrapper:has([data-expanded="true"]) .lk-carousel-layout {
+  display: none !important;
+}
+
+/* Expand tab button */
+.lk-tile-expand-tab-btn {
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.lk-tile-expand-tab-btn:hover {
+  opacity: 1;
+}

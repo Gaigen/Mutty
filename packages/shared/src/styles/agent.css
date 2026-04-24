@@ -1,0 +1,10 @@
+/* ── Agent: playing bar animation ─────────────────────────────────────────── */
+
+.agent-playing-bar {
+  display: inline-block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--lk-accent, var(--mutty-accent-3));
+  animation: agent-bar-bounce 0.8s ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}

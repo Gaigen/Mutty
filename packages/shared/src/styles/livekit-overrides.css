@@ -1,0 +1,77 @@
+/* ── LiveKit: layout fixes for video, focus, grid ─────────────────────────── */
+
+/* Flex children need min-height: 0 or overflow breaks on resize */
+.lk-video-conference-inner,
+.lk-focus-layout-wrapper,
+.lk-grid-layout-wrapper {
+  min-height: 0;
+  min-width: 0;
+}
+
+.lk-video-conference {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.lk-focus-layout-container,
+.lk-focus-layout,
+.lk-grid-layout {
+  min-height: 0;
+}
+
+/* Focus mode — contain so wide video isn’t cropped */
+.lk-focused-participant .lk-participant-media-video {
+  object-fit: contain !important;
+}
+
+/* Bot camera stream — preserve aspect ratio at any size */
+.lk-participant-tile[data-lk-source=camera] .lk-participant-media-video {
+  object-fit: contain;
+}
+
+/* Custom avatar in participant placeholder */
+.lk-participant-placeholder .lk-participant-placeholder-avatar {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+}
+
+/* Focus layout fills available space */
+.lk-focus-layout-wrapper {
+  flex: 1;
+}
+
+.lk-focus-layout {
+  height: 100%;
+  max-height: 100%;
+}
+
+.lk-focused-participant {
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Focused video container fills area */
+.lk-focused-participant .lk-participant-tile,
+.lk-focused-participant video {
+  width: 100%;
+  height: 100%;
+}
+
+/* Chat form height matches control bar */
+.lk-chat-form,
+.lk-control-bar {
+  height: var(--lk-control-bar-height);
+}
+
+/* Chat textarea: hide scrollbars */
+.lk-chat-form-input::-webkit-scrollbar {
+  display: none;
+}
+
+.lk-chat-form-input {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

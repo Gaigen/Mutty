@@ -1,0 +1,327 @@
+/* ── Control bar redesign ─────────────────────────────────────────────────── */
+
+/* Container: prevent overflow causing horizontal scroll */
+.mutty-cb {
+  overflow: visible;
+  min-width: 0;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* Primary buttons: 42×42, rounded rectangle */
+.mutty-cb .lk-button {
+  width: 42px;
+  height: 42px;
+  min-width: unset;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--mutty-surface-1);
+  color: var(--mutty-fg-1);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-cb .lk-button:hover {
+  background: var(--mutty-surface-3);
+  color: var(--mutty-fg-1);
+}
+
+/* Split button wrapper (mic / camera) */
+.mutty-split {
+  display: flex !important;
+  flex-shrink: 0;
+  gap: 0 !important;
+  position: relative;
+}
+
+/* Main toggle — round left corners only */
+.mutty-split > .lk-button {
+  border-radius: 10px 0 0 10px !important;
+  border-right: 1px solid var(--mutty-border-2) !important;
+  width: 42px;
+  height: 42px;
+}
+
+/* Chevron trigger inside lk-button-group-menu */
+.mutty-split .lk-button-group-menu {
+  display: flex;
+  position: static !important;
+}
+
+/* MediaDeviceMenu button inside group */
+.mutty-split .lk-button-group-menu button {
+  width: 20px !important;
+  height: 42px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  border-radius: 0 10px 10px 0 !important;
+  background: var(--mutty-surface-6) !important;
+  color: var(--mutty-fg-3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-split .lk-button-group-menu button:hover {
+  background: var(--mutty-surface-3) !important;
+  color: var(--mutty-fg-2) !important;
+}
+
+/* Device dropdown positioned above the group */
+.mutty-split .lk-device-menu {
+  top: auto !important;
+  bottom: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: auto !important;
+}
+
+/* Reset overrides inside device-select dropdown */
+.mutty-cb .lk-device-menu .lk-button {
+  width: 100% !important;
+  height: auto !important;
+  min-width: unset !important;
+  min-height: unset !important;
+  border-radius: var(--lk-border-radius, 0.5rem) !important;
+  background: none !important;
+  color: var(--lk-fg) !important;
+  padding: 0.5rem !important;
+  justify-content: flex-start !important;
+  font-size: inherit !important;
+}
+
+.mutty-cb .lk-device-menu .lk-button:hover {
+  background: var(--lk-bg3, var(--mutty-surface-1)) !important;
+  color: var(--lk-fg) !important;
+}
+
+/* Active / selected device */
+.mutty-cb .lk-device-menu [data-lk-active="true"] .lk-button {
+  background: var(--lk-accent-bg, var(--mutty-accent-3)) !important;
+  color: var(--lk-accent-fg, var(--mutty-fg-10)) !important;
+}
+
+/* Thin vertical divider between primary and secondary groups */
+.mutty-cb-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--mutty-border-1);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Secondary controls (36×36) */
+.mutty-cb-secondary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mutty-cb-secondary > button.lk-button,
+.mutty-cb-secondary > div > button.lk-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: var(--mutty-surface-2) !important;
+  color: var(--mutty-fg-3) !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-cb-secondary > button.lk-button:hover,
+.mutty-cb-secondary > div > button.lk-button:hover {
+  background: var(--mutty-surface-4) !important;
+  color: var(--mutty-fg-2) !important;
+}
+
+/* Agent dropdown: undo fixed box sizing */
+.mutty-cb .mutty-agent-dropdown .lk-button {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+/* Leave button */
+.mutty-cb .mutty-danger {
+  background: var(--mutty-danger) !important;
+  color: var(--mutty-fg-10) !important;
+}
+
+.mutty-cb .mutty-danger:hover {
+  background: var(--mutty-danger-hover) !important;
+}
+
+/* Hide StartMediaButton until LiveKit activates it */
+.mutty-cb .lk-start-media-button,
+.mutty-cb [data-lk-start-media-button] {
+  display: none;
+}
+
+.mutty-cb .lk-start-media-button[data-lk-media-unresolved],
+.mutty-cb [data-lk-start-media-button][data-lk-media-unresolved] {
+  display: flex;
+}
+
+/* ── Burger menu (overflow controls) ────────────────────────────────────── */
+
+.mutty-burger-trigger {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px !important;
+  background: var(--mutty-surface-1) !important;
+  color: var(--mutty-fg-1) !important;
+  border: none !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+
+.mutty-burger-trigger:hover {
+  background: var(--mutty-surface-3) !important;
+}
+
+.mutty-burger-trigger[aria-expanded="true"] {
+  background: var(--mutty-surface-5) !important;
+}
+
+.mutty-burger-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.mutty-burger-dropdown {
+  width: 180px;
+  background: var(--mutty-burger-dropdown-bg);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px var(--mutty-burger-dropdown-shadow), 0 0 0 1px var(--mutty-burger-dropdown-border);
+  z-index: 9999;
+  animation: mutty-burger-fade 0.15s ease-out;
+  padding: 4px;
+}
+
+@keyframes mutty-burger-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mutty-burger-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.5rem 0.5rem;
+  background: none;
+  border: none;
+  color: var(--mutty-fg-1);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+  border-radius: 6px;
+}
+
+.mutty-burger-item:hover {
+  background: var(--mutty-surface-1);
+}
+
+.mutty-burger-item:active {
+  background: var(--mutty-surface-3);
+}
+
+.mutty-burger-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  color: var(--mutty-fg-2);
+}
+
+.mutty-burger-item-label {
+  font-size: 13px;
+  color: var(--mutty-fg-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mutty-burger-item.mutty-burger-danger {
+  color: var(--mutty-danger);
+}
+
+.mutty-burger-item.mutty-burger-danger:hover {
+  background: var(--mutty-danger-soft);
+}
+
+.mutty-burger-item.mutty-burger-danger .mutty-burger-item-icon {
+  color: var(--mutty-danger);
+}
+
+.mutty-burger-divider {
+  height: 1px;
+  background: var(--mutty-border-1);
+  margin: 4px 0;
+}
+
+.mutty-burger-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+}
+
+.mutty-burger-right .mutty-cb-secondary {
+  background: none !important;
+  padding: 0 !important;
+  gap: 4px !important;
+}
+
+.mutty-burger-right > .lk-button,
+.mutty-burger-right > div > .lk-button {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: unset !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  background: var(--mutty-surface-2) !important;
+  color: var(--mutty-fg-2) !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mutty-burger-right > .lk-button:hover,
+.mutty-burger-right > div > .lk-button:hover {
+  background: var(--mutty-surface-4) !important;
+  color: var(--mutty-fg-1) !important;
+}
+
+/* Agent dropdown overlay */
+.mutty-agent-dropdown {
+  max-height: calc(100vh - 100px) !important;
+  overflow-y: auto !important;
+}

@@ -1,0 +1,49 @@
+/* ── Global keyframes & animation utilities ───────────────────────────────── */
+
+/* Agent playing bars */
+@keyframes agent-bar-bounce {
+  from { height: 4px; opacity: 0.6; }
+  to   { height: 12px; opacity: 1; }
+}
+
+/* Message copied flash */
+@keyframes msg-flash {
+  0% { box-shadow: 0 0 0 2px var(--mutty-copied-shadow); }
+  100% { box-shadow: none; }
+}
+
+/* Copied badge */
+@keyframes badge-fade {
+  0% { opacity: 0; transform: translateY(4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Burger dropdown entrance */
+@keyframes mutty-burger-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide-in from right (desktop panels) */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}

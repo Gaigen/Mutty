@@ -1,0 +1,114 @@
+/* ── Link preview cards ───────────────────────────────────────────────────── */
+
+.link-preview-card {
+  margin-top: 6px;
+  margin-block-start: 0 !important;
+  margin-block-end: 0 !important;
+  border-radius: 8px;
+  border: 1px solid var(--mutty-link-preview-border);
+  border-left: 4px solid var(--lp-accent, #555);
+  overflow: hidden;
+  background: var(--mutty-link-preview-bg);
+  transition: background 0.15s;
+}
+
+.link-preview-card * {
+  margin-block-start: 0 !important;
+  margin-block-end: 0 !important;
+}
+
+.link-preview-card:hover {
+  background: var(--mutty-link-preview-bg-hover);
+}
+
+.link-preview-generic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.link-preview-generic:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.lp-generic-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--mutty-surface-6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.lp-generic-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.lp-generic-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lp-generic-domain {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mutty-link-preview-domain);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.lp-generic-url {
+  font-size: 13px;
+  color: var(--mutty-link-preview-url);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-preview-youtube {
+  transition: opacity 0.15s;
+}
+
+.link-preview-youtube:hover {
+  opacity: 0.9;
+}
+
+.link-preview-twitter-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.link-preview-twitter-card:hover {
+  background: var(--mutty-twitter-hover) !important;
+}
+
+.link-preview-github a {
+  display: block;
+  padding: 11px 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.link-preview-github-fallback a {
+  display: block;
+  padding: 11px 14px;
+  color: var(--mutty-link-preview-github);
+  text-decoration: none;
+  font-size: 13px;
+}
