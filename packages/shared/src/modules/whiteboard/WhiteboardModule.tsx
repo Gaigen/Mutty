@@ -137,11 +137,136 @@ export function WhiteboardModule() {
   const isInteractingRef = React.useRef(false);
   const pendingRemoteRef = React.useRef(false);
   const compressingRef = React.useRef<Set<string>>(new Set());
+  const pendingChangeRef = React.useRef<{ elements: readonly any[]; files?: Record<string, any> } | null>(null);
+
+  // ── Core sync logic (elements + files) ─────────────────────────────────────
+  const syncToYjs = React.useCallback(
+    (elements: readonly any[], files?: Record<string, any>) => {
+      const syncable = deepClone(elements);
+      const fp = fingerprint(syncable);
+      if (fp === lastSyncedFp.current) return; // already synced this state
+
+      const prev = prevElementsRef.current;
+      const prevMap = new Map(prev.map((e) => [e.id, e]));
+      const nextMap = new Map(syncable.map((e) => [e.id, e]));
+
+      doc.transact(() => {
+        // 1. Remove deleted elements (iterate backwards to keep indices valid)
+        for (let i = yElements.length - 1; i >= 0; i--) {
+          const ymap = yElements.get(i);
+          const id = ymap.get('id');
+          if (!nextMap.has(id)) {
+            yElements.delete(i, 1);
+          }
+        }
+
+        // 2. Check if z-order changed (add / delete / reorder)
+        const currentIds = Array.from({ length: yElements.length }, (_, i) =>
+          yElements.get(i).get('id')
+        );
+        const newIds = syncable.map((e) => e.id);
+        const orderChanged =
+          currentIds.length !== newIds.length ||
+          currentIds.some((id, i) => id !== newIds[i]);
+
+        if (orderChanged) {
+          // Full rebuild only for structural changes
+          yElements.delete(0, yElements.length);
+          for (const el of syncable) {
+            const ymap = new Y.Map<any>();
+            for (const [k, v] of Object.entries(el)) {
+              ymap.set(k, v);
+            }
+            yElements.push([ymap]);
+          }
+        } else {
+          // Property-level diff — update only changed fields
+          for (let i = 0; i < yElements.length; i++) {
+            const ymap = yElements.get(i);
+            const id = ymap.get('id');
+            const el = nextMap.get(id)!;
+            const prevEl = prevMap.get(id);
+            if (!prevEl) continue;
+            for (const [k, v] of Object.entries(el)) {
+              if (valueChanged(prevEl[k], v)) {
+                ymap.set(k, v);
+              }
+            }
+          }
+        }
+      }, LOCAL_ORIGIN);
+
+      lastSyncedFp.current = fp;
+      lastAppliedFp.current = fp; // Excalidraw already has this state
+      prevElementsRef.current = syncable;
+
+      // ── Files sync ──────────────────────────────────────────────────────
+      if (files && Object.keys(files).length > 0) {
+        const smallFiles: Record<string, any> = {};
+
+        for (const [fileId, file] of Object.entries(files)) {
+          if (yFiles.has(fileId)) continue;           // already synced
+          if (compressingRef.current.has(fileId)) continue; // being compressed
+
+          const base64Len = file.dataURL?.length ?? 0;
+          if (base64Len > MAX_FILE_BASE64) {
+            compressingRef.current.add(fileId);
+            compressImageDataUrl(file.dataURL).then((compressed) => {
+              compressingRef.current.delete(fileId);
+              if (!compressed) {
+                console.warn('[whiteboard] Image too large even after compression:', fileId);
+                return;
+              }
+              const compressedFile = { ...file, dataURL: compressed };
+              const api = excalidrawRef.current;
+              if (api) {
+                api.updateScene({ files: { [fileId]: compressedFile }, commitToHistory: false });
+              }
+              doc.transact(() => {
+                yFiles.set(fileId, compressedFile);
+              }, LOCAL_ORIGIN);
+            });
+          } else {
+            smallFiles[fileId] = file;
+          }
+        }
+
+        if (Object.keys(smallFiles).length > 0) {
+          doc.transact(() => {
+            for (const [fileId, file] of Object.entries(smallFiles)) {
+              yFiles.set(fileId, file);
+            }
+          }, LOCAL_ORIGIN);
+        }
+      }
+    },
+    [doc, yElements, yFiles]
+  );
+
+  const syncToYjsRef = React.useRef(syncToYjs);
+  syncToYjsRef.current = syncToYjs;
 
   // Load elements + files from Yjs into Excalidraw
   const loadFromYjs = React.useCallback(() => {
     const api = excalidrawRef.current;
     if (!api) return;
+
+    // Flush any pending local changes BEFORE applying remote state.
+    // Otherwise remote updateScene would overwrite local elements that
+    // haven't been synced to Yjs yet (because of the 50ms debounce).
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (pendingChangeRef.current) {
+      syncToYjsRef.current(pendingChangeRef.current.elements, pendingChangeRef.current.files);
+      pendingChangeRef.current = null;
+    } else {
+      // Safety: sync current scene even if onChange hasn't fired yet
+      syncToYjsRef.current(api.getSceneElements());
+    }
+
+    // Now yElements already contains our flushed local + remote changes
     const elements = yElementsToPlain(yElements).map((e) => deepClone(e));
     const fp = fingerprint(elements);
     if (fp === lastAppliedFp.current) return; // already up to date
@@ -202,112 +327,19 @@ export function WhiteboardModule() {
     };
   }, []);
 
-  // Sync Excalidraw → Yjs (debounced diff — update properties when possible,
-  // full rebuild only when z-order / add / delete)
+  // Sync Excalidraw → Yjs (debounced — only fires 50ms after last onChange)
   const handleChange = React.useCallback(
     (elements: readonly any[], _appState: any, files?: Record<string, any>) => {
+      pendingChangeRef.current = { elements, files };
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        const syncable = deepClone(elements);
-        const fp = fingerprint(syncable);
-        if (fp === lastSyncedFp.current) return; // already synced this state
-
-        const prev = prevElementsRef.current;
-        const prevMap = new Map(prev.map((e) => [e.id, e]));
-        const nextMap = new Map(syncable.map((e) => [e.id, e]));
-
-        doc.transact(() => {
-          // 1. Remove deleted elements (iterate backwards to keep indices valid)
-          for (let i = yElements.length - 1; i >= 0; i--) {
-            const ymap = yElements.get(i);
-            const id = ymap.get('id');
-            if (!nextMap.has(id)) {
-              yElements.delete(i, 1);
-            }
-          }
-
-          // 2. Check if z-order changed (add / delete / reorder)
-          const currentIds = Array.from({ length: yElements.length }, (_, i) =>
-            yElements.get(i).get('id')
-          );
-          const newIds = syncable.map((e) => e.id);
-          const orderChanged =
-            currentIds.length !== newIds.length ||
-            currentIds.some((id, i) => id !== newIds[i]);
-
-          if (orderChanged) {
-            // Full rebuild only for structural changes
-            yElements.delete(0, yElements.length);
-            for (const el of syncable) {
-              const ymap = new Y.Map<any>();
-              for (const [k, v] of Object.entries(el)) {
-                ymap.set(k, v);
-              }
-              yElements.push([ymap]);
-            }
-          } else {
-            // Property-level diff — update only changed fields
-            for (let i = 0; i < yElements.length; i++) {
-              const ymap = yElements.get(i);
-              const id = ymap.get('id');
-              const el = nextMap.get(id)!;
-              const prevEl = prevMap.get(id);
-              if (!prevEl) continue;
-              for (const [k, v] of Object.entries(el)) {
-                if (valueChanged(prevEl[k], v)) {
-                  ymap.set(k, v);
-                }
-              }
-            }
-          }
-        }, LOCAL_ORIGIN);
-
-        lastSyncedFp.current = fp;
-        lastAppliedFp.current = fp; // Excalidraw already has this state
-        prevElementsRef.current = syncable;
-
-        // ── Files sync ──────────────────────────────────────────────────────
-        if (files && Object.keys(files).length > 0) {
-          const smallFiles: Record<string, any> = {};
-
-          for (const [fileId, file] of Object.entries(files)) {
-            if (yFiles.has(fileId)) continue;           // already synced
-            if (compressingRef.current.has(fileId)) continue; // being compressed
-
-            const base64Len = file.dataURL?.length ?? 0;
-            if (base64Len > MAX_FILE_BASE64) {
-              compressingRef.current.add(fileId);
-              compressImageDataUrl(file.dataURL).then((compressed) => {
-                compressingRef.current.delete(fileId);
-                if (!compressed) {
-                  console.warn('[whiteboard] Image too large even after compression:', fileId);
-                  return;
-                }
-                const compressedFile = { ...file, dataURL: compressed };
-                const api = excalidrawRef.current;
-                if (api) {
-                  api.updateScene({ files: { [fileId]: compressedFile }, commitToHistory: false });
-                }
-                doc.transact(() => {
-                  yFiles.set(fileId, compressedFile);
-                }, LOCAL_ORIGIN);
-              });
-            } else {
-              smallFiles[fileId] = file;
-            }
-          }
-
-          if (Object.keys(smallFiles).length > 0) {
-            doc.transact(() => {
-              for (const [fileId, file] of Object.entries(smallFiles)) {
-                yFiles.set(fileId, file);
-              }
-            }, LOCAL_ORIGIN);
-          }
+        if (pendingChangeRef.current) {
+          syncToYjsRef.current(pendingChangeRef.current.elements, pendingChangeRef.current.files);
+          pendingChangeRef.current = null;
         }
       }, 50);
     },
-    [doc, yElements, yFiles]
+    []
   );
 
   useModuleToggle('whiteboard', win.toggle);

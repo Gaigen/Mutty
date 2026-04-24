@@ -1,6 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -479,18 +481,39 @@ fn main() {
             get_minimize_to_tray,
         ])
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                let minimize = window
-                    .app_handle()
-                    .try_state::<Arc<Mutex<bool>>>()
-                    .and_then(|s| s.lock().ok().map(|v| *v))
-                    .unwrap_or(true);
+            // Throttle window-state saves during move/resize to avoid excessive disk writes
+            static LAST_SAVE_MS: AtomicU64 = AtomicU64::new(0);
+            match event {
+                tauri::WindowEvent::CloseRequested { api, .. } => {
+                    let minimize = window
+                        .app_handle()
+                        .try_state::<Arc<Mutex<bool>>>()
+                        .and_then(|s| s.lock().ok().map(|v| *v))
+                        .unwrap_or(true);
 
-                if minimize {
-                    api.prevent_close();
-                    let _ = window.app_handle().save_window_state(StateFlags::all());
-                    let _ = window.hide();
+                    if minimize {
+                        api.prevent_close();
+                        let _ = window.app_handle().save_window_state(StateFlags::all());
+                        let _ = window.hide();
+                    }
                 }
+                tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
+                    let now = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis() as u64;
+                    let last = LAST_SAVE_MS.load(Ordering::Relaxed);
+                    if now.saturating_sub(last) > 500 {
+                        let _ = window.app_handle().save_window_state(StateFlags::all());
+                        LAST_SAVE_MS.store(now, Ordering::Relaxed);
+                    }
+                }
+                _ => {}
+            }
+        })
+        .on_run_event(|app_handle, event| {
+            if let tauri::RunEvent::ExitRequested { .. } = event {
+                let _ = app_handle.save_window_state(StateFlags::all());
             }
         })
         .run(tauri::generate_context!())
