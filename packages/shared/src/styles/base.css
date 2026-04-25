@@ -74,6 +74,7 @@
   --mutty-fullscreen-bg: #000;
   --mutty-tile-controls-bg: rgba(0, 0, 0, 0.5);
   --mutty-tile-controls-bg-hover: rgba(0, 0, 0, 0.75);
+  --mutty-tile-controls-fg: rgba(255, 255, 255, 0.85);
 
   --mutty-slider-track: rgba(255, 255, 255, 0.15);
   --mutty-slider-thumb-border: rgba(0, 0, 0, 0.3);
@@ -173,6 +174,7 @@
   --mutty-fullscreen-bg: #000;
   --mutty-tile-controls-bg: rgba(0, 0, 0, 0.45);
   --mutty-tile-controls-bg-hover: rgba(0, 0, 0, 0.65);
+  --mutty-tile-controls-fg: rgba(255, 255, 255, 0.85);
 
   --mutty-slider-track: rgba(0, 0, 0, 0.15);
   --mutty-slider-thumb-border: rgba(255, 255, 255, 0.4);

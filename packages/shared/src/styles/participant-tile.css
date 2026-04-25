@@ -44,6 +44,7 @@
   padding: 0.25rem !important;
   line-height: 0;
   background-color: var(--mutty-tile-controls-bg) !important;
+  color: var(--mutty-tile-controls-fg);
 }
 
 /* Tile controls cluster */
@@ -84,7 +85,8 @@
   background-color: var(--mutty-tile-controls-bg) !important;
   border-radius: calc(var(--lk-border-radius) / 2) !important;
   line-height: 0;
-  color: var(--mutty-fg-4);
+  /* Always light icons — tile control bg is always dark (overlay on video) */
+  color: var(--mutty-tile-controls-fg);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
