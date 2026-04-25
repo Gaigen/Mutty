@@ -9,7 +9,7 @@ from typing import Callable, Optional
 from livekit import rtc
 
 from . import streamer as media_streamer, queue as media_queue, resolver as media_resolver
-from .config import (
+from ..config import (
     DEFAULT_QUALITY,
     classify_source,
     is_audio_only_source,
