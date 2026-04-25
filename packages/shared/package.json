@@ -12,6 +12,7 @@
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
     "@livekit/krisp-noise-filter": "^0.3.4",
+    "@tldraw/assets": "^4.5.10",
     "@tldraw/tldraw": "^4.5.10",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",

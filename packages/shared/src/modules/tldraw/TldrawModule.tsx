@@ -7,12 +7,16 @@ import {
   defaultShapeUtils,
 } from '@tldraw/tldraw';
 import '@tldraw/tldraw/tldraw.css';
+import { getAssetUrls } from '@tldraw/assets/selfHosted';
 import { useFloatingWindow, FloatingWindow } from '../../floating';
 import { useModuleToggle } from '../../hooks';
 import { useTheme } from '../../context/ThemeContext';
 import { useTldrawSync } from './useTldrawSync';
 
 export const TLDRAW_ID = 'tldraw';
+
+// Self-hosted assets — served from /tldraw-assets/ (copied from @tldraw/assets at build time)
+const assetUrls = getAssetUrls({ baseUrl: '/tldraw-assets' });
 
 /** Error boundary to catch tldraw crashes instead of silently unmounting */
 class TldrawErrorBoundary extends React.Component<
@@ -85,7 +89,7 @@ export function TldrawModule() {
         data-theme={resolvedTheme}
       >
         <TldrawErrorBoundary>
-          <Tldraw store={storeWithStatus} />
+          <Tldraw store={storeWithStatus} assetUrls={assetUrls} />
         </TldrawErrorBoundary>
       </div>
     </FloatingWindow>

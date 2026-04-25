@@ -123,6 +123,9 @@ importers:
       '@livekit/krisp-noise-filter':
         specifier: ^0.3.4
         version: 0.3.4(livekit-client@2.18.3(@types/dom-mediacapture-record@1.0.22))
+      '@tldraw/assets':
+        specifier: ^4.5.10
+        version: 4.5.10
       '@tldraw/tldraw':
         specifier: ^4.5.10
         version: 4.5.10(@floating-ui/dom@1.7.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -1815,6 +1818,9 @@ packages:
 
   '@tiptap/starter-kit@3.22.4':
     resolution: {integrity: sha512-qWjw+vfdin1rzMRpRU4cC5tLTwMJtUpXeQukv+6mOqqvhptuwuZBjUHImVEJaSPoHXS7+1ut+nTnrLyWyEuE5Q==}
+
+  '@tldraw/assets@4.5.10':
+    resolution: {integrity: sha512-nJZ+dZgLcmeEtv4aZv/kEkeY4IU2qrFC8Ayftxql1B+2hXc9ZsjNMKOHyB/W2BsVWdUplZm2qjujKeGNs1VWrw==}
 
   '@tldraw/editor@4.5.10':
     resolution: {integrity: sha512-kM11sDK1ADXATE/wthBDY3ZOriT5Nzpieq1EoPz/HwSMVFuLq5NVmaOPKF+Pt/n43T1S5eLOfMOc7i3zojNc3g==}
@@ -5621,6 +5627,10 @@ snapshots:
       '@tiptap/extension-underline': 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))
       '@tiptap/extensions': 3.22.4(@tiptap/core@3.22.4(@tiptap/pm@3.22.4))(@tiptap/pm@3.22.4)
       '@tiptap/pm': 3.22.4
+
+  '@tldraw/assets@4.5.10':
+    dependencies:
+      '@tldraw/utils': 4.5.10
 
   '@tldraw/editor@4.5.10(@floating-ui/dom@1.7.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
