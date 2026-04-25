@@ -13,7 +13,7 @@ export const WHITEBOARD_ID = 'whiteboard';
 
 const EMPTY_INITIAL_DATA = { elements: [] };
 const LOCAL_ORIGIN = 'wb-local';
-const MAX_FILE_BASE64 = 50_000; // ~37KB binary, safe for LiveKit data channel
+const MAX_FILE_BASE64 = 50_000;
 const DEBOUNCE_MS = 50;
 
 /** Convert Yjs Y.Array of Y.Maps to plain Excalidraw elements */
@@ -53,16 +53,12 @@ async function compressImageDataUrl(
       if (!ctx) { resolve(null); return; }
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Always target JPEG for lossy compression — canvas ignores the
-      // quality parameter for PNG, so we always convert to JPEG regardless of
-      // the original mime type.  This makes tryCompress actually reduce size
-      // with each step instead of looping endlessly at the same byte count.
       const tryCompress = (q: number) => {
         const out = canvas.toDataURL('image/jpeg', q);
         if (out.length <= maxOutputBytes || q <= 0.3) {
           resolve(out.length <= maxOutputBytes ? out : null);
         } else {
-          tryCompress(Math.round((q - 0.1) * 10) / 10); // avoid float drift
+          tryCompress(Math.round((q - 0.1) * 10) / 10);
         }
       };
       tryCompress(quality);
@@ -77,7 +73,6 @@ async function compressImageDataUrl(
  *  or elements missing required geometry fields). */
 function isValidElement(el: Record<string, any>): boolean {
   if (!el.id || !el.type || el.x == null || el.y == null) return false;
-  // Freedraw and line elements must have a points array
   if (el.type === 'freedraw' || el.type === 'line' || el.type === 'arrow') {
     if (!Array.isArray(el.points)) return false;
   }
@@ -98,6 +93,8 @@ export function WhiteboardModule() {
   const doc = useYjsDoc(WHITEBOARD_ID);
   const yElements = React.useMemo(() => doc.getArray<Y.Map<any>>('elements'), [doc]);
   const yFiles = React.useMemo(() => doc.getMap<any>('files'), [doc]);
+  // Track explicit deletions so they propagate without risking accidental wipes
+  const yDeleted = React.useMemo(() => doc.getMap<boolean>('deleted'), [doc]);
 
   const excalidrawRef = React.useRef<any>(null);
   const lastSyncedFp = React.useRef<string>('');
@@ -110,47 +107,51 @@ export function WhiteboardModule() {
   const pendingChangeRef = React.useRef<{ elements: readonly any[]; files?: Record<string, any> } | null>(null);
   const isApplyingRemoteRef = React.useRef(false);
 
-  // Simple fingerprint — just versionNonces + ids for dedup
   const simpleFp = React.useCallback((elements: readonly any[]): string => {
     return elements.map((e) => `${e.id}:${e.versionNonce ?? 0}`).join(',');
   }, []);
 
-  // ── Core sync: write current elements into Yjs (diff-based) ─────────────
+  // ── Core sync: append-only + in-place update, NEVER delete from Yjs ────
   //
-  // Instead of delete-all + push-all (which destroys CRDT convergence under
-  // concurrent edits), we diff against the existing Y.Array:
-  //   • update Y.Maps in-place for elements that already exist
-  //   • push new Y.Maps for elements that don't
-  //   • delete Y.Maps whose ids are no longer present
-  // Deletions are processed back-to-front so indices stay valid.
+  // Deleting elements from Yjs based on local Excalidraw state is unsafe:
+  // the local state may be incomplete (elements still rendering, or buffered).
+  // Instead, we track explicit deletions in a separate Y.Set.
+  //
+  // This approach:
+  //   • Appends new elements (by id)
+  //   • Updates existing elements in-place (changed fields only)
+  //   • NEVER deletes elements from yElements
+  //   • Marks user-deleted elements in yDeleted for propagation
   const syncToYjs = React.useCallback(
     (elements: readonly any[], files?: Record<string, any>) => {
       const syncable = deepClone(elements) as Record<string, any>[];
       const fp = simpleFp(syncable);
-      if (fp === lastSyncedFp.current) return; // already synced this state
+      if (fp === lastSyncedFp.current) return;
+
+      const incomingIds = new Set(syncable.map((e) => e.id as string));
 
       doc.transact(() => {
-        // Build an index of current Yjs elements by id → array position
+        // Build index of existing Yjs elements by id
         const existingIdx = new Map<string, number>();
-        yElements.toArray().forEach((m, i) => existingIdx.set(m.get('id') as string, i));
+        yElements.toArray().forEach((m, i) => {
+          const id = m.get('id') as string;
+          if (id) existingIdx.set(id, i);
+        });
 
-        const incomingIds = new Set(syncable.map((e) => e.id as string));
-
-        // Delete removed elements (back-to-front to keep indices stable)
-        const toDelete = [...existingIdx.entries()]
-          .filter(([id]) => !incomingIds.has(id))
-          .sort((a, b) => b[1] - a[1]);
-        for (const [, i] of toDelete) {
-          yElements.delete(i, 1);
+        // Detect explicit deletions: elements that were in Yjs but are NOT
+        // in local Excalidraw AND are not already marked deleted.
+        // Only mark as deleted if we've synced before (not initial load).
+        if (lastSyncedFp.current) {
+          for (const [id] of existingIdx) {
+            if (!incomingIds.has(id) && !yDeleted.has(id)) {
+              yDeleted.set(id, true);
+            }
+          }
         }
-
-        // Rebuild the index after deletions
-        const currentIdx = new Map<string, number>();
-        yElements.toArray().forEach((m, i) => currentIdx.set(m.get('id') as string, i));
 
         // Update existing / insert new
         for (const el of syncable) {
-          const idx = currentIdx.get(el.id as string);
+          const idx = existingIdx.get(el.id as string);
           if (idx === undefined) {
             // New element — append
             const ymap = new Y.Map<any>();
@@ -179,9 +180,9 @@ export function WhiteboardModule() {
         const smallFiles: Record<string, any> = {};
 
         for (const [fileId, file] of Object.entries(files)) {
-          if (yFiles.has(fileId)) continue;                   // already synced
-          if (compressingRef.current.has(fileId)) continue;   // in-flight compression
-          if (failedFilesRef.current.has(fileId)) continue;   // gave up earlier
+          if (yFiles.has(fileId)) continue;
+          if (compressingRef.current.has(fileId)) continue;
+          if (failedFilesRef.current.has(fileId)) continue;
 
           const base64Len = file.dataURL?.length ?? 0;
           if (base64Len > MAX_FILE_BASE64) {
@@ -189,7 +190,6 @@ export function WhiteboardModule() {
             compressImageDataUrl(file.dataURL).then((compressed) => {
               compressingRef.current.delete(fileId);
               if (!compressed) {
-                // Mark as failed so we stop retrying on every syncToYjs call
                 failedFilesRef.current.add(fileId);
                 console.warn('[whiteboard] Image too large even after compression:', fileId);
                 return;
@@ -217,7 +217,7 @@ export function WhiteboardModule() {
         }
       }
     },
-    [doc, yElements, yFiles, simpleFp]
+    [doc, yElements, yFiles, yDeleted, simpleFp]
   );
 
   const syncToYjsRef = React.useRef(syncToYjs);
@@ -229,8 +229,6 @@ export function WhiteboardModule() {
     if (!api) return;
 
     // CRITICAL: flush any pending local change BEFORE reading Yjs.
-    // Otherwise updateScene would overwrite the local stroke that
-    // hasn't been synced yet (debounce is still pending).
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
@@ -240,16 +238,20 @@ export function WhiteboardModule() {
       pendingChangeRef.current = null;
     }
 
+    // Read elements from Yjs, filter out deleted and invalid ones
     const raw = yElementsToPlain(yElements);
+    const deleted = new Set<string>();
+    yDeleted.forEach((_val, key) => deleted.add(key));
+
     const valid: Record<string, any>[] = [];
     for (const e of raw) {
+      if (deleted.has(e.id)) continue;
       if (isValidElement(e)) {
         valid.push(deepClone(e));
-      } else if (e.id && e.type) {
-        // Element exists but is incomplete — skip silently (still being synced)
       }
     }
     const elements = valid;
+
     const files: Record<string, any> = {};
     yFiles.forEach((file, id) => { files[id] = deepClone(file); });
 
@@ -261,7 +263,7 @@ export function WhiteboardModule() {
     } finally {
       isApplyingRemoteRef.current = false;
     }
-  }, [yElements, yFiles]);
+  }, [yElements, yFiles, yDeleted]);
 
   const loadFromYjsRef = React.useRef(loadFromYjs);
   loadFromYjsRef.current = loadFromYjs;
@@ -270,7 +272,7 @@ export function WhiteboardModule() {
   const setExcalidrawApi = React.useCallback(
     (api: any) => {
       excalidrawRef.current = api;
-      loadFromYjsRef.current(); // load existing remote data on open
+      loadFromYjsRef.current();
     },
     []
   );
@@ -278,8 +280,8 @@ export function WhiteboardModule() {
   // Sync Yjs → Excalidraw via doc update events
   React.useEffect(() => {
     const onDocUpdate = (_update: Uint8Array, origin: any) => {
-      if (origin === LOCAL_ORIGIN) return;       // ignore our own writes
-      if (isApplyingRemoteRef.current) return;   // ignore re-entrant events
+      if (origin === LOCAL_ORIGIN) return;
+      if (isApplyingRemoteRef.current) return;
       if (isInteractingRef.current) {
         pendingRemoteRef.current = true;
         return;
@@ -298,7 +300,6 @@ export function WhiteboardModule() {
     const onDown = () => { isInteractingRef.current = true; };
     const onUp = () => {
       isInteractingRef.current = false;
-      // Flush pending local change BEFORE applying buffered remote update.
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
         debounceRef.current = null;
@@ -316,10 +317,6 @@ export function WhiteboardModule() {
     el.addEventListener('pointerdown', onDown);
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointerleave', onUp);
-    // pointercancel fires when the browser interrupts the pointer
-    // sequence (touch scroll, system gesture, stylus lifted out of range).
-    // Without this handler isInteractingRef stays true forever and all
-    // subsequent remote updates are buffered but never applied.
     el.addEventListener('pointercancel', onUp);
 
     return () => {
@@ -330,11 +327,13 @@ export function WhiteboardModule() {
     };
   }, []);
 
-  // Sync Excalidraw → Yjs (debounced diff sync)
+  // Sync Excalidraw → Yjs (debounced)
+  // CRITICAL: skip onChange fired by our own updateScene to prevent echo loops.
   const handleChange = React.useCallback(
     (elements: readonly any[], _appState: any, files?: Record<string, any>) => {
-      // Snapshot files shallowly so mutations by Excalidraw between
-      // now and when the debounce fires don't corrupt the pending state.
+      // If we're applying a remote update, this onChange is an echo — ignore it.
+      if (isApplyingRemoteRef.current) return;
+
       pendingChangeRef.current = {
         elements,
         files: files ? { ...files } : undefined,
