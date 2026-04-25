@@ -14,8 +14,11 @@ export function useYjsDoc(moduleId: string): Y.Doc {
   const doc = docRef.current;
 
   // Send local updates to other participants
+  // CRITICAL: only send updates that originated locally, not remote updates
   React.useEffect(() => {
-    const handler = (update: Uint8Array) => {
+    const handler = (update: Uint8Array, origin: any) => {
+      // Skip updates that came from remote participants to prevent echo loops
+      if (origin === 'remote') return;
       sendUpdate(moduleId, update);
     };
     doc.on('update', handler);
@@ -25,7 +28,8 @@ export function useYjsDoc(moduleId: string): Y.Doc {
   // Receive remote updates from other participants
   React.useEffect(() => {
     const unsub = subscribe(moduleId, (update) => {
-      Y.applyUpdate(doc, new Uint8Array(update));
+      // Apply with 'remote' origin to prevent re-broadcasting
+      Y.applyUpdate(doc, new Uint8Array(update), 'remote');
     });
     return unsub;
   }, [doc, moduleId, subscribe]);
@@ -38,11 +42,14 @@ export function useYjsDoc(moduleId: string): Y.Doc {
   //
   // 1. New participant broadcasts a sync request with its (empty) state vector
   // 2. Existing participants compute the delta and respond
-  // 3. New participant applies the delta → full state convergence
+  // 3. New participant applies ALL deltas (merges multiple responses)
+  // 4. Retry if no response received within timeout
   //
   const SYNC_REQ_TOPIC = `collab:${moduleId}:sync-req`;
   const SYNC_RES_TOPIC = `collab:${moduleId}:sync-res`;
   const syncedRef = React.useRef(false);
+  const syncAttemptRef = React.useRef(0);
+  const MAX_SYNC_ATTEMPTS = 3;
 
   // Listen for sync requests from new participants — respond with our state
   React.useEffect(() => {
@@ -59,34 +66,51 @@ export function useYjsDoc(moduleId: string): Y.Doc {
     return unsub;
   }, [doc, moduleId, subscribeRaw, sendRaw]);
 
-  // On mount: broadcast a sync request to catch up with existing state
-  React.useEffect(() => {
-    if (syncedRef.current) return;
-
-    const timer = setTimeout(() => {
-      if (syncedRef.current) return;
-      // Broadcast our (empty) state vector — existing participants will respond
-      // with the full state delta
-      const ourSV = Y.encodeStateVector(doc);
-      sendRaw(SYNC_REQ_TOPIC, ourSV);
-    }, 200); // small delay to ensure subscriptions are ready
-
-    return () => clearTimeout(timer);
-  }, [doc, moduleId, sendRaw]);
-
-  // Listen for sync responses — apply the delta to catch up
+  // Listen for sync responses — apply ALL deltas to catch up
+  // CRITICAL: Accept multiple responses and merge them (don't stop at first)
   React.useEffect(() => {
     const unsub = subscribeRaw(SYNC_RES_TOPIC, (data) => {
-      if (syncedRef.current) return;
       try {
-        Y.applyUpdate(doc, new Uint8Array(data));
-        syncedRef.current = true;
+        // Apply with 'remote' origin to prevent re-broadcasting
+        Y.applyUpdate(doc, new Uint8Array(data), 'remote');
+        // Mark as synced after receiving first response
+        if (!syncedRef.current) {
+          syncedRef.current = true;
+          console.log(`[useYjsDoc:${moduleId}] Initial sync completed`);
+        }
       } catch (err) {
         console.warn(`[useYjsDoc:${moduleId}] Failed to apply sync response:`, err);
       }
     });
     return unsub;
   }, [doc, moduleId, subscribeRaw]);
+
+  // On mount: broadcast sync requests with retry logic
+  React.useEffect(() => {
+    if (syncedRef.current) return;
+
+    const sendSyncRequest = () => {
+      if (syncedRef.current) return;
+      syncAttemptRef.current += 1;
+      
+      const ourSV = Y.encodeStateVector(doc);
+      sendRaw(SYNC_REQ_TOPIC, ourSV);
+      console.log(`[useYjsDoc:${moduleId}] Sync request sent (attempt ${syncAttemptRef.current})`);
+
+      // Retry if no response within 1 second (up to MAX_SYNC_ATTEMPTS)
+      if (syncAttemptRef.current < MAX_SYNC_ATTEMPTS) {
+        setTimeout(() => {
+          if (!syncedRef.current) {
+            sendSyncRequest();
+          }
+        }, 1000);
+      }
+    };
+
+    // Small delay to ensure subscriptions are ready
+    const timer = setTimeout(sendSyncRequest, 300);
+    return () => clearTimeout(timer);
+  }, [doc, moduleId, sendRaw]);
 
   // Destroy the Y.Doc when the hook unmounts to release all internal
   // event listeners and prevent memory leaks.  This matters especially under
