@@ -14,6 +14,48 @@ import { useTldrawSync } from './useTldrawSync';
 
 export const TLDRAW_ID = 'tldraw';
 
+/** Error boundary to catch tldraw crashes instead of silently unmounting */
+class TldrawErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[TldrawModule] Crashed:', error, info);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          height: '100%', color: '#ef4444', padding: 20, textAlign: 'center',
+          flexDirection: 'column', gap: 8,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Whiteboard crashed</div>
+          <div style={{ fontSize: 11, opacity: 0.7 }}>{this.state.error.message}</div>
+          <button
+            onClick={() => this.setState({ error: null })}
+            style={{
+              marginTop: 8, padding: '4px 12px', borderRadius: 4,
+              border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)',
+              color: '#e2e8f0', cursor: 'pointer', fontSize: 11,
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function TldrawModule() {
   const { resolvedTheme } = useTheme();
   const win = useFloatingWindow({
@@ -42,7 +84,9 @@ export function TldrawModule() {
         style={{ position: 'relative' }}
         data-theme={resolvedTheme}
       >
-        <Tldraw store={storeWithStatus} />
+        <TldrawErrorBoundary>
+          <Tldraw store={storeWithStatus} />
+        </TldrawErrorBoundary>
       </div>
     </FloatingWindow>
   );
