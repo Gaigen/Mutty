@@ -21,6 +21,7 @@ import StreamSettings from './StreamSettings';
 import { VideoConferenceWithVolume } from './VideoConferenceWithVolume';
 import { CollabProvider } from '../../collab';
 import { NotesModule } from '../../modules/notes/NotesModule';
+import { TldrawModule } from '../../modules/tldraw/TldrawModule';
 
 interface LiveKitRoomProps {
   roomName: string;
@@ -287,6 +288,7 @@ export default function LiveKitRoomComponent({
         rightControls={rightControls}
       />
       <NotesModule />
+      <TldrawModule />
       <AudioHandler />
       <SoundHandler />
       <ScreenShareHandler />

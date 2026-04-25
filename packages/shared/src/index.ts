@@ -28,6 +28,7 @@ export * from './collab';
 
 // Modules
 export { NotesModule } from './modules/notes/NotesModule';
+export { TldrawModule } from './modules/tldraw/TldrawModule';
 
 // Store
 export * from './store';

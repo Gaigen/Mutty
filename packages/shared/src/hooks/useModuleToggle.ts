@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 const DEFAULT_HOTKEYS = {
   notes: 'ctrl+m',
+  tldraw: 'ctrl+b',
 } as const;
 
 /** Minimum ms between toggles to prevent double-fires */
@@ -35,7 +36,7 @@ function matchHotkey(e: KeyboardEvent, combo: string): boolean {
  * Hook that toggles a floating module via hardcoded hotkey in web,
  * or via dispatched custom events in desktop.
  *
- * @param id - module id ('notes')
+ * @param id - module id ('notes' | 'tldraw')
  * @param toggle - function to call when hotkey fires
  */
 export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => void) {
