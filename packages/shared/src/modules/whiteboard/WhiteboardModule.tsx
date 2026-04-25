@@ -130,6 +130,13 @@ export function WhiteboardModule() {
 
       const incomingIds = new Set(syncable.map((e) => e.id as string));
 
+      console.log('[whiteboard] syncToYjs:', {
+        incomingCount: syncable.length,
+        yjsCount: yElements.length,
+        deletedCount: yDeleted.size,
+        isApplyingRemote: isApplyingRemoteRef.current,
+      });
+
       doc.transact(() => {
         // Build index of existing Yjs elements by id
         const existingIdx = new Map<string, number>();
@@ -140,12 +147,19 @@ export function WhiteboardModule() {
 
         // Detect explicit deletions: elements that were in Yjs but are NOT
         // in local Excalidraw AND are not already marked deleted.
-        // Only mark as deleted if we've synced before (not initial load).
-        if (lastSyncedFp.current) {
+        // CRITICAL: Only do this if:
+        // 1. We've synced before (not initial load)
+        // 2. We're NOT currently applying a remote update (to avoid false deletions)
+        if (lastSyncedFp.current && !isApplyingRemoteRef.current) {
+          const toDelete: string[] = [];
           for (const [id] of existingIdx) {
             if (!incomingIds.has(id) && !yDeleted.has(id)) {
+              toDelete.push(id);
               yDeleted.set(id, true);
             }
+          }
+          if (toDelete.length > 0) {
+            console.warn('[whiteboard] Marking elements as deleted:', toDelete, 'remaining:', syncable.length);
           }
         }
 
@@ -255,6 +269,13 @@ export function WhiteboardModule() {
     const files: Record<string, any> = {};
     yFiles.forEach((file, id) => { files[id] = deepClone(file); });
 
+    console.log('[whiteboard] loadFromYjs:', {
+      rawCount: raw.length,
+      deletedCount: deleted.size,
+      validCount: elements.length,
+      filesCount: Object.keys(files).length,
+    });
+
     // Guard against the Yjs update event that syncToYjs (above) just
     // emitted from triggering another loadFromYjs and creating a feedback loop.
     isApplyingRemoteRef.current = true;
@@ -332,7 +353,15 @@ export function WhiteboardModule() {
   const handleChange = React.useCallback(
     (elements: readonly any[], _appState: any, files?: Record<string, any>) => {
       // If we're applying a remote update, this onChange is an echo — ignore it.
-      if (isApplyingRemoteRef.current) return;
+      if (isApplyingRemoteRef.current) {
+        console.log('[whiteboard] handleChange: skipped (applying remote)');
+        return;
+      }
+
+      console.log('[whiteboard] handleChange:', {
+        elementsCount: elements.length,
+        filesCount: files ? Object.keys(files).length : 0,
+      });
 
       pendingChangeRef.current = {
         elements,
