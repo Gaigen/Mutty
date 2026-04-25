@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 
 const DEFAULT_HOTKEYS = {
-  whiteboard: 'ctrl+b',
   notes: 'ctrl+m',
 } as const;
 
@@ -36,7 +35,7 @@ function matchHotkey(e: KeyboardEvent, combo: string): boolean {
  * Hook that toggles a floating module via hardcoded hotkey in web,
  * or via dispatched custom events in desktop.
  *
- * @param id - module id ('whiteboard' | 'notes')
+ * @param id - module id ('notes')
  * @param toggle - function to call when hotkey fires
  */
 export function useModuleToggle(id: keyof typeof DEFAULT_HOTKEYS, toggle: () => void) {

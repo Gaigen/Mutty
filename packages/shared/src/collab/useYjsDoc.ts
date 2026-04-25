@@ -36,7 +36,7 @@ export function useYjsDoc(moduleId: string): Y.Doc {
 
   // ── Initial state sync protocol ──────────────────────────────────────
   //
-  // LiveKit data channel has no replay — if you open the whiteboard after
+  // LiveKit data channel has no replay — if you open a module after
   // others have drawn, you won't receive past updates. This protocol
   // implements a Yjs state-vector exchange to catch up:
   //

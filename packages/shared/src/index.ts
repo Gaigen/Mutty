@@ -27,7 +27,6 @@ export * from './floating';
 export * from './collab';
 
 // Modules
-export { WhiteboardModule } from './modules/whiteboard/WhiteboardModule';
 export { NotesModule } from './modules/notes/NotesModule';
 
 // Store

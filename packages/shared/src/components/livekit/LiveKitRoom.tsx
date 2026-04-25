@@ -20,7 +20,6 @@ import SoundHandler from './SoundHandler';
 import StreamSettings from './StreamSettings';
 import { VideoConferenceWithVolume } from './VideoConferenceWithVolume';
 import { CollabProvider } from '../../collab';
-import { WhiteboardModule } from '../../modules/whiteboard/WhiteboardModule';
 import { NotesModule } from '../../modules/notes/NotesModule';
 
 interface LiveKitRoomProps {
@@ -287,7 +286,6 @@ export default function LiveKitRoomComponent({
         outputVolume={audioSettings.outputVolume}
         rightControls={rightControls}
       />
-      <WhiteboardModule />
       <NotesModule />
       <AudioHandler />
       <SoundHandler />

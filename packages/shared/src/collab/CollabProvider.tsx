@@ -84,7 +84,7 @@ export function CollabProvider({ children }: { children: React.ReactNode }) {
   );
 
   // sendRaw / subscribeRaw use the topic string verbatim — needed for the
-  // Yjs sync protocol which uses topics like "collab:whiteboard:sync-req"
+  // Yjs sync protocol which uses topics like "collab:notes:sync-req"
   // that must not get the prefix stripped (they don't match COLLAB_TOPIC_PREFIX
   // after the slice because they contain a second colon segment).
   const sendRaw = React.useCallback(
