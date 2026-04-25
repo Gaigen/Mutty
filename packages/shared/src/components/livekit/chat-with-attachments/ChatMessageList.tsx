@@ -239,11 +239,11 @@ export const ChatMessageList = React.memo(function ChatMessageList({
   receivedFiles = [],
   onDownloadFile,
 }: ChatMessageListProps) {
-  // Build lookup: fileName → ReceivedFile (latest match)
+  // Build lookup: fileId → ReceivedFile (unique per transfer, not by name)
   const fileMap = React.useMemo(() => {
     const map = new Map<string, ReceivedFile>();
     for (const f of receivedFiles) {
-      map.set(f.name, f);
+      map.set(f.id, f);
     }
     return map;
   }, [receivedFiles]);
@@ -273,7 +273,7 @@ export const ChatMessageList = React.memo(function ChatMessageList({
       if (message.startsWith(FT_MARKER)) {
         try {
           const meta = JSON.parse(message.slice(FT_MARKER.length));
-          const receivedFile = fileMap.get(meta.name);
+          const receivedFile = fileMap.get(meta.fileId);
           return (
             <FileCardInline
               meta={meta}
