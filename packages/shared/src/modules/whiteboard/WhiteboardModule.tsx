@@ -72,6 +72,18 @@ async function compressImageDataUrl(
   });
 }
 
+/** Validate an element before passing to Excalidraw — filter out incomplete
+ *  elements that would crash the renderer (e.g. freedraw/line without points,
+ *  or elements missing required geometry fields). */
+function isValidElement(el: Record<string, any>): boolean {
+  if (!el.id || !el.type || el.x == null || el.y == null) return false;
+  // Freedraw and line elements must have a points array
+  if (el.type === 'freedraw' || el.type === 'line' || el.type === 'arrow') {
+    if (!Array.isArray(el.points)) return false;
+  }
+  return true;
+}
+
 export function WhiteboardModule() {
   const { resolvedTheme } = useTheme();
   const win = useFloatingWindow({
@@ -228,7 +240,16 @@ export function WhiteboardModule() {
       pendingChangeRef.current = null;
     }
 
-    const elements = yElementsToPlain(yElements).map((e) => deepClone(e));
+    const raw = yElementsToPlain(yElements);
+    const valid: Record<string, any>[] = [];
+    for (const e of raw) {
+      if (isValidElement(e)) {
+        valid.push(deepClone(e));
+      } else if (e.id && e.type) {
+        // Element exists but is incomplete — skip silently (still being synced)
+      }
+    }
+    const elements = valid;
     const files: Record<string, any> = {};
     yFiles.forEach((file, id) => { files[id] = deepClone(file); });
 
