@@ -80,11 +80,10 @@ class Agent:
             logger.warning("[Agent] Failed to update status: %s", exc)
 
     # ── Chat message from text stream (livekit-agents v1.5+) ───────────────
-    def _on_chat_message(self, text: str, participant) -> None:
+    def _on_chat_message(self, text: str, participant_identity: str) -> None:
         """Handle chat messages arriving via text streams."""
         try:
-            identity = getattr(participant, "identity", None) if participant else None
-            if identity == BOT_IDENTITY:
+            if participant_identity == BOT_IDENTITY:
                 return
 
             stripped = text.strip()
@@ -93,7 +92,7 @@ class Agent:
 
             # Persist to memory
             if self._memory:
-                self._memory.add_history(self.room_name, "user", stripped, identity)
+                self._memory.add_history(self.room_name, "user", stripped, participant_identity)
 
             cmd = parse(stripped)
             if cmd:

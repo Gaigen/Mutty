@@ -39,20 +39,17 @@ async def bot_session(ctx: JobContext) -> None:
     await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
 
     # Register text stream handler for chat messages (livekit-agents v1.5+)
-    # Chat messages arrive via text streams, not raw data packets
-    async def on_chat_text(stream, participant):
+    # Chat messages arrive via text streams, not raw data packets.
+    # Handler signature: (reader: TextStreamReader, participant_identity: str) -> None
+    def on_chat_text(reader, participant_identity: str):
         try:
-            text = await stream.read_all()
+            text = reader.read_all()
             if text:
-                agent._on_chat_message(text, participant)
+                agent._on_chat_message(text, participant_identity)
         except Exception:
             pass
 
-    try:
-        ctx.register_text_stream_handler("lk.chat", on_chat_text)
-    except Exception:
-        # Fallback for older livekit-agents versions
-        pass
+    room.register_text_stream_handler("lk.chat", on_chat_text)
 
     agent.setup()
 
