@@ -18,10 +18,12 @@ class AIChatManager:
         llm: Optional[LLMProvider],
         chat_send: Callable[[str], asyncio.Future],
         memory: Optional[MemoryStore],
+        on_play: Optional[Callable[[str], asyncio.Future]] = None,
     ) -> None:
         self._llm = llm
         self._chat_send = chat_send
         self._memory = memory
+        self._on_play = on_play
 
     # ── Chat ──────────────────────────────────────────────────────────────────
     async def chat(self, message: str, room_name: str) -> None:
@@ -46,8 +48,8 @@ class AIChatManager:
             if text.upper().startswith("PLAY:"):
                 query = text[5:].strip()
                 await self._chat_send(f"🔍 AI ищет: {query}")
-                # Delegate back to caller (media manager)
-                await self._chat_send(f"__PLAY__:{query}")
+                if self._on_play:
+                    await self._on_play(query)
                 if self._memory:
                     self._memory.add_history(room_name, "assistant", f"🤖 (play) {query}")
                 return

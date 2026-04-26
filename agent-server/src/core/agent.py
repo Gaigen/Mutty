@@ -42,6 +42,7 @@ class Agent:
             llm=llm,
             chat_send=self._chat.send,
             memory=memory,
+            on_play=lambda query: self._media.search_and_play("youtube", query),
         )
 
         self._command_lock = asyncio.Lock()
@@ -84,6 +85,14 @@ class Agent:
         """Handle chat messages arriving via text streams."""
         try:
             logger.info("[Agent] _on_chat_message called: from=%s, text=%s", participant_identity, text[:80])
+
+            # Handle __PLAY__ commands from AI chat (sent by the bot itself)
+            if text.startswith("__PLAY__:"):
+                query = text[9:].strip()
+                if query:
+                    logger.info("[Agent] AI requested play: %s", query)
+                    asyncio.ensure_future(self._media.search_and_play("youtube", query))
+                return
 
             if participant_identity == BOT_IDENTITY:
                 return
@@ -129,6 +138,10 @@ class Agent:
             # Skip chat data packets — those are handled by the text stream
             # handler (on_chat_text) to avoid duplicate processing.
             if topic in ("lk-chat-topic", "lk.chat"):
+                return
+
+            # Skip noisy tldraw sync packets
+            if topic.startswith("collab:tldraw"):
                 return
 
             if topic == "agent-control":
