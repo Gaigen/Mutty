@@ -56,7 +56,7 @@ class AIChatManager:
             if self._memory:
                 self._memory.add_history(room_name, "assistant", text)
         except Exception as exc:
-            logger.warning("[AI] Chat error: %s", exc)
+            logger.warning("[AI] Chat error: %s (%s)", exc, type(exc).__name__)
             await self._chat_send("❌ Ошибка AI, попробуй ещё.")
 
     # ── Search translation ────────────────────────────────────────────────────
