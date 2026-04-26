@@ -140,8 +140,8 @@ class Agent:
             if topic in ("lk-chat-topic", "lk.chat"):
                 return
 
-            # Skip noisy tldraw sync packets
-            if topic.startswith("collab:tldraw"):
+            # Skip noisy collab sync packets (tldraw, notes, etc.)
+            if topic.startswith("collab:"):
                 return
 
             if topic == "agent-control":
