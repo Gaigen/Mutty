@@ -37,6 +37,23 @@ async def bot_session(ctx: JobContext) -> None:
     agent = Agent(room, on_shutdown=shutdown_event.set, llm=llm, memory=memory)
 
     await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
+
+    # Register text stream handler for chat messages (livekit-agents v1.5+)
+    # Chat messages arrive via text streams, not raw data packets
+    async def on_chat_text(stream, participant):
+        try:
+            text = await stream.read_all()
+            if text:
+                agent._on_chat_message(text, participant)
+        except Exception:
+            pass
+
+    try:
+        ctx.register_text_stream_handler("lk.chat", on_chat_text)
+    except Exception:
+        # Fallback for older livekit-agents versions
+        pass
+
     agent.setup()
 
     await agent.run()

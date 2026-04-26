@@ -79,6 +79,30 @@ class Agent:
         except Exception as exc:
             logger.warning("[Agent] Failed to update status: %s", exc)
 
+    # ── Chat message from text stream (livekit-agents v1.5+) ───────────────
+    def _on_chat_message(self, text: str, participant) -> None:
+        """Handle chat messages arriving via text streams."""
+        try:
+            identity = getattr(participant, "identity", None) if participant else None
+            if identity == BOT_IDENTITY:
+                return
+
+            stripped = text.strip()
+            if not stripped:
+                return
+
+            # Persist to memory
+            if self._memory:
+                self._memory.add_history(self.room_name, "user", stripped, identity)
+
+            cmd = parse(stripped)
+            if cmd:
+                asyncio.ensure_future(self._dispatch(cmd))
+            elif self._ai:
+                asyncio.ensure_future(self._ai.chat(stripped, self.room_name))
+        except Exception:
+            logger.exception("[Agent] Error in _on_chat_message")
+
     # ── Event handlers ────────────────────────────────────────────────────────
     def _on_participant_disconnected(self, participant: rtc.RemoteParticipant) -> None:
         if len(self.room.remote_participants) == 0:
