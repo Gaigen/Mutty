@@ -202,7 +202,7 @@ class MediaStreamer:
         cmd = [
             "ffmpeg",
             "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
-            *seek, "-i", url, "-an",
+            *seek, "-re", "-i", url, "-an",
             "-vf", vf,
             "-pix_fmt", "yuv420p",
             "-f", "rawvideo", "-loglevel", "quiet",
@@ -255,7 +255,7 @@ class MediaStreamer:
             if video_url == audio_url:
                 cmd = [
                     "ffmpeg", "-loglevel", "quiet",
-                    *reconnect, *seek, "-i", video_url,
+                    *reconnect, *seek, "-re", "-i", video_url,
                     "-map", "0:a", "-acodec", "pcm_s16le",
                     "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
                     "-f", "s16le", "pipe:1",
@@ -265,8 +265,8 @@ class MediaStreamer:
             else:
                 cmd = [
                     "ffmpeg", "-loglevel", "quiet",
-                    *reconnect, *seek, "-i", video_url,
-                    *reconnect, *seek, "-i", audio_url,
+                    *reconnect, *seek, "-re", "-i", video_url,
+                    *reconnect, *seek, "-re", "-i", audio_url,
                     "-map", "1:a", "-acodec", "pcm_s16le",
                     "-ar", str(AUDIO_SAMPLE_RATE), "-ac", str(AUDIO_CHANNELS),
                     "-f", "s16le", "pipe:1",
