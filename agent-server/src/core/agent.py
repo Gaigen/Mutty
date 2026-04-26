@@ -83,6 +83,8 @@ class Agent:
     def _on_chat_message(self, text: str, participant_identity: str) -> None:
         """Handle chat messages arriving via text streams."""
         try:
+            logger.info("[Agent] _on_chat_message called: from=%s, text=%s", participant_identity, text[:80])
+
             if participant_identity == BOT_IDENTITY:
                 return
 
@@ -120,6 +122,15 @@ class Agent:
 
             # Control commands come via a dedicated topic
             topic = (dp.topic or "") if hasattr(dp, "topic") else ""
+            logger.info("[Data] Received packet: topic=%r, data_len=%d, from=%s",
+                        topic, len(dp.data) if dp.data else 0,
+                        getattr(dp.participant, "identity", None) if dp.participant else "unknown")
+
+            # Skip chat data packets — those are handled by the text stream
+            # handler (on_chat_text) to avoid duplicate processing.
+            if topic in ("lk-chat-topic", "lk.chat"):
+                return
+
             if topic == "agent-control":
                 try:
                     obj = json.loads(dp.data.decode("utf-8"))

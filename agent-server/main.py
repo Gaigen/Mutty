@@ -6,6 +6,7 @@ Run: python main.py dev   (development)
 """
 
 import asyncio
+import logging
 import os
 
 from livekit.agents import AgentServer, JobContext, JobRequest, cli
@@ -15,6 +16,8 @@ from src.core.agent import Agent
 from src.config import AGENT_NAME, BOT_IDENTITY, BOT_NAME, LIVEKIT_URL
 from src.llm import OpenRouterProvider
 from src.memory import MemoryStore
+
+logger = logging.getLogger(__name__)
 
 os.environ["LIVEKIT_URL"] = LIVEKIT_URL
 server = AgentServer(num_idle_processes=1)
@@ -39,17 +42,16 @@ async def bot_session(ctx: JobContext) -> None:
     await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
 
     # Register text stream handler for chat messages (livekit-agents v1.5+)
-    # Chat messages arrive via text streams, not raw data packets.
-    # Handler signature: (reader: TextStreamReader, participant_identity: str) -> None
-    # NOTE: handler is sync but reader.read_all() is async — schedule via asyncio
+    # Chat messages arrive via text streams with topic "lk.chat".
     def on_chat_text(reader, participant_identity: str):
         async def _process():
             try:
                 text = await reader.read_all()
                 if text:
+                    logger.info("[Chat] Received text stream from %s: %s", participant_identity, text[:100])
                     agent._on_chat_message(text, participant_identity)
             except Exception:
-                pass
+                logger.exception("[Chat] Error processing text stream message")
         asyncio.ensure_future(_process())
 
     room.register_text_stream_handler("lk.chat", on_chat_text)

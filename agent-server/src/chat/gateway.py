@@ -19,20 +19,20 @@ class ChatGateway:
 
     async def send(self, message: str) -> None:
         if self._room.connection_state != rtc.ConnectionState.CONN_CONNECTED:
+            logger.warning("[ChatGateway] Not connected, cannot send")
             return
-        payload = json.dumps({
-            "id": uuid.uuid4().hex[:8],
-            "timestamp": int(time.time() * 1000),
-            "message": message,
-        }).encode()
         try:
-            # topic="" is required for @livekit/components-react useChat() to receive it.
-            # Custom topics (e.g. "lk-chat-topic") are ignored by the built-in chat hook.
-            await self._room.local_participant.publish_data(
-                payload,
-                reliable=True,
-                topic="",
+            # Use send_text (text stream) with topic "lk.chat" — this is what
+            # @livekit/components-react useChat() listens for via setupChat().
+            await self._room.local_participant.send_text(
+                message,
+                topic="lk.chat",
+                attributes={
+                    "lk.chat.message.id": uuid.uuid4().hex[:8],
+                    "lk.chat.message.timestamp": str(int(time.time() * 1000)),
+                },
             )
+            logger.info("[ChatGateway] Sent text stream: %s", message[:80])
         except Exception as exc:
             logger.warning("[ChatGateway] Failed to send message: %s", exc)
 
