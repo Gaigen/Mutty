@@ -41,13 +41,16 @@ async def bot_session(ctx: JobContext) -> None:
     # Register text stream handler for chat messages (livekit-agents v1.5+)
     # Chat messages arrive via text streams, not raw data packets.
     # Handler signature: (reader: TextStreamReader, participant_identity: str) -> None
+    # NOTE: handler is sync but reader.read_all() is async — schedule via asyncio
     def on_chat_text(reader, participant_identity: str):
-        try:
-            text = reader.read_all()
-            if text:
-                agent._on_chat_message(text, participant_identity)
-        except Exception:
-            pass
+        async def _process():
+            try:
+                text = await reader.read_all()
+                if text:
+                    agent._on_chat_message(text, participant_identity)
+            except Exception:
+                pass
+        asyncio.ensure_future(_process())
 
     room.register_text_stream_handler("lk.chat", on_chat_text)
 
