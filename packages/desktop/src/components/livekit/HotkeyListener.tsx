@@ -71,9 +71,9 @@ export function HotkeyListener() {
           if (cleanup) return;
           toggleAudioMutedRef.current();
         });
-        unlistenWhiteboard = await listen('global-hotkey-whiteboard', () => {
-          if (cleanup) return;
-          window.dispatchEvent(new Event('toggle-whiteboard'));
+ unlistenWhiteboard = await listen('global-hotkey-whiteboard', () => {
+ if (cleanup) return;
+ window.dispatchEvent(new Event('toggle-tldraw'));
         });
         unlistenNotes = await listen('global-hotkey-notes', () => {
           if (cleanup) return;
@@ -118,8 +118,8 @@ export function HotkeyListener() {
           else playMicUnmuteSound();
         } else if (matchesHotkey(e, settings.toggleFullMute)) {
           toggleAudioMutedRef.current();
-        } else if (matchesHotkey(e, settings.toggleWhiteboard)) {
-          window.dispatchEvent(new Event('toggle-whiteboard'));
+ } else if (matchesHotkey(e, settings.toggleWhiteboard)) {
+ window.dispatchEvent(new Event('toggle-tldraw'));
         } else if (matchesHotkey(e, settings.toggleNotes)) {
           window.dispatchEvent(new Event('toggle-notes'));
         }
