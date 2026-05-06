@@ -69,6 +69,12 @@ function CodeBlock({ className, children }: { className?: string; children: Reac
   );
 }
 
+// react-markdown v10: code inside <pre> = block, outside = inline.
+// We detect block by checking if the code element has a className (language-xxx)
+// OR is wrapped in <pre> (fenced code block without language).
+// We use a context flag set by the `pre` component to reliably distinguish.
+const CodeBlockContext = React.createContext(false);
+
 export function MarkdownMessage({ content }: { content: string }) {
   const [expanded, setExpanded] = React.useState(false);
   const [isLong, setIsLong] = React.useState(false);
@@ -97,20 +103,23 @@ export function MarkdownMessage({ content }: { content: string }) {
             : 'chat-markdown-body'
         }
       >
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            pre: ({ children }) => <>{children}</>,
-            code: ({ className, children, node }) => {
-              // Блочный код — всегда имеет className "language-xxx"
-              // ИЛИ находится внутри <pre> (фenced без языка)
-              const isBlock = !!className || node?.position?.start.line !== node?.position?.end.line;
-              
-              if (isBlock) {
-                return <CodeBlock className={className}>{children}</CodeBlock>;
-              }
-              return <InlineCode>{children}</InlineCode>;
-            },
+ <ReactMarkdown
+ remarkPlugins={[remarkGfm]}
+ components={{
+ pre: ({ children }) => (
+ <CodeBlockContext.Provider value={true}>{children}</CodeBlockContext.Provider>
+ ),
+ code: ({ className, children }) => {
+ // Блочный код = fenced code block (внутри <pre>, флаг через контекст)
+ // ИЛИ имеет className "language-xxx"
+ const isInPre = React.useContext(CodeBlockContext);
+ const isBlock = !!className || isInPre;
+ 
+ if (isBlock) {
+ return <CodeBlock className={className}>{children}</CodeBlock>;
+ }
+ return <InlineCode>{children}</InlineCode>;
+ },
             a: ({ children, href }) => (
               <a
                 href={href}
