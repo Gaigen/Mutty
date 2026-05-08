@@ -55,7 +55,7 @@ function DataUrlFileCard({ dataUrl }: { dataUrl: string }) {
       borderRadius: 8,
       border: '1px solid var(--mutty-border-2)',
       background: 'var(--mutty-surface-2)',
-      minWidth: 180,
+      maxWidth: '100%',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px' }}>
         <span style={{ fontSize: 20, flexShrink: 0 }}>{getFileIcon(mime)}</span>
@@ -165,7 +165,7 @@ function FileCardInline({
         border: '1px solid var(--mutty-border-2)',
         background: 'var(--mutty-surface-2)',
         overflow: 'hidden',
-        minWidth: 200,
+        maxWidth: '100%',
       }}
     >
       {/* Video preview */}
