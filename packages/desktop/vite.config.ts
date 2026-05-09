@@ -5,6 +5,9 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   publicDir: path.resolve(__dirname, '../shared/public'),
+  define: {
+    __TLDRAW_LICENSE_KEY__: JSON.stringify(process.env.TLDRAW_LICENSE_KEY || ''),
+  },
   resolve: {
     alias: {
       '@shared': path.resolve(__dirname, '../shared/src'),
