@@ -1,4 +1,4 @@
-# Voice App
+# Mutty
 ![GitHub release (latest SemVer)]
 
 **Voice App** is an open-source, real-time voice communication platform
