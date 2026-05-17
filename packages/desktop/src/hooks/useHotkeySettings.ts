@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LS_KEYS } from '@shared/config';
-import { storeGet, storeSet } from '../lib/store';
+import { usePlatform } from '@shared/platform';
+import type { StorageAdapter } from '@shared/platform/storage';
 
 export interface HotkeySettings {
   toggleMicrophone: string;
@@ -16,9 +17,9 @@ export const DEFAULT_HOTKEYS: HotkeySettings = {
   toggleNotes: 'Ctrl+KeyN',
 };
 
-async function loadSettings(): Promise<HotkeySettings> {
+async function loadSettings(storage: StorageAdapter): Promise<HotkeySettings> {
   try {
-    const stored = await storeGet<Partial<HotkeySettings>>(LS_KEYS.hotkeySettings);
+    const stored = await storage.getAsync<Partial<HotkeySettings>>(LS_KEYS.hotkeySettings);
     if (stored) return { ...DEFAULT_HOTKEYS, ...stored };
   } catch (e) {
     console.warn('Failed to load hotkey settings from store:', e);
@@ -26,9 +27,9 @@ async function loadSettings(): Promise<HotkeySettings> {
   return { ...DEFAULT_HOTKEYS };
 }
 
-async function saveSettings(settings: HotkeySettings) {
+function saveSettings(storage: StorageAdapter, settings: HotkeySettings) {
   try {
-    await storeSet(LS_KEYS.hotkeySettings, settings);
+    storage.set(LS_KEYS.hotkeySettings, settings);
   } catch (e) {
     console.warn('Failed to save hotkey settings to store:', e);
   }
@@ -38,10 +39,11 @@ let currentSettings: HotkeySettings = { ...DEFAULT_HOTKEYS };
 const listeners = new Set<(settings: HotkeySettings) => void>();
 
 export function useHotkeySettings() {
+  const { storage } = usePlatform();
   const [settings, setSettingsState] = useState<HotkeySettings>(currentSettings);
 
     useEffect(() => {
-    loadSettings().then((s) => {
+    loadSettings(storage).then((s) => {
       currentSettings = s;
       setSettingsState(s);
       // Sync loaded hotkeys to Rust poller
@@ -58,7 +60,7 @@ export function useHotkeySettings() {
         // Tauri not available, ignore
       }
     });
-  }, []);
+  }, [storage]);
 
   useEffect(() => {
     const listener = (s: HotkeySettings) => setSettingsState(s);
@@ -71,7 +73,7 @@ export function useHotkeySettings() {
   const setSettings = useCallback(async (newSettings: Partial<HotkeySettings>) => {
     currentSettings = { ...currentSettings, ...newSettings };
     setSettingsState(currentSettings);
-    saveSettings(currentSettings);
+    saveSettings(storage, currentSettings);
     listeners.forEach((listener) => listener(currentSettings));
     try {
       const { invoke } = await import('@tauri-apps/api/core');
@@ -84,7 +86,7 @@ export function useHotkeySettings() {
     } catch {
       // Tauri not available (dev mode in browser), ignore
     }
-  }, []);
+  }, [storage]);
 
   return { settings, setSettings };
 }

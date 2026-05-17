@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LS_KEYS } from '@shared/config';
-import { storeGet, storeSet } from '../lib/store';
+import { usePlatform } from '@shared/platform';
+import type { StorageAdapter } from '@shared/platform/storage';
 
 export interface AppSettings {
   minimizeToTray: boolean;
@@ -12,9 +13,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   autostart: false,
 };
 
-async function loadSettings(): Promise<AppSettings> {
+async function loadSettings(storage: StorageAdapter): Promise<AppSettings> {
   try {
-    const stored = await storeGet<Partial<AppSettings>>(LS_KEYS.appSettings);
+    const stored = await storage.getAsync<Partial<AppSettings>>(LS_KEYS.appSettings);
     if (stored) return { ...DEFAULT_SETTINGS, ...stored };
   } catch (e) {
     console.warn('Failed to load app settings from store:', e);
@@ -22,9 +23,9 @@ async function loadSettings(): Promise<AppSettings> {
   return { ...DEFAULT_SETTINGS };
 }
 
-async function saveSettings(settings: AppSettings) {
+function saveSettings(storage: StorageAdapter, settings: AppSettings) {
   try {
-    await storeSet(LS_KEYS.appSettings, settings);
+    storage.set(LS_KEYS.appSettings, settings);
   } catch (e) {
     console.warn('Failed to save app settings to store:', e);
   }
@@ -65,10 +66,11 @@ let currentSettings: AppSettings = { ...DEFAULT_SETTINGS };
 const listeners = new Set<(settings: AppSettings) => void>();
 
 export function useAppSettings() {
+  const { storage } = usePlatform();
   const [settings, setSettingsState] = useState<AppSettings>(currentSettings);
 
   useEffect(() => {
-    loadSettings().then((s) => {
+    loadSettings(storage).then((s) => {
       currentSettings = s;
       setSettingsState(s);
       // Sync loaded values to Tauri/Rust state
@@ -83,12 +85,12 @@ export function useAppSettings() {
         }
         if (changed) {
           setSettingsState(currentSettings);
-          saveSettings(currentSettings);
+          saveSettings(storage, currentSettings);
           listeners.forEach((listener) => listener(currentSettings));
         }
       });
     });
-  }, []);
+  }, [storage]);
 
   useEffect(() => {
     const listener = (s: AppSettings) => setSettingsState(s);
@@ -101,7 +103,7 @@ export function useAppSettings() {
   const setSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
     currentSettings = { ...currentSettings, ...newSettings };
     setSettingsState(currentSettings);
-    saveSettings(currentSettings);
+    saveSettings(storage, currentSettings);
     listeners.forEach((listener) => listener(currentSettings));
     if (newSettings.minimizeToTray !== undefined) {
       await syncMinimizeToTray(newSettings.minimizeToTray);
@@ -109,7 +111,7 @@ export function useAppSettings() {
     if (newSettings.autostart !== undefined) {
       await syncAutostart(newSettings.autostart);
     }
-  }, []);
+  }, [storage]);
 
   return { settings, setSettings };
 }
