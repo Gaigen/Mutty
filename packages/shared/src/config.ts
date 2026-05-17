@@ -19,6 +19,7 @@ export const LS_KEYS = {
   hotkeySettings: 'voice-app:hotkey-settings',
   floatingLayout: 'mutty:floating-layout',
   participantVolumes: 'voice-app:participant-volumes',
+  theme: 'mutty-theme',
 } as const;
 
 // ── Avatars ──────────────────────────────────────────────────────────────────

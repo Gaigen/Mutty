@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { StorageAdapter } from '../platform';
+import { LS_KEYS } from '../config';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -12,7 +13,7 @@ interface ThemeContextValue {
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = 'mutty-theme';
+const STORAGE_KEY = LS_KEYS.theme;
 
 function getSystemTheme(): 'dark' | 'light' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
