@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react';
 import { Check, UserPlus } from 'lucide-react';
-import { AVATAR_IDS } from '../../config';
-import { generateRandomNickname } from '../../utils/randomNickname';
 import { usePlatform } from '../../platform';
 
 export function InviteRoomButton({ roomName }: { roomName: string }) {
@@ -9,13 +7,8 @@ export function InviteRoomButton({ roomName }: { roomName: string }) {
   const [copied, setCopied] = useState(false);
 
   const buildUrl = useCallback(() => {
-    const identity = generateRandomNickname();
-    const avatar = AVATAR_IDS[Math.floor(Math.random() * AVATAR_IDS.length)]!;
-    const params = new URLSearchParams();
-    params.set('identity', identity);
-    params.set('avatar', avatar);
     const baseUrl = config.getWebAppUrl() || window.location.origin;
-    return `${baseUrl}/room/${encodeURIComponent(roomName)}?${params.toString()}`;
+    return `${baseUrl}/room/${encodeURIComponent(roomName)}?identity=random`;
   }, [roomName, config]);
 
   const onClick = async () => {
@@ -35,7 +28,7 @@ export function InviteRoomButton({ roomName }: { roomName: string }) {
       className="lk-button"
       onClick={onClick}
       aria-label="Copy invite link"
-      title="Copy invite link (random guest name and avatar for each new link)"
+      title="Copy invite link (anyone joining gets a random guest name and avatar)"
     >
       {copied
         ? <Check size={15} aria-hidden />

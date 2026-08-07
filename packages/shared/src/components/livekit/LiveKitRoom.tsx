@@ -3,7 +3,8 @@ import '@livekit/components-styles';
 import { type RoomOptions, DisconnectReason } from 'livekit-client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Settings } from 'lucide-react';
-import { appConfig } from '../../config';
+import { appConfig, AVATAR_IDS } from '../../config';
+import { generateRandomNickname } from '../../utils/randomNickname';
 import { usePlatform } from '../../platform';
 import { useAudioSettings, getAudioSettings } from '../../hooks/useAudioSettings';
 import { getCameraSettings } from '../../hooks/useCameraSettings';
@@ -114,9 +115,24 @@ export default function LiveKitRoomComponent({
 
   // Identity задаётся при монтировании. При навигации RoomPage передаёт identity из URL,
   // поэтому providedIdentity стабилен в рамках сессии комнаты.
+  // identity=random → каждый участник получает случайный ник и аватар (общая ссылка-приглашение).
+  const isRandomIdentity = providedIdentity === 'random';
   const identity = useMemo(
-    () => providedIdentity || `dev-${(crypto.randomUUID?.() ?? Math.random().toString(36)).slice(0, 8)}`,
-    [providedIdentity],
+    () => {
+      if (isRandomIdentity) return generateRandomNickname();
+      return providedIdentity || `dev-${(crypto.randomUUID?.() ?? Math.random().toString(36)).slice(0, 8)}`;
+    },
+    [providedIdentity, isRandomIdentity],
+  );
+
+  const resolvedAvatar = useMemo(
+    () => {
+      if (isRandomIdentity || !avatar) {
+        return AVATAR_IDS[Math.floor(Math.random() * AVATAR_IDS.length)]!;
+      }
+      return avatar;
+    },
+    [avatar, isRandomIdentity],
   );
 
   const [connection, setConnection] = useState<{ token: string; serverUrl: string } | null>(null);
@@ -146,7 +162,7 @@ export default function LiveKitRoomComponent({
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room: roomName, identity, avatar: avatar || undefined }),
+        body: JSON.stringify({ room: roomName, identity, avatar: resolvedAvatar }),
       });
       if (!response.ok) throw new Error(`Token request failed with status ${response.status}`);
       const data = await response.json();
@@ -160,7 +176,7 @@ export default function LiveKitRoomComponent({
       setError('Failed to get LiveKit token. Check that the token server is running.');
       setStatus('error');
     }
-  }, [tokenEndpoint, roomName, identity, avatar]);
+  }, [tokenEndpoint, roomName, identity, resolvedAvatar]);
 
   const handleDisconnected = useCallback((reason?: DisconnectReason) => {
     setConnection(null);
