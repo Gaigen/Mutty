@@ -161,7 +161,11 @@ export function TldrawModule() {
         data-theme={resolvedTheme}
       >
         <TldrawErrorBoundary>
-          <Tldraw store={storeWithStatus} assetUrls={assetUrls} license={__TLDRAW_LICENSE_KEY__} />
+          <Tldraw
+            store={storeWithStatus}
+            assetUrls={assetUrls}
+            {...({ license: __TLDRAW_LICENSE_KEY__ } as object)}
+          />
         </TldrawErrorBoundary>
       </div>
     </FloatingWindow>
