@@ -126,11 +126,11 @@ export function MarkdownMessage({ content }: { content: string }) {
                 onClick={(e) => {
                   e.preventDefault();
                   if (!href) return;
-                  // Ctrl/Cmd+Click → open in browser directly
+                  // Ctrl/Cmd+Click → open iframe preview
                   if (e.ctrlKey || e.metaKey) {
-                    linkBrowser.openInBrowser(href);
-                  } else {
                     linkBrowser.open(href);
+                  } else {
+                    linkBrowser.openInBrowser(href);
                   }
                 }}
                 onMouseDown={(e) => {
@@ -141,7 +141,7 @@ export function MarkdownMessage({ content }: { content: string }) {
                   }
                 }}
                 style={{ cursor: 'pointer' }}
-                title={`${href}\nClick to preview / Ctrl+Click to open in browser`}
+                title={`${href}\nClick to open in browser / Ctrl+Click to preview`}
               >
                 {children}
               </a>

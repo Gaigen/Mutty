@@ -13,9 +13,9 @@ export function GenericPreview({ url }: { url: string }) {
       onClick={(e) => {
         e.preventDefault();
         if (e.ctrlKey || e.metaKey) {
-          openInBrowser(url);
-        } else {
           open(url);
+        } else {
+          openInBrowser(url);
         }
       }}
       onMouseDown={(e) => {
@@ -25,7 +25,7 @@ export function GenericPreview({ url }: { url: string }) {
         }
       }}
       style={{ cursor: 'pointer' }}
-      title={`${url}\nClick to preview / Ctrl+Click to open in browser`}
+      title={`${url}\nClick to open in browser / Ctrl+Click to preview`}
     >
       <div className="lp-generic-icon">
         <img
