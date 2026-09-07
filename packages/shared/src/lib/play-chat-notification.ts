@@ -7,6 +7,18 @@ function playDefaultChatNotificationTone(): void {
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
     const ctx = new AC();
+
+    // A browser allows only a handful of AudioContexts per document (~6 in Chromium),
+    // so this one-shot context must be released once the tone has finished.
+    const close = () => {
+      if (ctx.state === 'closed') return;
+      try {
+        void ctx.close().catch(() => {});
+      } catch {
+        /* ignore */
+      }
+    };
+
     const schedule = (freq: number, start: number, dur: number, vol: number) => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
@@ -18,12 +30,21 @@ function playDefaultChatNotificationTone(): void {
       g.connect(ctx.destination);
       osc.start(start);
       osc.stop(start + dur);
+      return osc;
     };
-    void ctx.resume().then(() => {
-      const t = ctx.currentTime;
-      schedule(784, t, 0.08, 0.1);
-      schedule(988, t + 0.06, 0.1, 0.08);
-    });
+
+    void ctx
+      .resume()
+      .then(() => {
+        const t = ctx.currentTime;
+        schedule(784, t, 0.08, 0.1);
+        // Ends last (t + 0.16), so it owns the cleanup.
+        schedule(988, t + 0.06, 0.1, 0.08).onended = close;
+        // Fallback: `ended` never fires if the context gets suspended mid-tone.
+        setTimeout(close, 1000);
+      })
+      // Autoplay policy can reject resume() — don't leak the context.
+      .catch(close);
   } catch {
     /* ignore */
   }

@@ -134,7 +134,7 @@ Voice-app/
 - **Стек:** React + TypeScript
 - **Что внутри:**
   - `floating/` — система плавающих окон (drag, resize, z-index, minimize)
-  - `collab/` — синхронизация через LiveKit data channels (Yjs для whiteboard, JSON-reducer для notes)
+  - `collab/` — синхронизация через LiveKit data channels (broadcast диффов для whiteboard, JSON-reducer для notes; CRDT не используется, разрешение конфликтов — last-writer-wins)
   - `components/livekit/` — UI компоненты комнаты (control bar, settings, chat)
   - `hooks/` — React hooks (audio settings, camera, screen share, hotkeys)
   - `modules/tldraw/` — tldraw-интеграция с коллаборацией
@@ -148,7 +148,7 @@ Voice-app/
   - `src/chat/` — чат-шлюз и парсер команд
   - `src/media/` — стриминг, очередь воспроизведения, резолвер URL
   - `src/llm/` — OpenRouter провайдер + промпты (AI-ассистент, поиск, плейлисты)
-  - `src/memory/` — SQLite memory store (история разговоров)
+  - `src/memory/` — in-memory store истории разговоров (per room, живёт только пока бот в комнате)
 - **Команды в чате** (без "!"):
   - `<url>` — воспроизвести ссылку (YouTube / Twitch / SoundCloud / Telegram)
   - `add <url>` / `queue <url>` — добавить в очередь
@@ -167,7 +167,7 @@ Voice-app/
   - Установи `OPENROUTER_API_KEY` в env
   - Бот отвечает на вопросы, может искать и играть музыку по запросу
   - Генерирует плейлисты по описанию (например, "lofi для программирования")
-  - Помнит контекст разговора (SQLite per room)
+  - Помнит контекст разговора в пределах сессии (in-memory per room, стирается когда бот покидает комнату)
 
 ---
 
@@ -251,22 +251,31 @@ pnpm tauri dev    # http://localhost:1421 + Tauri window
 
 ### Веб (`packages/web`)
 
-| Комбо        | Действие               |
-|--------------|------------------------|
+Захардкожены в `packages/shared/src/hooks/useModuleToggle.ts`, через UI не настраиваются.
+
+| Комбо        | Действие                   |
+|--------------|----------------------------|
 | `Ctrl + B`   | Открыть/закрыть Whiteboard |
-| `Ctrl + N`   | Открыть/закрыть Notes      |
+| `Ctrl + M`   | Открыть/закрыть Notes      |
 
 ### Десктоп (`packages/desktop`)
 
 | Комбо (дефолт)    | Действие               | Настраиваемый |
 |-------------------|------------------------|---------------|
-| `Ctrl + B`        | Whiteboard toggle      | ✅              |
-| `Ctrl + N`        | Notes toggle           | ✅              |
-| `Ctrl + M`        | Mute/unmute mic        | ✅              |
-| `Ctrl + F`        | Full mute toggle       | ✅              |
-| `MouseBack`       | (опционально)          | ✅              |
+| `Ctrl + M`        | Mute/unmute mic        | ✅             |
+| `Ctrl + F`        | Full mute toggle       | ✅             |
+| `Ctrl + B`        | Whiteboard toggle      | ✅             |
+| `Ctrl + N`        | Notes toggle           | ✅             |
 
-Настройка — в Settings → Hotkeys. Работает **глобально**, даже когда окно свёрнуто (Windows).
+Настройка — в Settings → Hotkeys. Работает **глобально**, даже когда окно свёрнуто.
+
+> ⚠️ **Глобальные хоткеи работают только на Windows.** Они реализованы опросом
+> `GetAsyncKeyState` в `src-tauri/src/main.rs` под `#[cfg(target_os = "windows")]`.
+> На macOS и Linux они не срабатывают, причём браузерный фолбэк в десктоп-сборке
+> тоже отключён — то есть хоткеи там не работают вообще.
+
+> ℹ️ Обратите внимание: Notes на вебе висит на `Ctrl + M`, а на десктопе по умолчанию
+> на `Ctrl + N`. На десктопе комбинацию можно переназначить, на вебе — нет.
 
 ---
 
@@ -355,7 +364,7 @@ Voice-app/
 │   └── shared/                     # Shared компоненты
 │       ├── src/
 │       │   ├── floating/           # Плавающие окна (drag, resize)
-│       │   ├── collab/             # Коллаб-синхронизация (Yjs, LiveKit)
+│       │   ├── collab/             # Коллаб-синхронизация (LiveKit data channels)
 │       │   ├── components/livekit/ # UI комнаты
 │       │   ├── modules/
 │       │   │   ├── tldraw/         # tldraw + LiveKit data channels
@@ -373,7 +382,7 @@ Voice-app/
 │       ├── chat/                   # Чат-шлюз, парсер команд
 │       ├── media/                  # Стриминг, очередь, резолвер
 │       ├── llm/                    # OpenRouter AI
-│       └── memory/                 # SQLite store
+│       └── memory/                 # In-memory store истории
 │
 └── livekit/                        # Конфиги LiveKit
     └── livekit.prod.yaml
