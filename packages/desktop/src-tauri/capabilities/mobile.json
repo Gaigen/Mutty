@@ -1,0 +1,18 @@
+{
+  "identifier": "mobile-capability",
+  "description": "Capability for the Android/iOS webview. Excludes the window-state, autostart and window-manipulation permissions, none of which exist on mobile.",
+  "platforms": [
+    "android",
+    "iOS"
+  ],
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "notification:default",
+    "store:default",
+    "dialog:default"
+  ]
+}

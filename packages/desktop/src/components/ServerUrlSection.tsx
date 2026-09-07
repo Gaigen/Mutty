@@ -6,12 +6,66 @@ interface ServerUrlSectionProps {
   onConfigured: (configured: boolean) => void;
 }
 
+/**
+ * Picks the scheme for both the token endpoint and the LiveKit WebSocket URL.
+ * The token server dictates the ws URL it hands back, so without this there is no
+ * way to try the other scheme against an existing deployment.
+ */
+function SecurityToggle({
+  secure,
+  onChange,
+}: {
+  secure: boolean;
+  onChange: (secure: boolean) => void;
+}) {
+  const options = [
+    { value: true, label: 'Secure', hint: 'https / wss' },
+    { value: false, label: 'Insecure', hint: 'http / ws' },
+  ];
+  return (
+    <fieldset>
+      <legend className="block text-sm font-medium text-[var(--mutty-fg-2)] mb-1">
+        Connection
+      </legend>
+      <div className="flex gap-2">
+        {options.map((opt) => (
+          <label
+            key={String(opt.value)}
+            className={`flex-1 flex items-center gap-2 px-3 py-2 rounded border cursor-pointer transition-colors ${
+              secure === opt.value
+                ? 'border-[var(--mutty-accent-1)] bg-[var(--mutty-surface-2)]'
+                : 'border-[var(--mutty-border-2)] hover:bg-[var(--mutty-surface-1)]'
+            }`}
+          >
+            <input
+              type="radio"
+              name="server-security"
+              className="accent-[var(--mutty-accent-1)]"
+              checked={secure === opt.value}
+              onChange={() => onChange(opt.value)}
+            />
+            <span className="text-sm text-[var(--mutty-fg-1)]">{opt.label}</span>
+            <span className="text-xs text-[var(--mutty-fg-3)] ml-auto">{opt.hint}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps) {
   const { config } = usePlatform();
   const [serverUrl, setServerUrl] = useState('');
   const [serverError, setServerError] = useState('');
   const [showInput, setShowInput] = useState(false);
   const [configured, setConfigured] = useState(false);
+  const [secure, setSecure] = useState(() => config.isSecure?.() ?? true);
+
+  const handleSecureChange = useCallback(async (next: boolean) => {
+    setSecure(next);
+    setServerError('');
+    await config.setSecure?.(next);
+  }, [config]);
 
   useEffect(() => {
     const endpoint = config.getTokenEndpoint();
@@ -64,13 +118,14 @@ export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps
             onChange={(e) => { setServerUrl(e.target.value); setServerError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
             className="w-full px-4 py-2 bg-[var(--mutty-surface-1)] border border-[var(--mutty-border-2)] rounded focus:ring-2 focus:ring-[var(--mutty-accent-1)] focus:outline-none text-[var(--mutty-fg-1)] placeholder-[var(--mutty-fg-3)]"
-            placeholder="https://your-server.com"
+            placeholder="your-server.com"
             autoFocus
           />
           {serverError && (
             <p className="mt-1 text-xs text-[var(--mutty-danger)]">{serverError}</p>
           )}
         </div>
+        <SecurityToggle secure={secure} onChange={handleSecureChange} />
         <button
           type="button"
           onClick={handleSave}
@@ -120,12 +175,15 @@ export default function ServerUrlSection({ onConfigured }: ServerUrlSectionProps
             onChange={(e) => { setServerUrl(e.target.value); setServerError(''); }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
             className="w-full px-3 py-1.5 bg-[var(--mutty-surface-2)] border border-[var(--mutty-border-2)] rounded focus:ring-2 focus:ring-[var(--mutty-accent-1)] focus:outline-none text-[var(--mutty-fg-1)] placeholder-[var(--mutty-fg-3)] text-sm"
-            placeholder="https://your-server.com"
+            placeholder="your-server.com"
             autoFocus
           />
           {serverError && (
             <p className="mt-1 text-xs text-[var(--mutty-danger)]">{serverError}</p>
           )}
+          <div className="mt-2">
+            <SecurityToggle secure={secure} onChange={handleSecureChange} />
+          </div>
           <button
             type="button"
             onClick={handleSave}

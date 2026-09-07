@@ -42,11 +42,36 @@ export class TauriConfig implements ConfigAdapter {
     }
   }
 
+  /** Defaults to secure, which is the behaviour this adapter had before the toggle. */
+  isSecure(): boolean {
+    const stored = this.storage.get<boolean>(LS_KEYS.serverSecure);
+    return stored === null || stored === undefined ? true : stored;
+  }
+
+  async setSecure(secure: boolean): Promise<void> {
+    this.storage.set(LS_KEYS.serverSecure, secure);
+  }
+
+  /**
+   * The token server returns its own LIVEKIT_PUBLIC_WS_URL, so the scheme there is
+   * whatever the operator configured. Force it to match the user's choice, otherwise
+   * there is no way to try ws:// against a server that advertises wss:// (or back).
+   */
+  normalizeWsUrl(url: string): string {
+    const trimmed = url.trim();
+    if (!trimmed) return trimmed;
+    const scheme = this.isSecure() ? 'wss://' : 'ws://';
+    const withoutScheme = trimmed.replace(/^wss?:\/\//i, '');
+    return `${scheme}${withoutScheme}`;
+  }
+
   private normalizeBaseUrl(url: string): string {
-    let base = url.replace(/\/+$/, '');
-    if (base.startsWith('http://') || base.startsWith('https://')) {
+    const base = url.replace(/\/+$/, '');
+    const scheme = this.isSecure() ? 'https://' : 'http://';
+    // An explicit scheme in the input wins over the toggle.
+    if (/^https?:\/\//i.test(base)) {
       return base;
     }
-    return `https://${base}`;
+    return `${scheme}${base}`;
   }
 }

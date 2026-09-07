@@ -1,6 +1,11 @@
 {
   "identifier": "main-capability",
   "description": "Capability for the main window",
+  "platforms": [
+    "windows",
+    "macOS",
+    "linux"
+  ],
   "windows": [
     "main"
   ],

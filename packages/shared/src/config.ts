@@ -7,6 +7,10 @@
 
 export const LS_KEYS = {
   serverUrl: 'voice-app:server-url',
+  /** Desktop/mobile: https+wss when true, http+ws when false. Must stay in LS_KEYS —
+   *  the Tauri Store cache only preloads keys listed here, and a missing key silently
+   *  resets to its default on every restart. */
+  serverSecure: 'voice-app:server-secure',
   audioSettings: 'voice-app:audio-settings',
   cameraSettings: 'voice-app:camera-settings',
   screenShareSettings: 'voice-app:screen-share-settings',

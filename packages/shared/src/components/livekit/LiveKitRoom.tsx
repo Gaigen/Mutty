@@ -167,8 +167,11 @@ export default function LiveKitRoomComponent({
       if (!response.ok) throw new Error(`Token request failed with status ${response.status}`);
       const data = await response.json();
       if (!data.token) throw new Error('Token payload is empty');
-      const wsUrl = typeof data.wsUrl === 'string' ? data.wsUrl.trim() : '';
-      if (!wsUrl) throw new Error('Token response missing wsUrl');
+      const rawWsUrl = typeof data.wsUrl === 'string' ? data.wsUrl.trim() : '';
+      if (!rawWsUrl) throw new Error('Token response missing wsUrl');
+      // Desktop/mobile may force ws:// or wss:// regardless of what the server
+      // advertises; web has no such adapter method and keeps the URL as-is.
+      const wsUrl = config.normalizeWsUrl?.(rawWsUrl) ?? rawWsUrl;
       setConnection({ token: data.token, serverUrl: wsUrl });
       setStatus('idle');
     } catch (err) {
@@ -176,7 +179,7 @@ export default function LiveKitRoomComponent({
       setError('Failed to get LiveKit token. Check that the token server is running.');
       setStatus('error');
     }
-  }, [tokenEndpoint, roomName, identity, resolvedAvatar]);
+  }, [tokenEndpoint, roomName, identity, resolvedAvatar, config]);
 
   const handleDisconnected = useCallback((reason?: DisconnectReason) => {
     setConnection(null);
