@@ -1,0 +1,205 @@
+name: Release
+
+# Builds the Android APK and the desktop apps, then attaches everything to a
+# GitHub Release. Tag a commit (v0.1.0) or run the workflow manually.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name for the release (e.g. v0.1.0)'
+        required: true
+        default: 'v0.0.0-dev'
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10'
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  android:
+    name: Android APK (arm64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      # Use the action rather than unzipping the NDK by hand: a plain
+      # `python -m zipfile` extraction drops the archive's 35 symlinks and
+      # `clang` degrades into a text file containing "clang-18", which only
+      # surfaces at link time as `clang-18: command not found`.
+      - name: Install Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          add-to-path: false
+
+      - name: Install Rust (aarch64-linux-android)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop/src-tauri -> target
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build APK
+        env:
+          NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+          TLDRAW_LICENSE_KEY: ${{ secrets.TLDRAW_LICENSE_KEY }}
+          # Unstripped debug symbols inflate the APK from ~27 MB to ~170 MB.
+          CARGO_PROFILE_DEV_STRIP: symbols
+        working-directory: packages/desktop
+        run: pnpm exec tauri android build --debug --target aarch64 --apk
+
+      - name: Collect APK
+        run: |
+          set -euo pipefail
+          SRC=$(find packages/desktop/src-tauri/gen/android -name '*.apk' | head -1)
+          test -n "$SRC"
+          mkdir -p dist-release
+          cp "$SRC" "dist-release/mutty-android-arm64-debug.apk"
+          sha256sum dist-release/*.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist-release/*.apk
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────────────────────────────────
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+          - os: macos-latest
+            name: macos
+          - os: ubuntu-22.04
+            name: linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # Tauri on Linux links against GTK/WebKit; without these the Rust build
+      # fails in `gio-sys` with "The pkg-config command could not be found".
+      - name: Linux build dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf \
+            libayatana-appindicator3-dev build-essential curl wget file libssl-dev pkg-config
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop/src-tauri -> target
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TLDRAW_LICENSE_KEY: ${{ secrets.TLDRAW_LICENSE_KEY }}
+        with:
+          projectPath: packages/desktop
+          includeDebug: false
+          includeRelease: true
+          # Upload happens in the `release` job so every artifact lands together.
+          args: ''
+
+      - name: Collect desktop bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-release
+          find packages/desktop/src-tauri/target/release/bundle -type f \
+            \( -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o -name '*.app.tar.gz' \
+               -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
+            -exec cp {} dist-release/ \; || true
+          ls -la dist-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          path: dist-release/*
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────────────────────────────────
+  release:
+    name: Publish release
+    needs: [android, desktop]
+    if: always() && needs.android.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          cd release && sha256sum * > SHA256SUMS.txt
+          ls -la
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: Mutty ${{ github.event.inputs.tag || github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          files: release/*
+          body: |
+            ## Android
+
+            `mutty-android-arm64-debug.apk` — **arm64-v8a only**, debug build
+            (self-signed, installs via sideload). minSdk 24, targetSdk 36.
+
+            Screen sharing, global hotkeys and the system tray do not work on
+            Android. Dragging the floating whiteboard/notes windows does not
+            work either — that UI is mouse-only.
+
+            ## Desktop
+
+            Windows, macOS and Linux bundles built from the same commit.
+
+            Verify downloads against `SHA256SUMS.txt`.
