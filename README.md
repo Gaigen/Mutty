@@ -20,7 +20,7 @@
 - **Плавающие окна** — коллаборативный whiteboard (tldraw) и shared notepad
 - **Бот-агент** со встроенным AI через OpenRouter — стримит YouTube/Twitch/SoundCloud и отвечает в чате
 - **Чат** с вложениями изображений, drag-and-drop, превью твитов
-- **Кроссплатформенность** — веб (React) + десктоп (Tauri + Rust)
+- **Кроссплатформенность** — веб (React), десктоп (Tauri + Rust) и **Android**
 - **Self-hosted** — полностью под твоим контролем
 
 ---
@@ -121,6 +121,8 @@ Voice-app/
 
 #### 4. Desktop Client (`packages/desktop`)
 - **Стек:** Tauri v2 (React frontend + Rust backend)
+- **Отсюда же собирается Android-приложение** — см. раздел [Android](#android).
+  Десктопная точка входа в `src-tauri/src/main.rs`, мобильная — в `src/lib.rs`
 - **Порт:** `1421` (dev)
 - **Фичи:**
   - Все фичи веб-клиента
@@ -276,6 +278,67 @@ pnpm tauri dev    # http://localhost:1421 + Tauri window
 
 > ℹ️ Обратите внимание: Notes на вебе висит на `Ctrl + M`, а на десктопе по умолчанию
 > на `Ctrl + N`. На десктопе комбинацию можно переназначить, на вебе — нет.
+
+---
+
+## Android
+
+Android-приложение собирается из того же пакета `packages/desktop` — Tauri v2 умеет
+собирать мобильную цель из общего кода. Отдельного пакета нет.
+
+### Готовый APK
+
+Собирается в CI. Тег `v*` запускает workflow `.github/workflows/release.yml`, который
+кладёт APK и десктопные сборки в один черновик релиза.
+
+- **ABI: только `arm64-v8a`.** На 32-битных устройствах не установится
+- `minSdk 24` (Android 7+), проверялось на Android 9 и выше
+- Сборка **debug**, самоподписанная — ставится сайдлоадом
+
+### Локальная сборка
+
+Нужны: Rust с таргетом `aarch64-linux-android`, JDK 17, Android SDK (platform 34,
+build-tools 34) и NDK r27c.
+
+```bash
+export ANDROID_HOME=~/android-sdk NDK_HOME=~/android-ndk-r27c JAVA_HOME=~/jdk17
+cd packages/desktop
+CARGO_PROFILE_DEV_STRIP=symbols pnpm exec tauri android build --debug --target aarch64 --apk
+```
+
+Три грабли, каждая стоит отдельного круга отладки:
+
+1. **Tauri CLI ищет `$ANDROID_HOME/cmdline-tools/bin/sdkmanager`**, а стандартная
+   установка кладёт его в `cmdline-tools/latest/bin`. Без симлинка `tauri android init`
+   падает с невнятным «Skipping Android Studio command line tools installation».
+2. **NDK распаковывать только `unzip`.** Распаковщик без поддержки симлинков (например
+   `python -m zipfile`) превращает `clang` в текстовый файл со строкой `clang-18`,
+   и это всплывает лишь на линковке, после успешной компиляции всех объектных файлов.
+3. **`CARGO_PROFILE_DEV_STRIP=symbols` обязателен** — иначе APK раздувается до ~170 МБ
+   вместо ~27 МБ. Удаление `jniLibs.keepDebugSymbols` не помогает: AGP пропускает стрип,
+   когда NDK не подключён к Gradle-проекту. После смены размера библиотеки удаляйте
+   `gen/android/app/build`, иначе Gradle оставит внутри APK дыру от прежней версии.
+
+### Подключение к серверу
+
+На первом экране, кроме адреса и ника, есть переключатель **Secure / Insecure**. Он
+задаёт схему сразу для token-эндпоинта и для WebSocket. Это важно, потому что адрес
+WebSocket приходит **с сервера** (`LIVEKIT_PUBLIC_WS_URL`), и без переключателя выбрать
+`ws://` вместо `wss://` было бы нельзя. Если подключение не проходит — смените положение.
+
+Debug-сборка разрешает нешифрованный трафик (`usesCleartextTraffic`), поэтому `ws://`
+и `http://` работают. В release-сборке это придётся включать отдельно.
+
+### Что на Android не работает
+
+| Функция | Причина |
+|---|---|
+| Шаринг экрана | в Android WebView нет `getDisplayMedia` |
+| Глобальные хоткеи | реализованы только под Windows |
+| Трей, autostart | десктопные понятия |
+| Перетаскивание плавающих окон | whiteboard и Notes открываются, но UI рассчитан на мышь |
+
+Голос, видео, чат и вложения работают.
 
 ---
 
